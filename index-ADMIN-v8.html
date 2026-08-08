@@ -658,11 +658,11 @@
 <div id="modalRegraAtrasoAdmin" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;align-items:center;justify-content:center;padding:16px">
   <div style="background:white;max-width:520px;width:100%;border-radius:16px;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,.25)">
     <h2 style="margin-top:0">Configurar regra de atraso</h2>
-    <p style="color:#666;font-size:13px">Defina a porcentagem dos pontos em cada faixa. Os valores devem ficar em ordem decrescente.</p>
+    <p style="color:#666;font-size:13px">Defina a porcentagem dos pontos em cada faixa. A janela de recuperação após zerar a tolerância é fixa em 25% no total: 12,5% na primeira faixa e 12,5% na segunda.</p>
     <div class="form-group"><label>Dentro dos limites (%)</label><input id="regraPct100" type="number" min="0" max="100" value="100"></div>
-    <div class="form-group"><label>Tolerância excedida até +25% (%)</label><input id="regraPct75" type="number" min="0" max="100" value="75"></div>
-    <div class="form-group"><label>Tolerância excedida até +50% (%)</label><input id="regraPct50" type="number" min="0" max="100" value="50"></div>
-    <div class="form-group"><label>Tolerância excedida acima de +50%</label><div style="padding:10px;border:1px solid #ddd;border-radius:6px;background:#f8fafc"><strong>0% fixo</strong> — consumir mais de 50% além do saldo de tolerância zera a pontuação automática.</div><input id="regraPct0" type="hidden" value="0"></div>
+    <div class="form-group"><label>Primeiros +12,5% após zerar (%)</label><input id="regraPct75" type="number" min="0" max="100" value="75"></div>
+    <div class="form-group"><label>Próximos +12,5% (%)</label><input id="regraPct50" type="number" min="0" max="100" value="50"></div>
+    <div class="form-group"><label>Após +25% adicional</label><div style="padding:10px;border:1px solid #ddd;border-radius:6px;background:#f8fafc"><strong>0% fixo</strong> — ao completar 25% adicional além da tolerância, a pontuação automática zera.</div><input id="regraPct0" type="hidden" value="0"></div>
     <div id="previewRegraAtrasoAdmin" style="padding:10px;background:#f8fafc;border-radius:8px;font-size:13px;margin:10px 0"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
       <button class="btn-action" style="width:auto;background:#64748b" onclick="fecharConfiguracaoRegraAtraso()">Cancelar</button>
@@ -705,10 +705,10 @@
     function textoRegraAtraso(r=regraAtrasoAtual){
         return `<strong>Regra atual: ${r.dentroLimites}% / ${r.atrasoLeve}% / ${r.atrasoMaior}% / ${r.estourado}%.</strong><br>`+
         `• O saldo consumido é a soma do atraso no início com o atraso no término.<br>`+
-        `• Consumo até 100% da tolerância: <strong>${r.dentroLimites}%</strong> dos pontos.<br>`+
-        `• Consumo acima da tolerância, até +25%: <strong>${r.atrasoLeve}%</strong>.<br>`+
-        `• Consumo acima de +25%, até +50%: <strong>${r.atrasoMaior}%</strong>.<br>`+
-        `• Consumo acima de +50% da tolerância: <strong>${r.estourado}%</strong>.<br><small>Exemplo com tolerância de 10 min: até 10 min consumidos = primeira faixa; 11 a 13 = segunda; 14 a 15 = terceira; acima de 15 = 0%. O cálculo usa minutos completos.</small>`;
+        `• Enquanto o saldo estiver acima de 00:00: <strong>${r.dentroLimites}%</strong> dos pontos.<br>`+
+        `• Ao chegar a 00:00 e durante os primeiros +12,5%: <strong>${r.atrasoLeve}%</strong>.<br>`+
+        `• Nos próximos +12,5% (até +25% adicional no total): <strong>${r.atrasoMaior}%</strong>.<br>`+
+        `• Ao completar +25% adicional: <strong>${r.estourado}%</strong>.<br><small>Exemplo com tolerância de 10 min: 100% até 09:59; 75% de 10:00 a 11:14; 50% de 11:15 a 12:29; em 12:30 = 0%. As transições usam segundos exatos.</small>`;
     }
     function atualizarExplicacaoRegraAtrasoAdmin(){
         const el=document.getElementById('explicacaoRegraAtrasoAdmin'); if(el) el.innerHTML=textoRegraAtraso();
