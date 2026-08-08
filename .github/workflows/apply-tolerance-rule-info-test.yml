@@ -13,7 +13,7 @@ jobs:
         with:
           ref: test/tolerance-rule-25-v1
       - run: node patch-tolerance-rule-copy.mjs
-      - name: Commit rule copy and audit
+      - name: Commit rule copy
         run: |
           if git diff --quiet; then
             echo 'No patch needed'
@@ -21,6 +21,6 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index-ADMIN-v8.html .github/workflows/temporary-adm-quality-check.yml
+          git add index-ADMIN-v8.html
           git commit -m 'Align ADM rule text with 12.5 percent recovery bands'
           git push origin HEAD:test/tolerance-rule-25-v1
