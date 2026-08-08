@@ -17,3 +17,4 @@ once('• Consumo acima de +25%, até +50%: <strong>${r.atrasoMaior}%</strong>.<
 once('• Consumo acima de +50% da tolerância: <strong>${r.estourado}%</strong>.<br><small>Exemplo com tolerância de 10 min: até 10 min consumidos = primeira faixa; 11 a 13 = segunda; 14 a 15 = terceira; acima de 15 = 0%. O cálculo usa minutos completos.</small>','• Ao completar +25% adicional: <strong>${r.estourado}%</strong>.<br><small>Exemplo com tolerância de 10 min: 100% até 09:59; 75% de 10:00 a 11:14; 50% de 11:15 a 12:29; em 12:30 = 0%. As transições usam segundos exatos.</small>','zero copy');
 fs.writeFileSync(file,s);
 console.log('ADM rule copy aligned with 12.5% + 12.5% recovery bands.');
+// trigger test workflow after workflow permission adjustment
