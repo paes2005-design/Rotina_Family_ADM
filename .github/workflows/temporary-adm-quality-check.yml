@@ -45,9 +45,12 @@ jobs:
 
           // Regra explicada e totalizadores coerentes
           assert(html.includes('O saldo consumido é a soma do atraso no início com o atraso no término.'),'ADM explains shared tolerance balance');
-          assert(html.includes('Tolerância excedida até +25%'),'ADM 75% band label matches current rule');
-          assert(html.includes('Tolerância excedida até +50%'),'ADM 50% band label matches current rule');
-          assert(html.includes('Tolerância excedida acima de +50%'),'ADM 0% band label matches current rule');
+          assert(html.includes('Primeiros +12,5% após zerar'),'ADM 75% band label matches 12.5% recovery rule');
+          assert(html.includes('Próximos +12,5%'),'ADM 50% band label matches second 12.5% recovery rule');
+          assert(html.includes('Após +25% adicional'),'ADM 0% band label matches 25% total recovery cap');
+          assert(html.includes('100% até 09:59; 75% de 10:00 a 11:14; 50% de 11:15 a 12:29; em 12:30 = 0%'),'ADM example explains exact zero boundary');
+          assert(mon.includes('12,5%')&&mon.includes('25% adicional no total'),'Monitor rule modal explains both recovery bands');
+          assert(!html.includes('Tolerância excedida até +50%'),'old 50% extra wording is gone');
           assert(!html.includes('iniciar ou terminar depois do limite final sempre zera'),'old final-limit wording is gone');
           assert(!html.includes('if(!h.status || !h.status.includes("Prazo")) return;'),'Monitor points do not discard reviewed late-task points');
 
