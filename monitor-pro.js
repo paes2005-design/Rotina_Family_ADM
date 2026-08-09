@@ -11,6 +11,7 @@ if(!document.querySelector('link[data-manage-pro]')){
   document.head.appendChild(link);
 }
 import('./manage-pro.js').catch(e=>console.error('Gerenciamento responsivo:',e));
+import('./rewards-admin-ui-v2.js').catch(e=>console.error('Recompensas administrativas:',e));
 
 const escM=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
