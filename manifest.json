@@ -2,7 +2,7 @@
   "name": "Espaço de Metas - Administrador",
   "short_name": "Metas Admin",
   "description": "Painel de administração de metas e tarefas",
-  "start_url": "./index-ADMIN-v8.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
