@@ -1,0 +1,34 @@
+.mobile-bottom-nav,.monitor-native-cards{display:none}
+@media(max-width:780px){
+  /* Evita o flash da tela de logo/login enquanto o Firebase restaura uma sessão já autenticada. */
+  #telaAcesso{display:none}
+  body{padding:12px!important;padding-bottom:calc(86px + env(safe-area-inset-bottom))!important;overflow-x:hidden!important}
+  #sistemaPrincipal,.tab-content,#monitor,#cadastro,#dashboard,#recompensas{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important}
+  .tab-content{padding:14px!important;border-radius:15px!important;overflow:hidden!important}
+  .tab-nav{display:none!important}
+
+  #monitor .monitor-scroll-pro{display:none!important}
+  .monitor-native-cards{display:grid;gap:10px;width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+  .mon-app-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:'time main side' 'meta meta meta';align-items:center;gap:9px 10px;width:100%;max-width:100%;min-width:0;box-sizing:border-box;padding:11px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 3px 12px rgba(15,23,42,.05);overflow:hidden}
+  .mon-app-time{grid-area:time;background:#eeebff;color:#5138cc;border-radius:9px;padding:7px 8px;font-size:12px;font-weight:900;white-space:nowrap;max-width:92px;overflow:hidden;text-overflow:ellipsis}
+  .mon-app-main{grid-area:main;display:grid;grid-template-columns:36px minmax(0,1fr);align-items:center;gap:9px;min-width:0}
+  .task-icon-badge{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:#f3f0ff;border:1px solid #ddd7ff;font-size:19px;line-height:1;flex:0 0 auto}
+  .mon-app-copy{min-width:0;overflow:hidden}.mon-app-copy strong{display:block;color:#1e293b;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mon-app-copy span{display:block;color:#64748b;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  .mon-app-side{grid-area:side;display:grid;justify-items:end;gap:5px;min-width:0;max-width:145px}.mon-app-status{font-size:10px;font-weight:800;border-radius:999px;padding:5px 7px;white-space:normal;line-height:1.15;text-align:center;max-width:145px;overflow:visible;text-overflow:clip}.mon-app-status.ok{background:#eaf8ef;color:#16803d}.mon-app-status.partial{background:#fff4e6;color:#d26700}.mon-app-status.late{background:#ffeded;color:#c62828}.mon-app-status.pending{background:#f1f5f9;color:#475569}.mon-app-status.progress{background:#eaf2ff;color:#2563eb}.mon-app-points{font-size:11px;font-weight:900;color:#334155;white-space:nowrap}
+  .mon-app-meta{grid-area:meta;display:flex;align-items:center;gap:8px;padding-top:8px;border-top:1px solid #f1f5f9;min-width:0}.mon-app-meta>span:first-child{flex:0 0 auto}.mon-app-meta .real-time{flex:1;text-align:right;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#64748b;font-size:10px}.mon-app-meta>span:first-child{font-size:10px;color:#64748b}.mon-just-flag{flex:0 0 auto;width:34px;height:30px;border:1px solid #fecaca;background:#fff7f7;border-radius:9px;display:grid;place-items:center;font-size:16px;line-height:1;cursor:pointer;padding:0}.mon-just-flag:active{transform:scale(.96)}
+  .monitor-native-empty{padding:22px 12px;text-align:center;border:1px dashed #cbd5e1;border-radius:14px;color:#64748b;background:#f8fafc;font-size:12px}
+
+  .ger-task-card .task-icon-badge{width:34px;height:34px;font-size:18px}
+  .ger-task-card{grid-template-columns:auto auto minmax(0,1fr) auto!important}.ger-task-card .task-icon-badge{grid-column:2}.ger-task-card .ger-main{grid-column:3}.ger-task-card .ger-more{grid-column:4}.ger-task-card .ger-card-actions{grid-column:1/-1}
+
+  /* Ranking detalhado: a regra geral .tabela-scroll table usa min-width:640px.
+     No celular isso empurrava os valores para fora do cartão. */
+  #rankingDetalhadoDashboard .ranking-table-pro{min-width:0!important;width:100%!important;max-width:100%!important}
+  #rankingDetalhadoDashboard .ranking-table-pro tbody,
+  #rankingDetalhadoDashboard .ranking-table-pro tr,
+  #rankingDetalhadoDashboard .ranking-table-pro td{min-width:0!important;max-width:100%!important;box-sizing:border-box!important}
+
+  .mobile-bottom-nav{position:fixed;left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));z-index:11000;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;background:rgba(255,255,255,.96);border:1px solid #dfe5ec;border-radius:18px;padding:7px 6px;box-shadow:0 12px 35px rgba(15,23,42,.18);backdrop-filter:blur(10px);box-sizing:border-box;max-width:620px;margin:auto}
+  .mobile-bottom-nav button{min-width:0;border:0;background:transparent;border-radius:12px;padding:7px 2px 6px;display:grid;justify-items:center;gap:3px;color:#64748b;font-size:9px;font-weight:700;cursor:pointer;overflow:hidden}.mobile-bottom-nav .nav-ico{font-size:18px;line-height:1}.mobile-bottom-nav .nav-label{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mobile-bottom-nav button.active{background:#efedff;color:#5138cc}.mobile-bottom-nav button.active .nav-ico{transform:translateY(-1px)}
+}
+@media(max-width:390px){.mon-app-card{padding:9px;gap:7px}.mon-app-main{grid-template-columns:32px minmax(0,1fr);gap:7px}.task-icon-badge{width:32px;height:32px;font-size:17px}.mon-app-time{padding:6px;font-size:11px;max-width:78px}.mon-app-copy strong{font-size:12px}.mon-app-side{max-width:128px}.mon-app-status{font-size:9px;padding:4px 6px;max-width:128px}.mon-just-flag{width:32px;height:28px}.mobile-bottom-nav{left:5px;right:5px;padding:6px 4px}.mobile-bottom-nav .nav-ico{font-size:17px}.mobile-bottom-nav button{font-size:8px}}

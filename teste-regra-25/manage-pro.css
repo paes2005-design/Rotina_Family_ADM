@@ -1,0 +1,47 @@
+.gerenciar-mobile-pro{display:none}
+@media(max-width:780px){
+  html,body{max-width:100%;overflow-x:hidden}
+  #sistemaPrincipal,.container,.tab-content,#cadastro,#monitor,#dashboard{max-width:100%;min-width:0}
+  .gerenciar-box-original{display:none!important}
+  .gerenciar-mobile-pro{display:block;max-width:100%;min-width:0;margin-top:18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:18px;padding:14px;box-sizing:border-box;overflow:hidden}
+  .ger-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;min-width:0}
+  .ger-head>div{min-width:0}
+  .ger-eyebrow{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#7c3aed}
+  .ger-head h3{margin:4px 0 4px;font-size:18px;line-height:1.2;color:#1e293b}
+  .ger-head p{margin:0;color:#64748b;font-size:12px;line-height:1.4}
+  .ger-filter-btn{flex:0 0 auto;border:0;background:#5b3fd4;color:#fff;border-radius:12px;padding:9px 11px;font-weight:800;font-size:12px}
+  .ger-filter-panel{display:none;margin-top:12px;padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:14px}
+  .ger-filter-panel.open{display:grid;gap:10px}
+  .ger-filter-panel label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#334155}
+  .ger-filter-panel select{width:100%;max-width:100%;box-sizing:border-box}
+  .ger-filter-panel button{border:1px solid #cbd5e1;background:#fff;border-radius:10px;padding:9px;font-weight:700;color:#475569}
+  .ger-day-strip{display:grid;grid-template-columns:repeat(7,minmax(38px,1fr));gap:5px;margin:14px 0 12px;width:100%;max-width:100%}
+  .ger-day-strip button{min-width:0;border:1px solid #d8e0e8;background:#fff;color:#475569;border-radius:10px;padding:9px 2px;font-size:11px;font-weight:800}
+  .ger-day-strip button.active{background:#5b3fd4;color:#fff;border-color:#5b3fd4;box-shadow:0 4px 10px rgba(91,63,212,.2)}
+  .ger-day-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:4px 2px 9px;min-width:0}
+  .ger-day-heading strong{font-size:15px;color:#1e293b;min-width:0}
+  .ger-day-heading span{font-size:11px;color:#64748b;background:#eef2f7;border-radius:999px;padding:5px 8px;white-space:nowrap}
+  .ger-cards{display:grid;gap:9px;min-width:0}
+  .ger-task-card{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;max-width:100%;min-width:0;box-sizing:border-box;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px;box-shadow:0 3px 10px rgba(15,23,42,.04)}
+  .ger-time{font-size:14px;font-weight:900;color:#5138cc;background:#f0edff;border-radius:9px;padding:7px 8px;white-space:nowrap}
+  .ger-main{display:grid;gap:2px;min-width:0;overflow:hidden}
+  .ger-main strong{font-size:14px;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ger-main span{font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ger-more{width:34px;height:34px;border:0;background:#f8fafc;border-radius:50%;font-size:22px;line-height:1;color:#334155}
+  .ger-card-actions{display:none;grid-column:1/-1;grid-template-columns:1fr 1fr;gap:8px;border-top:1px solid #eef2f7;padding-top:9px}
+  .ger-card-actions.open{display:grid}
+  .ger-card-actions button{border-radius:10px;padding:9px;border:1px solid #dbe3ec;background:#fff;font-weight:800;font-size:12px}
+  .ger-card-actions .ger-edit{color:#4338ca}
+  .ger-card-actions .ger-delete{color:#dc2626;border-color:#fecaca;background:#fff7f7}
+  .ger-empty{display:grid;justify-items:center;text-align:center;gap:5px;padding:24px 12px;color:#64748b;background:#fff;border:1px dashed #cbd5e1;border-radius:14px}
+  .ger-empty span{font-size:26px}.ger-empty strong{color:#334155}.ger-empty small{font-size:11px}
+}
+@media(max-width:420px){
+  .gerenciar-mobile-pro{padding:11px;border-radius:15px}
+  .ger-head h3{font-size:16px}
+  .ger-filter-btn{padding:8px 9px}
+  .ger-day-strip{gap:3px}
+  .ger-day-strip button{font-size:10px;padding:8px 1px}
+  .ger-task-card{gap:8px;padding:10px}
+  .ger-time{font-size:13px;padding:6px}
+}
