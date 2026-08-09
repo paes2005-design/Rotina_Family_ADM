@@ -27,6 +27,7 @@
   .ger-main{display:grid;gap:2px;min-width:0;overflow:hidden}
   .ger-main strong{font-size:14px;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ger-main span{font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ger-tolerance{font-size:10px;font-weight:700;color:#64748b;background:#f1f5f9;border-radius:999px;padding:2px 5px;white-space:nowrap}
   .ger-more{width:34px;height:34px;border:0;background:#f8fafc;border-radius:50%;font-size:22px;line-height:1;color:#334155}
   .ger-card-actions{display:none;grid-column:1/-1;grid-template-columns:1fr 1fr;gap:8px;border-top:1px solid #eef2f7;padding-top:9px}
   .ger-card-actions.open{display:grid}
@@ -44,4 +45,5 @@
   .ger-day-strip button{font-size:10px;padding:8px 1px}
   .ger-task-card{gap:8px;padding:10px}
   .ger-time{font-size:13px;padding:6px}
+  .ger-tolerance{font-size:9px;padding:1px 4px}
 }
