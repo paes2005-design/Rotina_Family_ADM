@@ -44,7 +44,7 @@ jobs:
           assert(sw.includes('APP_MAIN_URL'),'legacy root navigation is redirected');
           assert(mobile.includes('MOBILE_QUERY.matches'),'mobile UI remains viewport-gated');
 
-          // Task-management presentation: preserve previous mobile layout and add tolerance only as auxiliary info
+          // Task-management presentation: keep description and put tolerance next to schedule
           assert(html.includes('<th>Horário sugerido / Tolerância</th>'),'management table header includes tolerance');
           assert(html.includes('Tolerância: ${Number(t.tempoLimite)||0} min'),'each managed task exposes its registered tolerance in source table');
           assert(html.includes('<strong>${t.horaSugeridaInicio} às ${t.horaSugeridaFim}</strong>'),'suggested schedule remains displayed');
@@ -52,8 +52,12 @@ jobs:
           assert(manage.includes("const horario=celHorario?.querySelector('strong')"),'mobile card reads schedule separately from tolerance');
           assert(manage.includes("const tolerancia=(textoTol.match(/Tolerância:"),'mobile card reads tolerance separately');
           assert(manage.includes('<strong>${escG(x.tarefa)}</strong>'),'mobile card preserves task name/description');
-          assert(manage.includes("<span>${escG(x.usuario)} <small class=\"ger-tolerance\">· Tol. ${escG(x.tolerancia)} min</small></span>"),'mobile card adds only compact tolerance beside auxiliary line');
-          assert(manageCss.includes('.ger-tolerance{font-size:10px'),'compact tolerance styling exists');
+          assert(manage.includes('<div class="ger-time-block">'),'mobile card groups schedule and tolerance together');
+          assert(manage.includes('<small class="ger-tolerance">Tol. ${escG(x.tolerancia)} min</small>'),'mobile card puts compact tolerance directly below schedule');
+          assert(manage.includes('<span>${escG(x.usuario)}</span>'),'integrant line stays clean and separate');
+          assert(!manage.includes('${escG(x.usuario)} <small class="ger-tolerance">'),'tolerance no longer competes with description/integrant line');
+          assert(manageCss.includes('.ger-time-block{display:grid'),'schedule/tolerance block styling exists');
+          assert(manageCss.includes('.ger-tolerance{display:inline-flex'),'compact tolerance styling exists');
           assert(manageCss.includes('.ger-main strong{font-size:14px'),'task description styling remains intact');
           assert(manageCss.includes('.ger-time{font-size:14px'),'original schedule badge styling remains intact');
 
