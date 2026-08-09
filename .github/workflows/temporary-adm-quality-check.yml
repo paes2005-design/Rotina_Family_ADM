@@ -34,6 +34,7 @@ jobs:
           assert(!mobile.includes('setInterval('),'mobile UI has no continuous interval');
           assert(!review.includes('setInterval('),'review module has no continuous interval');
           assert(!early.includes('setInterval('),'early-start module has no continuous interval');
+          assert(!dash.includes('setInterval('),'dashboard/rewards navigation adds no continuous interval');
           assert(!review.includes('MutationObserver'),'review module adds no mutation observer');
           assert(early.includes("observe(tb,{childList:true,subtree:false})"),'early-start observer is restricted to direct rows');
           assert(!mobile.includes('adm-enhancements.js'),'known freezing enhancement is not imported');
@@ -101,6 +102,33 @@ jobs:
           assert(eq(box.fn('No Prazo — atraso leve (75%)'),['partial','75% · atraso leve']),'75% status is correct');
           assert(eq(box.fn('No Prazo — atraso maior (50%)'),['partial','50% · atraso maior']),'50% status is correct');
           assert(eq(box.fn('Atrasado (0%)'),['late','0% · Atrasado']),'0% status is correct');
+
+          // Period navigation on every time-based ADM filter
+          assert(dash.includes('function moverData(ref, periodo, direcao)'),'shared previous/next period navigator exists');
+          assert(dash.includes("periodo==='semanal'?7:1"),'week navigation moves exactly seven days');
+          assert(dash.includes("periodo==='mensal') d.setMonth"),'month navigation moves by calendar month');
+          assert(dash.includes('adicionarNavegacaoMonitor'),'Monitor date filter receives previous/today/next navigation');
+          assert(dash.includes("input.value=iso(new Date());window.atualizarMonitor?.()"),'Monitor can return directly to today');
+          assert(dash.includes('dashboardPeriodNav'),'Dashboard date filter has previous/current/next navigation');
+          assert(dash.includes('periodoAtual=b.dataset.p'),'Dashboard navigation follows Day/Week/Month selection');
+          assert(dash.includes('rewardPeriodNav'),'Rewards history has previous/current/next navigation');
+          assert(dash.includes('periodoRecompensas=b.dataset.rp'),'Rewards navigation follows Day/Week/Month selection');
+          assert(dash.includes('function intervaloPeriodo(ref, periodo)'),'shared day/week/month boundaries exist');
+
+          // Rewards: bounded history, publication state, and dashboard metrics
+          assert(dash.includes('Histórico de Resgates'),'rewards uses period-based history instead of a continuous heading');
+          assert(dash.includes('Sem resgates no período selecionado.'),'empty selected period is explicit');
+          assert(dash.includes('reward-history-day'),'resgates are grouped by local calendar day');
+          assert(dash.includes('dataLocalRegistro(r.criadoEm)'),'redemption timestamps are converted to local calendar day');
+          assert(dash.includes("window.alternarRecompensa=async function"),'reward publish/deactivate action exists');
+          assert(dash.includes("{ativa:!ativaAtual,atualizadoEm:new Date().toISOString()}"),'publish state toggles without deleting historical records');
+          assert(dash.includes("ativa?'Desativar':'Publicar'"),'catalog exposes Publish/Deactivate control');
+          assert(dash.includes("r.ativa!==false"),'legacy rewards remain published by default');
+          assert(dash.includes("getDocs(query(collection(db,'resgates')"),'Dashboard reads redemption records for period metrics');
+          assert(dash.includes('Somente pedidos aprovados no período'),'Dashboard resgatado KPI counts approved redemptions');
+          assert(dash.includes('Resgatado ÷ alcançado'),'Dashboard exposes redeemed percentage definition');
+          assert(dash.includes("r.status==='Aprovado'"),'redeemed points exclude pending/refused requests');
+          assert(dash.includes("(r.status||'Pendente')==='Pendente'"),'pending points remain separate');
 
           // Dashboard / ranking / core flows
           assert(dash.includes('rankingDetalhadoDashboard'),'detailed ranking renderer remains');
