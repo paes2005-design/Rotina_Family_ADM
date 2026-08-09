@@ -1,5 +1,5 @@
 import { getApps, getApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, query, where, getDocs, doc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, query, where, getDocs, doc, writeBatch, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 if(!document.querySelector('link[data-monitor-pro]')){
   const link=document.createElement('link');
@@ -12,18 +12,74 @@ import('./monitor-pro.js').catch(e=>console.error('Monitor profissional:',e));
 
 const obterDb = () => getApps().length ? getFirestore(getApp()) : null;
 let periodoAtual = 'semanal';
+let periodoRecompensas = 'diario';
 let dashboardMontada = false;
+let recompensasMontada = false;
 
 const esc = (v='') => String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const inicioSemana = d => { const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-x.getDay()); return x; };
 const cores=['#315e8a','#4d8f74','#d39b3a','#9c6ade','#d1605d','#5b7c99','#7b8f47'];
 
+function dataDoInput(id){
+  const valor=document.getElementById(id)?.value;
+  return new Date((valor||iso(new Date()))+'T12:00:00');
+}
+function moverData(ref, periodo, direcao){
+  const d=new Date(ref);
+  if(periodo==='mensal') d.setMonth(d.getMonth()+direcao);
+  else d.setDate(d.getDate()+(periodo==='semanal'?7:1)*direcao);
+  return d;
+}
+function intervaloPeriodo(ref, periodo){
+  const dia=iso(ref);
+  if(periodo==='diario') return {ini:dia,fim:dia};
+  if(periodo==='mensal') return {ini:`${ref.getFullYear()}-${String(ref.getMonth()+1).padStart(2,'0')}-01`,fim:iso(new Date(ref.getFullYear(),ref.getMonth()+1,0))};
+  const iniD=inicioSemana(ref),fimD=new Date(iniD);fimD.setDate(fimD.getDate()+6);
+  return {ini:iso(iniD),fim:iso(fimD)};
+}
+function legendaPeriodo(ref, periodo){
+  const {ini,fim}=intervaloPeriodo(ref,periodo);
+  if(periodo==='diario') return ref.toLocaleDateString('pt-BR');
+  if(periodo==='mensal') return ref.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  const [ai,mi,di]=ini.split('-').map(Number),[af,mf,df]=fim.split('-').map(Number);
+  return `${new Date(ai,mi-1,di).toLocaleDateString('pt-BR')} a ${new Date(af,mf-1,df).toLocaleDateString('pt-BR')}`;
+}
+function garantirEstiloNavegacao(){
+  if(document.getElementById('period-nav-style')) return;
+  const style=document.createElement('style');style.id='period-nav-style';style.textContent=`
+    .period-nav{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:7px}
+    .period-nav button,.reward-toggle{border:1px solid #d5dee8;background:#fff;color:#40566d;border-radius:9px;padding:7px 10px;font-weight:700;cursor:pointer}
+    .period-nav button:hover,.reward-toggle:hover{background:#f3f7fb}
+    .period-nav .period-current{background:#eef5fb;color:#315e8a}
+    .period-reference-label{font-size:12px;color:#64748b;font-weight:700;margin-top:6px;text-transform:capitalize}
+    .reward-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:15px 0}
+    .reward-kpi{border:1px solid #dbe4ec;border-radius:13px;padding:12px;background:#f8fafc}
+    .reward-kpi small{display:block;color:#64748b;font-size:11px;font-weight:800;text-transform:uppercase}
+    .reward-kpi strong{display:block;color:#1e293b;font-size:21px;margin-top:4px}
+    .reward-history-day{border:1px solid #e2e8f0;border-radius:13px;margin:10px 0;overflow:hidden}
+    .reward-history-day>strong{display:block;background:#f8fafc;padding:9px 12px;color:#475569}
+    .reward-history-row{padding:11px 12px;border-top:1px solid #edf2f7}
+    .reward-catalog-status{display:inline-block;border-radius:999px;padding:3px 7px;font-size:10px;font-weight:800;margin-left:6px}
+    .reward-catalog-status.on{background:#dcfce7;color:#166534}.reward-catalog-status.off{background:#e2e8f0;color:#475569}
+    @media(max-width:620px){.reward-summary{grid-template-columns:1fr 1fr}.period-nav button{padding:7px 9px}}
+  `;document.head.appendChild(style);
+}
+function adicionarNavegacaoMonitor(){
+  const input=document.getElementById('filtroData');
+  if(!input||document.getElementById('monitorPeriodNav')) return;
+  const nav=document.createElement('div');nav.id='monitorPeriodNav';nav.className='period-nav';
+  nav.innerHTML='<button type="button" data-move="-1">‹ Dia anterior</button><button type="button" class="period-current">Hoje</button><button type="button" data-move="1">Próximo dia ›</button>';
+  input.insertAdjacentElement('afterend',nav);
+  nav.querySelectorAll('[data-move]').forEach(btn=>btn.addEventListener('click',()=>{input.value=iso(moverData(dataDoInput('filtroData'),'diario',Number(btn.dataset.move)));window.atualizarMonitor?.();}));
+  nav.querySelector('.period-current').addEventListener('click',()=>{input.value=iso(new Date());window.atualizarMonitor?.();});
+}
+
 function montarDashboard(){
   const root=document.getElementById('dashboard'); if(!root||dashboardMontada) return;
   root.innerHTML=`
     <div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap">
-      <div><h2 style="margin-bottom:4px">Dashboard de Desempenho</h2><p style="color:#667788;margin-top:0">Ranking, pontualidade e evolução da rotina familiar.</p></div>
+      <div><h2 style="margin-bottom:4px">Dashboard de Desempenho</h2><p style="color:#667788;margin-top:0">Ranking, pontualidade, pontos e resgates por período.</p></div>
       <div class="period-tabs">
         <button id="dashTabDiario" class="period-tab" data-p="diario">Dia</button>
         <button id="dashTabSemanal" class="period-tab active" data-p="semanal">Semana</button>
@@ -31,7 +87,7 @@ function montarDashboard(){
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:15px 0">
-      <div><label for="dashboardDataRef">Data de referência</label><input type="date" id="dashboardDataRef"></div>
+      <div><label for="dashboardDataRef">Data de referência</label><input type="date" id="dashboardDataRef"><div id="dashboardPeriodNav" class="period-nav"><button type="button" data-move="-1">‹ Anterior</button><button type="button" class="period-current">Período atual</button><button type="button" data-move="1">Próximo ›</button></div><div id="dashboardPeriodoRef" class="period-reference-label"></div></div>
       <div><label for="dashboardPerfil">Filtrar integrante</label><select id="dashboardPerfil"><option value="">Todos</option></select></div>
     </div>
     <div class="dashboard-pro">
@@ -42,12 +98,14 @@ function montarDashboard(){
       </div>
       <div class="dashboard-grid-2">
         <div class="dashboard-panel"><h3>✅ Cumprimento das tarefas</h3><div class="sub">No prazo, atraso parcial e tarefas zeradas</div><div id="graficoStatusDashboard" class="chart-wrap"></div></div>
-        <div class="dashboard-panel"><h3>📈 Evolução dos últimos 7 dias</h3><div class="sub">Pontos conquistados por dia</div><div id="graficoEvolucaoDashboard" class="chart-wrap"></div></div>
+        <div class="dashboard-panel"><h3>📈 Evolução dos últimos 7 dias</h3><div class="sub">Pontos conquistados por dia até a data de referência</div><div id="graficoEvolucaoDashboard" class="chart-wrap"></div></div>
       </div>
       <div class="dashboard-panel"><h3>Ranking detalhado</h3><div class="sub">Pontuação, pontualidade, tarefas e sequência</div><div class="tabela-scroll"><div id="rankingDetalhadoDashboard"></div></div></div>
     </div>`;
   document.getElementById('dashboardDataRef').value=iso(new Date());
   root.querySelectorAll('.period-tab').forEach(b=>b.addEventListener('click',()=>{periodoAtual=b.dataset.p;root.querySelectorAll('.period-tab').forEach(x=>x.classList.toggle('active',x===b));window.renderizarDashboard();}));
+  document.getElementById('dashboardPeriodNav').querySelectorAll('[data-move]').forEach(btn=>btn.addEventListener('click',()=>{const input=document.getElementById('dashboardDataRef');input.value=iso(moverData(dataDoInput('dashboardDataRef'),periodoAtual,Number(btn.dataset.move)));window.renderizarDashboard();}));
+  document.getElementById('dashboardPeriodNav').querySelector('.period-current').addEventListener('click',()=>{document.getElementById('dashboardDataRef').value=iso(new Date());window.renderizarDashboard();});
   document.getElementById('dashboardDataRef').addEventListener('change',()=>window.renderizarDashboard());
   document.getElementById('dashboardPerfil').addEventListener('change',()=>window.renderizarDashboard());
   dashboardMontada=true;
@@ -72,10 +130,18 @@ function svgLinha(pontos){
 }
 function ehPontual(h){return h.faixaAtraso?h.faixaAtraso==='dentro-limites':(h.status?.includes('Prazo')&&!h.iniciouComAtraso);}
 function sequencia(hist){const datas=new Set(hist.filter(ehPontual).map(h=>h.data));let d=new Date(),n=0;for(let i=0;i<60;i++){const k=iso(d);if(datas.has(k))n++;else if(i>0)break;d.setDate(d.getDate()-1)}return n;}
+function dataLocalRegistro(valor){
+  const d=new Date(valor||'');
+  return Number.isFinite(d.getTime())?iso(d):'';
+}
 
 async function carregarDados(grupoId, db){
-  const [ps,hs]=await Promise.all([getDocs(query(collection(db,'perfis'),where('grupoId','==',grupoId))),getDocs(query(collection(db,'historico'),where('grupoId','==',grupoId)))]);
-  return {perfis:ps.docs.map(d=>({id:d.id,...d.data()})),historico:hs.docs.map(d=>({id:d.id,...d.data()}))};
+  const [ps,hs,rs]=await Promise.all([
+    getDocs(query(collection(db,'perfis'),where('grupoId','==',grupoId))),
+    getDocs(query(collection(db,'historico'),where('grupoId','==',grupoId))),
+    getDocs(query(collection(db,'resgates'),where('grupoId','==',grupoId)))
+  ]);
+  return {perfis:ps.docs.map(d=>({id:d.id,...d.data()})),historico:hs.docs.map(d=>({id:d.id,...d.data()})),resgates:rs.docs.map(d=>({id:d.id,...d.data()}))};
 }
 
 window.renderizarDashboard=async function(){
@@ -83,11 +149,12 @@ window.renderizarDashboard=async function(){
   const grupoId=(document.getElementById('displayCodigoCliente')?.innerText||'').trim(); if(!grupoId||grupoId==='--'||grupoId==='CLI-Gen') return;
   const root=document.getElementById('dashboardFamilia'); root.innerHTML='<div class="dashboard-kpi"><small>Atualizando</small><strong>...</strong><em>Carregando dados</em></div>';
   try{
-    const {perfis,historico}=await carregarDados(grupoId,db),sel=document.getElementById('dashboardPerfil'),atual=sel.value;
+    const {perfis,historico,resgates}=await carregarDados(grupoId,db),sel=document.getElementById('dashboardPerfil'),atual=sel.value;
     sel.innerHTML='<option value="">Todos</option>'+perfis.map(p=>`<option value="${esc(p.id)}">${esc(p.nome)}</option>`).join(''); if([...sel.options].some(o=>o.value===atual))sel.value=atual;
-    const ref=new Date((document.getElementById('dashboardDataRef').value||iso(new Date()))+'T12:00:00'),dia=iso(ref),iniS=iso(inicioSemana(ref)),fimSD=new Date(inicioSemana(ref));fimSD.setDate(fimSD.getDate()+6);const fimS=iso(fimSD),iniM=`${ref.getFullYear()}-${String(ref.getMonth()+1).padStart(2,'0')}-01`,fimM=iso(new Date(ref.getFullYear(),ref.getMonth()+1,0));
+    const ref=dataDoInput('dashboardDataRef'),dia=iso(ref),iniS=iso(inicioSemana(ref)),fimSD=new Date(inicioSemana(ref));fimSD.setDate(fimSD.getDate()+6);const fimS=iso(fimSD),iniM=`${ref.getFullYear()}-${String(ref.getMonth()+1).padStart(2,'0')}-01`,fimM=iso(new Date(ref.getFullYear(),ref.getMonth()+1,0));
     const campo=periodoAtual;
     const periodoIni=campo==='diario'?dia:campo==='mensal'?iniM:iniS, periodoFim=campo==='diario'?dia:campo==='mensal'?fimM:fimS;
+    document.getElementById('dashboardPeriodoRef').innerText=legendaPeriodo(ref,campo);
     const vis=perfis.filter(p=>!sel.value||p.id===sel.value).map(p=>{
       const h=historico.filter(x=>x.perfilId===p.id||(!x.perfilId&&x.perfilNome===p.nome));
       const soma=(a,b)=>h.filter(x=>x.data>=a&&x.data<=b).reduce((q,x)=>q+(Number(x.pontosGanhos)||0),0);
@@ -97,14 +164,75 @@ window.renderizarDashboard=async function(){
     const ord=[...vis].sort((a,b)=>b[campo]-a[campo]);
     const perfilSelecionado=perfis.find(p=>p.id===sel.value);
     const hp=historico.filter(x=>x.data>=periodoIni&&x.data<=periodoFim&&(!sel.value||x.perfilId===sel.value||(!x.perfilId&&x.perfilNome===perfilSelecionado?.nome)));
+    const resgatesPeriodo=resgates.filter(r=>{const d=dataLocalRegistro(r.criadoEm);return d>=periodoIni&&d<=periodoFim&&(!sel.value||r.perfilId===sel.value||(!r.perfilId&&r.perfilNome===perfilSelecionado?.nome));});
     const pts=ord.reduce((q,x)=>q+x[campo],0),concl=hp.length,prazo=hp.filter(ehPontual).length,taxa=concl?Math.round(prazo/concl*100):0,lead=ord[0];
-    root.innerHTML=`<div class="dashboard-kpi"><small>🏆 Líder</small><strong>${lead?esc(lead.nome):'—'}</strong><em>${lead?lead[campo]+' pontos':'Sem dados'}</em></div><div class="dashboard-kpi"><small>⭐ Pontos do período</small><strong>${pts}</strong><em>Somatório da seleção</em></div><div class="dashboard-kpi"><small>✅ Pontualidade</small><strong>${taxa}%</strong><em>${prazo} de ${concl} concluídas</em></div><div class="dashboard-kpi"><small>🔥 Maior sequência</small><strong>${ord.length?Math.max(...ord.map(x=>x.seq)):0} dias</strong><em>Sequência atual</em></div>`;
+    const resgatados=resgatesPeriodo.filter(r=>r.status==='Aprovado').reduce((s,r)=>s+(Number(r.pontos)||0),0);
+    const pendentes=resgatesPeriodo.filter(r=>(r.status||'Pendente')==='Pendente').reduce((s,r)=>s+(Number(r.pontos)||0),0);
+    const percentualResgatado=pts>0?Math.round(resgatados/pts*100):0;
+    root.innerHTML=`<div class="dashboard-kpi"><small>🏆 Líder</small><strong>${lead?esc(lead.nome):'—'}</strong><em>${lead?lead[campo]+' pontos':'Sem dados'}</em></div><div class="dashboard-kpi"><small>⭐ Alcançado</small><strong>${pts} pts</strong><em>Pontos conquistados no período</em></div><div class="dashboard-kpi"><small>🎁 Resgatado</small><strong>${resgatados} pts</strong><em>Somente pedidos aprovados no período</em></div><div class="dashboard-kpi"><small>📉 % resgatado</small><strong>${percentualResgatado}%</strong><em>Resgatado ÷ alcançado</em></div><div class="dashboard-kpi"><small>⏳ Pendente</small><strong>${pendentes} pts</strong><em>Pedidos aguardando decisão</em></div><div class="dashboard-kpi"><small>✅ Pontualidade</small><strong>${taxa}%</strong><em>${prazo} de ${concl} concluídas</em></div><div class="dashboard-kpi"><small>🔥 Maior sequência</small><strong>${ord.length?Math.max(...ord.map(x=>x.seq)):0} dias</strong><em>Sequência atual</em></div>`;
     const top=ord.slice(0,3),slots=[top[1],top[0],top[2]],cls=['second','first','third'],med=['🥈','🥇','🥉'];document.getElementById('podioDashboard').innerHTML=slots.map((x,i)=>x?`<div class="podium-card ${cls[i]}"><div class="podium-rank">${med[i]}</div><div class="podium-name">${esc(x.nome)}</div><div class="podium-points">${x[campo]} pontos<br>🔥 ${x.seq} dias</div></div>`:'<div></div>').join('');
     document.getElementById('dashboardPeriodoLegenda').innerText=campo==='diario'?'Ranking do dia selecionado':campo==='mensal'?'Ranking do mês selecionado':'Ranking da semana selecionada';document.getElementById('graficoPontosDashboard').innerHTML=svgBarras(ord,campo);
     const cont={prazo100:hp.filter(ehPontual).length,parcial:hp.filter(x=>x.status?.includes('Prazo')&&!ehPontual(x)).length,zerado:hp.filter(x=>x.status?.includes('Atrasado')||Number(x.percentualAplicado)===0).length};document.getElementById('graficoStatusDashboard').innerHTML=svgStatus(cont);
     const ev=[];for(let i=6;i>=0;i--){const d=new Date(ref);d.setDate(d.getDate()-i);const k=iso(d);ev.push({label:d.toLocaleDateString('pt-BR',{weekday:'short'}).replace('.',''),valor:historico.filter(x=>x.data===k&&(!sel.value||x.perfilId===sel.value)).reduce((q,x)=>q+(Number(x.pontosGanhos)||0),0)})}document.getElementById('graficoEvolucaoDashboard').innerHTML=svgLinha(ev);
     document.getElementById('rankingDetalhadoDashboard').innerHTML=ord.length?`<table class="ranking-table-pro"><thead><tr><th>#</th><th>Integrante</th><th>Pontos</th><th>Pontualidade</th><th>Concluídas</th><th>Sequência</th></tr></thead><tbody>${ord.map((x,i)=>`<tr><td>${i+1}º</td><td><strong>${esc(x.nome)}</strong></td><td>${x[campo]}</td><td>${x.concluidas?Math.round(x.prazo/x.concluidas*100):0}%</td><td>${x.concluidas}</td><td>🔥 ${x.seq}</td></tr>`).join('')}</tbody></table>`:'<p>Sem dados no período.</p>';
   }catch(e){console.error('Dashboard ranking:',e);root.innerHTML='<div class="dashboard-kpi"><small>Dashboard</small><strong>Não foi possível carregar</strong><em>Atualize a página e tente novamente.</em></div>'}
+};
+
+function montarRecompensas(){
+  const root=document.getElementById('recompensas'); if(!root||recompensasMontada) return;
+  root.innerHTML=`
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start"><div><h2 style="margin-bottom:4px">Recompensas</h2><p style="margin-top:0;color:#64748b">Catálogo publicado e histórico de resgates por período.</p></div><div class="period-tabs"><button class="period-tab active" data-rp="diario">Dia</button><button class="period-tab" data-rp="semanal">Semana</button><button class="period-tab" data-rp="mensal">Mês</button></div></div>
+    <div style="background:#fafafa;padding:15px;border-radius:8px;border-left:4px solid var(--success);margin-bottom:20px">
+      <div class="form-group"><label for="recompensaNome">Recompensa:</label><input type="text" id="recompensaNome" placeholder="Ex: Escolher o filme"></div>
+      <div class="form-group"><label for="recompensaPontos">Custo em pontos:</label><input type="text" id="recompensaPontos" placeholder="Ex: 500"></div>
+      <button class="btn-action" style="width:auto;background:var(--success)" onclick="salvarRecompensa()">Adicionar recompensa</button>
+    </div>
+    <h3>Catálogo</h3><div id="listaRecompensasAdmin"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:25px">
+      <div><label for="recompensaDataRef">Histórico de referência</label><input type="date" id="recompensaDataRef"><div id="rewardPeriodNav" class="period-nav"><button type="button" data-move="-1">‹ Anterior</button><button type="button" class="period-current">Período atual</button><button type="button" data-move="1">Próximo ›</button></div><div id="rewardPeriodoRef" class="period-reference-label"></div></div>
+      <div><label for="recompensaPerfil">Filtrar integrante</label><select id="recompensaPerfil"><option value="">Todos</option></select></div>
+    </div>
+    <div id="rewardResumo" class="reward-summary"></div>
+    <h3>Histórico de Resgates</h3><div id="listaResgatesAdmin"></div>`;
+  document.getElementById('recompensaDataRef').value=iso(new Date());
+  root.querySelectorAll('[data-rp]').forEach(b=>b.addEventListener('click',()=>{periodoRecompensas=b.dataset.rp;root.querySelectorAll('[data-rp]').forEach(x=>x.classList.toggle('active',x===b));window.renderizarResgatesAdmin();}));
+  document.getElementById('rewardPeriodNav').querySelectorAll('[data-move]').forEach(btn=>btn.addEventListener('click',()=>{const input=document.getElementById('recompensaDataRef');input.value=iso(moverData(dataDoInput('recompensaDataRef'),periodoRecompensas,Number(btn.dataset.move)));window.renderizarResgatesAdmin();}));
+  document.getElementById('rewardPeriodNav').querySelector('.period-current').addEventListener('click',()=>{document.getElementById('recompensaDataRef').value=iso(new Date());window.renderizarResgatesAdmin();});
+  document.getElementById('recompensaDataRef').addEventListener('change',()=>window.renderizarResgatesAdmin());
+  document.getElementById('recompensaPerfil').addEventListener('change',()=>window.renderizarResgatesAdmin());
+  recompensasMontada=true;
+}
+async function carregarColecaoGrupo(nome){
+  const db=obterDb();if(!db)return [];
+  const grupoId=(document.getElementById('displayCodigoCliente')?.innerText||'').trim();if(!grupoId||grupoId==='--'||grupoId==='CLI-Gen')return [];
+  const snap=await getDocs(query(collection(db,nome),where('grupoId','==',grupoId)));
+  return snap.docs.map(d=>({id:d.id,...d.data()}));
+}
+window.alternarRecompensa=async function(id,ativaAtual){
+  const db=obterDb();if(!db)return alert('Banco de dados ainda não está disponível.');
+  try{await updateDoc(doc(db,'recompensas',id),{ativa:!ativaAtual,atualizadoEm:new Date().toISOString()});await window.renderizarRecompensasAdmin();}
+  catch(e){console.error('Publicação da recompensa:',e);alert('Não foi possível alterar a publicação da recompensa.');}
+};
+window.renderizarRecompensasAdmin=async function(){
+  montarRecompensas();const el=document.getElementById('listaRecompensasAdmin');if(!el)return;
+  try{
+    const lista=(await carregarColecaoGrupo('recompensas')).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+    el.innerHTML=lista.map(r=>{const ativa=r.ativa!==false;return `<div class="recompensa-item"><strong>${esc(r.nome)}</strong> — ${Number(r.pontos)||0} pts <span class="reward-catalog-status ${ativa?'on':'off'}">${ativa?'PUBLICADA':'DESATIVADA'}</span><div style="margin-top:9px;display:flex;gap:7px;flex-wrap:wrap"><button class="reward-toggle" onclick="alternarRecompensa('${r.id}',${ativa})">${ativa?'Desativar':'Publicar'}</button><button class="reward-toggle" onclick="excluirRecompensa('${r.id}')">Excluir</button></div></div>`}).join('')||'<p>Nenhuma recompensa.</p>';
+  }catch(e){console.error('Catálogo de recompensas:',e);el.innerHTML='<p>Não foi possível carregar o catálogo.</p>';}
+};
+window.renderizarResgatesAdmin=async function(){
+  montarRecompensas();const el=document.getElementById('listaResgatesAdmin'),resumo=document.getElementById('rewardResumo');if(!el||!resumo)return;
+  try{
+    const [resgates,perfis]=await Promise.all([carregarColecaoGrupo('resgates'),carregarColecaoGrupo('perfis')]);
+    const sel=document.getElementById('recompensaPerfil'),atual=sel.value;sel.innerHTML='<option value="">Todos</option>'+perfis.map(p=>`<option value="${esc(p.id)}">${esc(p.nome)}</option>`).join('');if([...sel.options].some(o=>o.value===atual))sel.value=atual;
+    const perfil=perfis.find(p=>p.id===sel.value),ref=dataDoInput('recompensaDataRef'),{ini,fim}=intervaloPeriodo(ref,periodoRecompensas);document.getElementById('rewardPeriodoRef').innerText=legendaPeriodo(ref,periodoRecompensas);
+    const lista=resgates.filter(r=>{const d=dataLocalRegistro(r.criadoEm);return d>=ini&&d<=fim&&(!sel.value||r.perfilId===sel.value||(!r.perfilId&&r.perfilNome===perfil?.nome));}).sort((a,b)=>(b.criadoEm||'').localeCompare(a.criadoEm||''));
+    const aprovados=lista.filter(r=>r.status==='Aprovado').reduce((s,r)=>s+(Number(r.pontos)||0),0),pendentes=lista.filter(r=>(r.status||'Pendente')==='Pendente').reduce((s,r)=>s+(Number(r.pontos)||0),0),recusados=lista.filter(r=>r.status==='Recusado').length;
+    resumo.innerHTML=`<div class="reward-kpi"><small>Pedidos</small><strong>${lista.length}</strong></div><div class="reward-kpi"><small>Aprovados</small><strong>${aprovados} pts</strong></div><div class="reward-kpi"><small>Pendentes</small><strong>${pendentes} pts</strong></div><div class="reward-kpi"><small>Recusados</small><strong>${recusados}</strong></div>`;
+    if(!lista.length){el.innerHTML='<p>Sem resgates no período selecionado.</p>';return;}
+    const grupos={};lista.forEach(r=>{const k=dataLocalRegistro(r.criadoEm)||'Sem data';(grupos[k]||(grupos[k]=[])).push(r);});
+    el.innerHTML=Object.keys(grupos).sort().reverse().map(k=>{const titulo=k==='Sem data'?k:new Date(k+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});return `<div class="reward-history-day"><strong>${esc(titulo)}</strong>${grupos[k].map(r=>`<div class="reward-history-row"><strong>${esc(r.perfilNome)}</strong> pediu <strong>${esc(r.recompensaNome)}</strong> (${Number(r.pontos)||0} pts) — ${esc(r.status||'Pendente')} ${(r.status||'Pendente')==='Pendente'?`<div style="margin-top:7px"><button onclick="decidirResgate('${r.id}','Aprovado')">Aprovar</button> <button onclick="decidirResgate('${r.id}','Recusado')">Recusar</button></div>`:''}</div>`).join('')}</div>`}).join('');
+  }catch(e){console.error('Histórico de resgates:',e);el.innerHTML='<p>Não foi possível carregar o histórico.</p>';}
 };
 
 const ordemDiasRecorrencia=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
@@ -197,4 +325,4 @@ window.excluirTarefa=async function(idTarefa){
   }
 };
 
-window.addEventListener('DOMContentLoaded',()=>{montarDashboard();garantirModalExclusaoRecorrente();});
+window.addEventListener('DOMContentLoaded',()=>{garantirEstiloNavegacao();montarDashboard();montarRecompensas();adicionarNavegacaoMonitor();garantirModalExclusaoRecorrente();});
