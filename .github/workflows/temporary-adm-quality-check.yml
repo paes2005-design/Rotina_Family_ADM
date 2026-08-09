@@ -106,7 +106,13 @@ jobs:
           // Period navigation on every time-based ADM filter
           assert(dash.includes('function moverData(ref, periodo, direcao)'),'shared previous/next period navigator exists');
           assert(dash.includes("periodo==='semanal'?7:1"),'week navigation moves exactly seven days');
-          assert(dash.includes("periodo==='mensal') d.setMonth"),'month navigation moves by calendar month');
+          assert(dash.includes("if(periodo==='mensal'){"),'month navigation has explicit calendar-month branch');
+          assert(dash.includes('d.setDate(1);'),'month navigation normalizes day before changing month');
+          const mm=dash.match(/function moverData\(ref, periodo, direcao\)\{[\s\S]*?\n\}/);assert(mm,'moverData found');
+          const monthBox={fn:null};vm.createContext(monthBox);vm.runInContext(mm[0]+';fn=moverData;',monthBox);
+          const jan31=monthBox.fn(new Date(2026,0,31,12),'mensal',1);assert(jan31.getFullYear()===2026&&jan31.getMonth()===1&&jan31.getDate()===1,'Jan 31 advances to February without skipping month');
+          const dec31=monthBox.fn(new Date(2026,11,31,12),'mensal',1);assert(dec31.getFullYear()===2027&&dec31.getMonth()===0&&dec31.getDate()===1,'December advances safely into January of next year');
+          const mar31=monthBox.fn(new Date(2026,2,31,12),'mensal',-1);assert(mar31.getFullYear()===2026&&mar31.getMonth()===1&&mar31.getDate()===1,'March 31 goes back to February without skipping month');
           assert(dash.includes('adicionarNavegacaoMonitor'),'Monitor date filter receives previous/today/next navigation');
           assert(dash.includes("input.value=iso(new Date());window.atualizarMonitor?.()"),'Monitor can return directly to today');
           assert(dash.includes('dashboardPeriodNav'),'Dashboard date filter has previous/current/next navigation');
