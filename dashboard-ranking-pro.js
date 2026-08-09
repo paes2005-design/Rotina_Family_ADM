@@ -27,8 +27,10 @@ function dataDoInput(id){
 }
 function moverData(ref, periodo, direcao){
   const d=new Date(ref);
-  if(periodo==='mensal') d.setMonth(d.getMonth()+direcao);
-  else d.setDate(d.getDate()+(periodo==='semanal'?7:1)*direcao);
+  if(periodo==='mensal'){
+    d.setDate(1);
+    d.setMonth(d.getMonth()+direcao);
+  } else d.setDate(d.getDate()+(periodo==='semanal'?7:1)*direcao);
   return d;
 }
 function intervaloPeriodo(ref, periodo){
