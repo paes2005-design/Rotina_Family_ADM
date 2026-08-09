@@ -97,12 +97,26 @@ async function renderDashboard(){
   host.innerHTML=`<div class="rf-score-title"><h3>📊 Acompanhamento de pontuação</h3><span style="font-size:12px;color:#64748b">Referência: ${ref.toLocaleDateString('pt-BR')}</span></div>`+(perfis.map(p=>{const r=resumo(p,ref,dados);return `<div class="rf-score-person"><strong>${esc(p.nome||'Integrante')}</strong><div class="rf-score-grid">${card(iso(ref)===iso(new Date())?'Hoje':ref.toLocaleDateString('pt-BR'),r.dia,'☀️')}${card('Semana',r.semana,'📅')}${card('Mês',r.mes,'🗓️')}</div></div>`;}).join('')||'<p>Nenhum integrante encontrado.</p>')+`<div class="rf-period-note">Os máximos são calculados pelas tarefas programadas em cada período. Ao escolher uma data antiga, Dia, Semana e Mês representam aquele período histórico completo.</div>`;
 }
 async function atualizar(force=false){try{if(force)cache.at=0;await Promise.all([renderMonitor(),renderDashboard()]);}catch(e){console.error('Falha nos cards históricos do ADM',e);}}
+function envolverAtualizadoresNativos(){
+  const origMonitor=window.atualizarMonitor;
+  if(typeof origMonitor==='function'&&!origMonitor.__rfScoreWrapped){
+    const wrapped=(...args)=>{const out=origMonitor(...args);queueMicrotask(()=>atualizar(true));return out;};
+    wrapped.__rfScoreWrapped=true;window.atualizarMonitor=wrapped;
+  }
+  const origDashboard=window.renderizarDashboard;
+  if(typeof origDashboard==='function'&&!origDashboard.__rfScoreWrapped){
+    const wrapped=(...args)=>{const out=origDashboard(...args);queueMicrotask(()=>atualizar(true));return out;};
+    wrapped.__rfScoreWrapped=true;window.renderizarDashboard=wrapped;
+  }
+}
 function ligar(){
   garantirEstilo();
+  envolverAtualizadoresNativos();
   const monitorSel=document.getElementById('filtroIntegrante'),monitorData=document.getElementById('filtroData'),dashData=document.getElementById('dashboardDataRef'),dashPerfil=document.getElementById('dashboardPerfil');
   [monitorSel,monitorData,dashData,dashPerfil].forEach(el=>el?.addEventListener('change',()=>setTimeout(()=>atualizar(true),100)));
   document.addEventListener('click',e=>{if(e.target.closest('.tab-btn'))setTimeout(()=>atualizar(),150)});
-  setInterval(()=>{if(document.getElementById('sistemaPrincipal')?.style.display!=='none')atualizar(true)},30000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)atualizar(true)});
+  window.addEventListener('focus',()=>atualizar(true));
   atualizar(true);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(ligar,350));else setTimeout(ligar,350);
