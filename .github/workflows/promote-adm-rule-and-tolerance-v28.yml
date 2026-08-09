@@ -1,0 +1,46 @@
+name: Promote audited ADM tolerance updates v28
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/promote-adm-rule-and-tolerance-v28.yml']
+permissions:
+  contents: write
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Copy audited production files
+        run: |
+          set -e
+          git fetch origin test/adm-show-tolerance-v1 --depth=1
+          git show FETCH_HEAD:index-ADMIN-v8.html > index-ADMIN-v8.html
+          git show FETCH_HEAD:monitor-pro.js > monitor-pro.js
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('sw.js')
+          s=p.read_text()
+          old="const CACHE_NAME='rotina-family-adm-v27';"
+          new="const CACHE_NAME='rotina-family-adm-v28';"
+          if old not in s:
+              raise SystemExit('CACHE_NAME esperado v27 não encontrado')
+          p.write_text(s.replace(old,new,1))
+          PY
+      - name: Validate promoted presentation
+        run: |
+          grep -q 'Horário sugerido / Tolerância' index-ADMIN-v8.html
+          grep -q 'Tolerância: ${Number(t.tempoLimite)||0} min' index-ADMIN-v8.html
+          grep -q 'Primeiros +12,5% após zerar' index-ADMIN-v8.html
+          grep -q '25% adicional no total' monitor-pro.js
+          node --check monitor-pro.js
+          node --check sw.js
+      - name: Commit exact audited build
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index-ADMIN-v8.html monitor-pro.js sw.js
+          git diff --cached --quiet && exit 0
+          git commit -m 'Officialize ADM tolerance rule and task tolerance display'
+          git push origin main
