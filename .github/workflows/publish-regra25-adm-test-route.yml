@@ -1,0 +1,38 @@
+name: Publish isolated ADM tolerance rule test route
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publish-regra25-adm-test-route.yml']
+permissions:
+  contents: write
+jobs:
+  publish-test-route:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Copy audited ADM test branch into isolated route
+        run: |
+          set -e
+          rm -rf teste-regra-25
+          mkdir -p teste-regra-25
+          git fetch origin test/tolerance-rule-25-v1 --depth=1
+          git archive FETCH_HEAD | tar -x -C teste-regra-25
+          rm -rf teste-regra-25/.github
+          rm -f teste-regra-25/patch-tolerance-rule.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('teste-regra-25/index-ADMIN-v8.html')
+          s=p.read_text()
+          s=s.replace('<title>', '<title>TESTE · ', 1)
+          s=s.replace('<body>', '<body><div style="position:sticky;top:0;z-index:30000;width:100%;box-sizing:border-box;background:#312e81;color:white;text-align:center;padding:8px;font-weight:800">🧪 ADM TESTE · regra: 100% até zerar · 75% por 12,5% · 50% por 12,5% · depois 0%</div>', 1)
+          p.write_text(s)
+          PY
+      - name: Commit isolated route only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add teste-regra-25
+          git commit -m 'Publish isolated ADM tolerance rule test route'
+          git push origin main
