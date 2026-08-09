@@ -1,0 +1,34 @@
+name: Apply ADM tolerance display test patch
+on:
+  push:
+    branches: ['test/adm-show-tolerance-v1']
+    paths: ['.github/workflows/apply-adm-show-tolerance-test.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add tolerance beside suggested schedule
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index-ADMIN-v8.html')
+          s=p.read_text()
+          old_h='<th>Horário Sugerido</th>'
+          new_h='<th>Horário sugerido / Tolerância</th>'
+          old_td='<td>${t.horaSugeridaInicio} às ${t.horaSugeridaFim}</td>'
+          new_td='<td><strong>${t.horaSugeridaInicio} às ${t.horaSugeridaFim}</strong><br><small style="color:#64748b">Tolerância: ${Number(t.tempoLimite)||0} min</small></td>'
+          if s.count(old_h)!=1: raise SystemExit(f'Cabeçalho esperado 1x, encontrado {s.count(old_h)}')
+          if s.count(old_td)!=1: raise SystemExit(f'Célula esperada 1x, encontrado {s.count(old_td)}')
+          s=s.replace(old_h,new_h,1).replace(old_td,new_td,1)
+          p.write_text(s)
+          PY
+      - name: Commit test change
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index-ADMIN-v8.html
+          git commit -m 'Show task tolerance with suggested schedule in ADM management'
+          git push origin HEAD:test/adm-show-tolerance-v1
