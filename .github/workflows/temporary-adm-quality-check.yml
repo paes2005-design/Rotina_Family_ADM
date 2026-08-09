@@ -42,7 +42,8 @@ jobs:
           assert(!mobile.includes('adm-enhancements.js'),'known freezing enhancement is not imported');
           assert(!sw.includes('adm-enhancements.js'),'known freezing enhancement is outside app shell');
           assert(sw.includes("cache:'no-store'"),'app assets refresh network-first');
-          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v30'"),'ADM cache is v30');
+          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v31'"),'ADM cache is v31');
+          assert(sw.includes("'./rewards-admin-ui-v2.js'"),'rewards admin module is included in ADM app shell');
           assert(manifest.start_url.includes('index-ADMIN-v8.html'),'installed ADM starts directly on real page');
           assert(sw.includes('APP_MAIN_URL'),'legacy root navigation is redirected');
           assert(mobile.includes('MOBILE_QUERY.matches'),'mobile UI remains viewport-gated');
@@ -145,6 +146,10 @@ jobs:
           assert(rewards.includes("${ativa?'ATIVA':'DESATIVADA'}"),'ADM reward catalog shows active state');
           assert(rewards.includes("{nome,pontos,atualizadoEm:new Date().toISOString()}"),'reward edit changes name and points without deleting history');
           assert(!rewards.includes('deleteDoc('),'reward edit module never deletes historical records');
+          assert(html.includes("function renderizarRecompensasAdmin(){ const el=document.getElementById('listaRecompensasAdmin')"),'legacy local reward renderer is still identified');
+          assert(rewards.includes("catalogoObserver=new MutationObserver"),'reward catalog watches legacy rerenders');
+          assert(rewards.includes("if(temItens&&!estaV2)renderCatalogoV2()"),'legacy-only catalog is replaced by V2 controls');
+          assert(rewards.includes('reward-admin-v2-item'),'V2 catalog has a stable marker to avoid rerender loops');
 
           // Dashboard / ranking / core flows
           assert(dash.includes('rankingDetalhadoDashboard'),'detailed ranking renderer remains');
