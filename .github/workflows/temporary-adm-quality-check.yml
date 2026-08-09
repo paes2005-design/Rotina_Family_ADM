@@ -27,7 +27,7 @@ jobs:
           node <<'NODE'
           const fs=require('fs'),vm=require('vm');
           const read=f=>fs.readFileSync(f,'utf8');
-          const html=read('index-ADMIN-v8.html'),dash=read('dashboard-ranking-pro.js'),mon=read('monitor-pro.js'),manage=read('manage-pro.js'),mobile=read('mobile-app-ui.js'),css=read('mobile-app-ui.css'),review=read('adm-justification-review.js'),early=read('adm-early-start-ui.js'),sw=read('sw.js'),manifest=JSON.parse(read('manifest.json'));
+          const html=read('index-ADMIN-v8.html'),dash=read('dashboard-ranking-pro.js'),mon=read('monitor-pro.js'),manage=read('manage-pro.js'),manageCss=read('manage-pro.css'),mobile=read('mobile-app-ui.js'),css=read('mobile-app-ui.css'),review=read('adm-justification-review.js'),early=read('adm-early-start-ui.js'),sw=read('sw.js'),manifest=JSON.parse(read('manifest.json'));
           const assert=(ok,msg)=>{if(!ok)throw new Error(msg);console.log('OK - '+msg)};
 
           // Stability / loading
@@ -39,16 +39,23 @@ jobs:
           assert(!mobile.includes('adm-enhancements.js'),'known freezing enhancement is not imported');
           assert(!sw.includes('adm-enhancements.js'),'known freezing enhancement is outside app shell');
           assert(sw.includes("cache:'no-store'"),'app assets refresh network-first');
-          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v28'"),'ADM cache is v28');
+          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v29'"),'ADM cache is v29');
           assert(manifest.start_url.includes('index-ADMIN-v8.html'),'installed ADM starts directly on real page');
           assert(sw.includes('APP_MAIN_URL'),'legacy root navigation is redirected');
           assert(mobile.includes('MOBILE_QUERY.matches'),'mobile UI remains viewport-gated');
 
-          // New task-management presentation
+          // Task-management presentation: preserve previous mobile layout and add tolerance only as auxiliary info
           assert(html.includes('<th>Horário sugerido / Tolerância</th>'),'management table header includes tolerance');
-          assert(html.includes('Tolerância: ${Number(t.tempoLimite)||0} min'),'each managed task displays its registered tolerance');
+          assert(html.includes('Tolerância: ${Number(t.tempoLimite)||0} min'),'each managed task exposes its registered tolerance in source table');
           assert(html.includes('<strong>${t.horaSugeridaInicio} às ${t.horaSugeridaFim}</strong>'),'suggested schedule remains displayed');
           assert(html.includes('renderizarTabelaExclusao'),'task management renderer remains present');
+          assert(manage.includes("const horario=celHorario?.querySelector('strong')"),'mobile card reads schedule separately from tolerance');
+          assert(manage.includes("const tolerancia=(textoTol.match(/Tolerância:"),'mobile card reads tolerance separately');
+          assert(manage.includes('<strong>${escG(x.tarefa)}</strong>'),'mobile card preserves task name/description');
+          assert(manage.includes("<span>${escG(x.usuario)} <small class=\"ger-tolerance\">· Tol. ${escG(x.tolerancia)} min</small></span>"),'mobile card adds only compact tolerance beside auxiliary line');
+          assert(manageCss.includes('.ger-tolerance{font-size:10px'),'compact tolerance styling exists');
+          assert(manageCss.includes('.ger-main strong{font-size:14px'),'task description styling remains intact');
+          assert(manageCss.includes('.ger-time{font-size:14px'),'original schedule badge styling remains intact');
 
           // 12.5% + 12.5% tolerance explanation
           assert(html.includes('Primeiros +12,5% após zerar'),'ADM explains first 75% recovery band');
