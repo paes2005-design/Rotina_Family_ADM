@@ -59,11 +59,14 @@ function renderCardsGerenciar(){
   }
   cards.innerHTML=linhas.map(x=>`
     <article class="ger-task-card">
-      <div class="ger-time">${escG(x.horario.replace(' às ','–'))}</div>
+      <div class="ger-time-block">
+        <div class="ger-time">${escG(x.horario.replace(' às ','–'))}</div>
+        <small class="ger-tolerance">Tol. ${escG(x.tolerancia)} min</small>
+      </div>
       <span class="task-icon-badge" aria-hidden="true">${escG(x.icone||'✅')}</span>
       <div class="ger-main">
         <strong>${escG(x.tarefa)}</strong>
-        <span>${escG(x.usuario)} <small class="ger-tolerance">· Tol. ${escG(x.tolerancia)} min</small></span>
+        <span>${escG(x.usuario)}</span>
       </div>
       <button class="ger-more" type="button" aria-label="Ações" data-ger-id="${escG(x.id)}">⋮</button>
       <div class="ger-card-actions" data-ger-actions="${escG(x.id)}">
