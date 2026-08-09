@@ -21,12 +21,15 @@ function obterLinhaTarefas(){
       const m=txt.match(new RegExp(fn+"\\(['\\\"]([^'\\\"]+)"));
       return m?.[1]||'';
     };
-    const horario=row.children[0]?.textContent.trim()||'';
+    const celHorario=row.children[0];
+    const horario=celHorario?.querySelector('strong')?.textContent.trim()||celHorario?.textContent.trim().replace(/\s*Tolerância:\s*\d+(?:[.,]\d+)?\s*min\s*/i,'').trim()||'';
+    const textoTol=celHorario?.querySelector('small')?.textContent||celHorario?.textContent||'';
+    const tolerancia=(textoTol.match(/Tolerância:\s*(\d+(?:[.,]\d+)?)\s*min/i)?.[1]||'0').replace(',','.');
     const celTarefa=row.children[1];
     const tarefa=celTarefa?.querySelector('strong')?.textContent.trim()||celTarefa?.textContent.trim()||'';
     const icone=celTarefa?.querySelector('.task-icon-cell')?.textContent.trim()||'✅';
     const usuario=row.children[2]?.textContent.trim()||'';
-    return {row,horario,tarefa,icone,usuario,id:pegarId(editar,'preencherEdicaoTarefa')||pegarId(excluir,'excluirTarefa')};
+    return {row,horario,tolerancia,tarefa,icone,usuario,id:pegarId(editar,'preencherEdicaoTarefa')||pegarId(excluir,'excluirTarefa')};
   });
 }
 
@@ -60,7 +63,7 @@ function renderCardsGerenciar(){
       <span class="task-icon-badge" aria-hidden="true">${escG(x.icone||'✅')}</span>
       <div class="ger-main">
         <strong>${escG(x.tarefa)}</strong>
-        <span>${escG(x.usuario)}</span>
+        <span>${escG(x.usuario)} <small class="ger-tolerance">· Tol. ${escG(x.tolerancia)} min</small></span>
       </div>
       <button class="ger-more" type="button" aria-label="Ações" data-ger-id="${escG(x.id)}">⋮</button>
       <div class="ger-card-actions" data-ger-actions="${escG(x.id)}">
