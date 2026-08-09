@@ -1,0 +1,115 @@
+name: Rotina Family ADM regression audit
+on:
+  push:
+    paths:
+      - '.github/workflows/temporary-adm-quality-check.yml'
+      - '*.js'
+      - '*.css'
+      - '*.html'
+      - 'manifest.json'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and JSON
+        run: |
+          node --check dashboard-ranking-pro.js
+          node --check monitor-pro.js
+          node --check manage-pro.js
+          node --check mobile-app-ui.js
+          node --check adm-justification-review.js
+          node --check adm-early-start-ui.js
+          node --check sw.js
+          node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8')); console.log('manifest OK')"
+      - name: Full ADM regression audit
+        run: |
+          node <<'NODE'
+          const fs=require('fs'),vm=require('vm');
+          const read=f=>fs.readFileSync(f,'utf8');
+          const html=read('index-ADMIN-v8.html'),dash=read('dashboard-ranking-pro.js'),mon=read('monitor-pro.js'),manage=read('manage-pro.js'),mobile=read('mobile-app-ui.js'),css=read('mobile-app-ui.css'),review=read('adm-justification-review.js'),early=read('adm-early-start-ui.js'),sw=read('sw.js'),manifest=JSON.parse(read('manifest.json'));
+          const assert=(ok,msg)=>{if(!ok)throw new Error(msg);console.log('OK - '+msg)};
+
+          // Stability / loading
+          assert(!mobile.includes('setInterval('),'mobile UI has no continuous interval');
+          assert(!review.includes('setInterval('),'review module has no continuous interval');
+          assert(!early.includes('setInterval('),'early-start module has no continuous interval');
+          assert(!review.includes('MutationObserver'),'review module adds no mutation observer');
+          assert(early.includes("observe(tb,{childList:true,subtree:false})"),'early-start observer is restricted to direct rows');
+          assert(!mobile.includes('adm-enhancements.js'),'known freezing enhancement is not imported');
+          assert(!sw.includes('adm-enhancements.js'),'known freezing enhancement is outside app shell');
+          assert(sw.includes("cache:'no-store'"),'app assets refresh network-first');
+          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v28'"),'ADM cache is v28');
+          assert(manifest.start_url.includes('index-ADMIN-v8.html'),'installed ADM starts directly on real page');
+          assert(sw.includes('APP_MAIN_URL'),'legacy root navigation is redirected');
+          assert(mobile.includes('MOBILE_QUERY.matches'),'mobile UI remains viewport-gated');
+
+          // New task-management presentation
+          assert(html.includes('<th>Horário sugerido / Tolerância</th>'),'management table header includes tolerance');
+          assert(html.includes('Tolerância: ${Number(t.tempoLimite)||0} min'),'each managed task displays its registered tolerance');
+          assert(html.includes('<strong>${t.horaSugeridaInicio} às ${t.horaSugeridaFim}</strong>'),'suggested schedule remains displayed');
+          assert(html.includes('renderizarTabelaExclusao'),'task management renderer remains present');
+
+          // 12.5% + 12.5% tolerance explanation
+          assert(html.includes('Primeiros +12,5% após zerar'),'ADM explains first 75% recovery band');
+          assert(html.includes('Próximos +12,5%'),'ADM explains second 50% recovery band');
+          assert(html.includes('Após +25% adicional'),'ADM explains total recovery cap');
+          assert(html.includes('100% até 09:59; 75% de 10:00 a 11:14; 50% de 11:15 a 12:29; em 12:30 = 0%'),'ADM shows exact 10-minute example');
+          assert(mon.includes('12,5%')&&mon.includes('25% adicional no total'),'Monitor rule modal explains both recovery bands');
+          assert(!html.includes('Tolerância excedida até +50%'),'old +50% recovery wording is absent');
+
+          // Justification review / returned points
+          assert(mobile.includes('mon-just-flag'),'mobile justification flag remains clickable');
+          assert(css.includes('white-space:normal'),'mobile status may wrap rather than truncate');
+          assert(review.includes('pontosOriginais'),'automatic points are preserved');
+          assert(review.includes('percentualOriginal'),'automatic percentage is preserved');
+          assert(review.includes('pontosDevolvidos'),'returned points are recorded separately');
+          assert(review.includes('revisaoDecisao'),'adult decision is recorded separately');
+          assert(review.includes('writeBatch'),'offline review uses Firestore batch');
+          assert(review.includes('navigator.onLine===false'),'offline review has queued-sync feedback');
+          assert(review.includes('function decisaoTomada(h)'),'single-decision lock exists');
+          assert(review.includes('data-review="reverter"'),'reviewed item exposes revert action');
+          assert(review.includes("if(tipo==='reverter')"),'revert path exists');
+          assert(review.includes("revisaoStatus:'aguardando'"),'revert returns review to pending');
+          assert(review.includes('pontosGanhos:o.pontos'),'revert restores automatic points');
+          assert(!review.includes('Math.max(o.pctAtual'),'old cumulative review behavior stays removed');
+
+          // Early start
+          assert(mobile.includes("import('./adm-early-start-ui.js')"),'early-start module is loaded');
+          assert(early.includes("b.textContent='🔵 Início antecipado'"),'desktop early-start marker remains blue');
+          assert(mobile.includes('🔵 Início antecipado'),'mobile early-start marker remains blue');
+          assert(early.includes('motivoInicioAntecipado'),'ADM reads early-start reason');
+          assert(early.includes('não reduz pontos nem consome tolerância'),'early start remains informational');
+          assert(!early.includes('updateDoc(')&&!early.includes('setDoc(')&&!early.includes('writeBatch('),'early-start display never writes scoring data');
+
+          // Status regression: 100% must not be mistaken for 0%
+          const sm=mobile.match(/function statusCard\(txt=''\)\{[\s\S]*?\n\}/);assert(sm,'statusCard found');
+          const box={fn:null};vm.createContext(box);vm.runInContext(sm[0]+';fn=statusCard;',box);
+          const eq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+          assert(eq(box.fn('No Prazo (100%)'),['ok','100% · No prazo']),'100% status is correct');
+          assert(eq(box.fn('No Prazo — atraso leve (75%)'),['partial','75% · atraso leve']),'75% status is correct');
+          assert(eq(box.fn('No Prazo — atraso maior (50%)'),['partial','50% · atraso maior']),'50% status is correct');
+          assert(eq(box.fn('Atrasado (0%)'),['late','0% · Atrasado']),'0% status is correct');
+
+          // Dashboard / ranking / core flows
+          assert(dash.includes('rankingDetalhadoDashboard'),'detailed ranking renderer remains');
+          assert(dash.includes('pontosGanhos'),'dashboard uses effective points');
+          assert(dash.includes("faixaAtraso==='dentro-limites'"),'punctuality uses automatic result');
+          assert(css.includes('#rankingDetalhadoDashboard .ranking-table-pro{min-width:0'),'mobile detailed ranking width override remains');
+          for(const s of ['salvarTarefa','preencherEdicaoTarefa','excluirTarefa','atualizarMonitor','renderizarDashboard','salvarRecompensa']) assert(html.includes(s),'core flow '+s+' remains');
+          assert(html.includes('justificativaObrigatoria'),'task justification setting remains');
+          assert(html.includes('onAuthStateChanged'),'session restoration remains');
+          assert(manage.includes("import('./mobile-app-ui.js')"),'manage to mobile UI import remains');
+          assert(dash.includes("import('./monitor-pro.js')"),'dashboard to monitor import remains');
+          assert(mon.includes("import('./manage-pro.js')"),'monitor to manage import remains');
+          assert(mobile.includes("import('./adm-justification-review.js')"),'review module import remains');
+
+          // Returned-point math stays absolute, not cumulative
+          const pts=(max,pct)=>Math.round(max*pct/100),ret=(orig,max,p)=>Math.max(orig,pts(max,p));
+          assert(ret(0,20,50)===10,'0 to 50% returns 10/20');
+          assert(ret(0,20,75)===15,'0 to 75% returns 15/20');
+          assert(ret(0,20,100)===20,'0 to 100% returns 20/20');
+          const original=0,max=20,first=ret(original,max,50),reverted=original,next=ret(reverted,max,100);
+          assert(first===10&&reverted===0&&next===20,'50% then revert then 100% ends at 20, never 30');
+          console.log('ALL ADM PRODUCTION REGRESSION CHECKS PASSED');
+          NODE
