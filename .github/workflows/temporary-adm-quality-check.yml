@@ -39,7 +39,7 @@ jobs:
           assert(!mobile.includes('adm-enhancements.js'),'known freezing enhancement is not imported');
           assert(!sw.includes('adm-enhancements.js'),'known freezing enhancement is outside app shell');
           assert(sw.includes("cache:'no-store'"),'app assets refresh network-first');
-          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v29'"),'ADM cache is v29');
+          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v30'"),'ADM cache is v30');
           assert(manifest.start_url.includes('index-ADMIN-v8.html'),'installed ADM starts directly on real page');
           assert(sw.includes('APP_MAIN_URL'),'legacy root navigation is redirected');
           assert(mobile.includes('MOBILE_QUERY.matches'),'mobile UI remains viewport-gated');
