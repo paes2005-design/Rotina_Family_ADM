@@ -3,6 +3,8 @@ import { getFirestore, collection, query, where, getDocs, doc, updateDoc } from 
 
 const escR=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dbR=()=>getApps().length?getFirestore(getApp()):null;
+let catalogoObserver=null;
+let renderCatalogoEmCurso=false;
 
 function grupoAtual(){
   return (document.getElementById('displayCodigoCliente')?.innerText||'').trim();
@@ -30,6 +32,7 @@ function garantirEstilo(){
     .reward-edit-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;flex-wrap:wrap}
     .reward-edit-actions button{border:1px solid #cbd5e1;background:#fff;border-radius:10px;padding:9px 12px;font-weight:800;cursor:pointer}
     .reward-edit-actions .save{background:#315e8a;color:#fff;border-color:#315e8a}
+    .reward-admin-v2-actions{margin-top:9px;display:flex;gap:7px;flex-wrap:wrap}
     @media(max-width:620px){.reward-report-toolbar{padding:12px}.reward-report-toolbar .period-tabs{display:flex;flex-wrap:wrap}.reward-report-toolbar .period-tab{flex:1;min-width:82px}}
   `;document.head.appendChild(s);
 }
@@ -81,17 +84,34 @@ window.editarRecompensaAdmin=async function(id){
     if(!nome)return alert('Informe o nome da recompensa.');
     if(!Number.isFinite(pontos)||pontos<0)return alert('Informe um custo em pontos válido.');
     const db=dbR();if(!db)return alert('Banco de dados ainda não está disponível.');
-    try{await updateDoc(doc(db,'recompensas',id),{nome,pontos,atualizadoEm:new Date().toISOString()});fecharEditor();await window.renderizarRecompensasAdmin?.();}
+    try{await updateDoc(doc(db,'recompensas',id),{nome,pontos,atualizadoEm:new Date().toISOString()});fecharEditor();await renderCatalogoV2();}
     catch(e){console.error('Edição da recompensa:',e);alert('Não foi possível editar a recompensa.');}
   };
 };
 
 async function renderCatalogoV2(){
-  const el=document.getElementById('listaRecompensasAdmin');if(!el)return;
+  const el=document.getElementById('listaRecompensasAdmin');if(!el||renderCatalogoEmCurso)return;
+  renderCatalogoEmCurso=true;
   try{
     const lista=(await recompensasDoGrupo()).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
-    el.innerHTML=lista.map(r=>{const ativa=r.ativa!==false;return `<div class="recompensa-item"><strong>${escR(r.nome)}</strong> — ${Number(r.pontos)||0} pts <span class="reward-catalog-status ${ativa?'on':'off'}">${ativa?'ATIVA':'DESATIVADA'}</span><div style="margin-top:9px;display:flex;gap:7px;flex-wrap:wrap"><button class="reward-toggle" onclick="editarRecompensaAdmin('${r.id}')">Editar</button><button class="reward-toggle" onclick="alternarRecompensa('${r.id}',${ativa})">${ativa?'Desativar':'Ativar'}</button><button class="reward-toggle" onclick="excluirRecompensa('${r.id}')">Excluir</button></div></div>`}).join('')||'<p>Nenhuma recompensa.</p>';
+    el.innerHTML=lista.map(r=>{const ativa=r.ativa!==false;return `<div class="recompensa-item reward-admin-v2-item"><strong>${escR(r.nome)}</strong> — ${Number(r.pontos)||0} pts <span class="reward-catalog-status ${ativa?'on':'off'}">${ativa?'ATIVA':'DESATIVADA'}</span><div class="reward-admin-v2-actions"><button class="reward-toggle" onclick="editarRecompensaAdmin('${r.id}')">Editar</button><button class="reward-toggle" onclick="alternarRecompensa('${r.id}',${ativa})">${ativa?'Desativar':'Ativar'}</button><button class="reward-toggle" onclick="excluirRecompensa('${r.id}')">Excluir</button></div></div>`}).join('')||'<p>Nenhuma recompensa.</p>';
   }catch(e){console.error('Catálogo de recompensas v2:',e);el.innerHTML='<p>Não foi possível carregar o catálogo.</p>';}
+  finally{renderCatalogoEmCurso=false;}
+}
+
+function garantirCatalogoV2(){
+  const el=document.getElementById('listaRecompensasAdmin');
+  if(!el)return;
+  const temItens=el.querySelector('.recompensa-item');
+  const estaV2=el.querySelector('.reward-admin-v2-item');
+  if(temItens&&!estaV2)renderCatalogoV2();
+}
+
+function observarCatalogo(){
+  const el=document.getElementById('listaRecompensasAdmin');
+  if(!el||catalogoObserver)return;
+  catalogoObserver=new MutationObserver(()=>queueMicrotask(garantirCatalogoV2));
+  catalogoObserver.observe(el,{childList:true});
 }
 
 function instalar(){
@@ -103,6 +123,7 @@ function instalar(){
   window.renderizarResgatesAdmin=async function(){await resgatesOriginal();reorganizarRelatorio();sincronizarLegenda();};
   window.renderizarRecompensasAdmin=renderCatalogoV2;
   reorganizarRelatorio();
+  observarCatalogo();
   renderCatalogoV2();
   window.renderizarResgatesAdmin();
 }
