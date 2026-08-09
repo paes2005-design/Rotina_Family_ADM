@@ -3,12 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="refresh" content="0; url=./index-ADMIN-v8.html">
   <title>Rotina Family ADM</title>
-  <script>location.replace('./index-ADMIN-v8.html');</script>
+  <style>body{font-family:Segoe UI,Tahoma,sans-serif;background:#f4f7f6;color:#334155;margin:0;display:grid;place-items:center;min-height:100vh}.loading{padding:24px;text-align:center}</style>
 </head>
 <body>
-  <p>Redirecionando para o Rotina Family ADM...</p>
-  <p><a href="./index-ADMIN-v8.html">Abrir painel</a></p>
+  <div class="loading">Carregando Rotina Family ADM...</div>
+  <script>
+    (async()=>{
+      try{
+        const r=await fetch('./index-ADMIN-v8.html?v=score-history-1',{cache:'no-store'});
+        let html=await r.text();
+        const addon='<script type="module" src="./adm-score-history-cards.js?v=1"><\/script>';
+        if(!html.includes('adm-score-history-cards.js')) html=html.replace('</body>',addon+'\n</body>');
+        document.open();document.write(html);document.close();
+      }catch(e){
+        document.body.innerHTML='<div class="loading"><strong>Não foi possível abrir o painel.</strong><br><a href="./index-ADMIN-v8.html">Tentar abrir diretamente</a></div>';
+      }
+    })();
+  </script>
 </body>
 </html>
