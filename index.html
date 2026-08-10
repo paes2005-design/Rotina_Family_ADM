@@ -14,8 +14,12 @@
         const r=await fetch('./index-ADMIN-v8.html',{cache:'no-store'});
         if(!r.ok) throw new Error('Falha ao carregar painel');
         let html=await r.text();
-        const addon='<script type="module" src="./adm-score-history-cards.js?v=2"><\/script>';
-        if(!html.includes('adm-score-history-cards.js')) html=html.replace('</body>',addon+'\n</body>');
+        const addons=[
+          '<script type="module" src="./adm-score-history-cards.js?v=2"><\\/script>',
+          '<script type="module" src="./adm-monitor-history-fix.js?v=1"><\\/script>'
+        ].join('\n');
+        if(!html.includes('adm-score-history-cards.js')) html=html.replace('</body>',addons+'\n</body>');
+        else if(!html.includes('adm-monitor-history-fix.js')) html=html.replace('</body>','<script type="module" src="./adm-monitor-history-fix.js?v=1"><\\/script>\n</body>');
         document.open();document.write(html);document.close();
       }catch(e){
         document.body.innerHTML='<div class="loading"><strong>Não foi possível abrir o painel.</strong><br><a href="./index-ADMIN-v8.html">Tentar abrir diretamente</a></div>';
