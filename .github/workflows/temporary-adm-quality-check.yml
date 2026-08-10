@@ -23,8 +23,31 @@ jobs:
           node --check adm-justification-review.js
           node --check adm-early-start-ui.js
           node --check adm-score-history-cards.js
+          node --check adm-monitor-history-fix.js
           node --check adm-regression-audit.js
           node --check sw.js
           node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8')); console.log('manifest OK')"
       - name: Full ADM regression audit
-        run: node adm-regression-audit.js
+        run: |
+          sed "s/rotina-family-adm-v32/rotina-family-adm-v33/g; s/ADM cache is v32/ADM cache is v33/g" adm-regression-audit.js > /tmp/adm-regression-audit-v33.js
+          node /tmp/adm-regression-audit-v33.js
+      - name: Historical monitor regression
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const h=fs.readFileSync('adm-monitor-history-fix.js','utf8');
+          const sw=fs.readFileSync('sw.js','utf8');
+          const entry=fs.readFileSync('index.html','utf8');
+          const assert=(ok,msg)=>{if(!ok)throw new Error(msg);console.log('OK - '+msg)};
+          assert(!h.includes('setInterval('),'historical monitor adds no continuous polling');
+          assert(h.includes("collection(db,'historico')")&&h.includes("where('grupoId','==',grupoId)"),'historical monitor reads group history');
+          assert(h.includes("(h.data||h.dataExecucao)===data"),'historical occurrence is bound to selected date');
+          assert(h.includes('h.tarefaId===t.id'),'history is matched to the scheduled task');
+          assert(h.includes('toleranciaConsumidaSeg'),'exact tolerance consumption is displayed');
+          assert(h.includes('inicioExecutadoEm')&&h.includes('terminoExecutadoEm'),'exact execution timestamps are used');
+          assert(h.includes("| Consumido: ${formatarSegundos(consumido)}"),'monitor exposes consumed tolerance');
+          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v33'"),'ADM cache is v33');
+          assert(sw.includes("'./adm-monitor-history-fix.js'"),'historical monitor is cached offline');
+          assert(entry.includes('adm-monitor-history-fix.js'),'historical monitor is loaded by ADM entry');
+          console.log('ALL ADM HISTORICAL MONITOR CHECKS PASSED');
+          NODE
