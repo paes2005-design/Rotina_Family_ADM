@@ -1,16 +1,21 @@
-const CACHE_NAME='rotina-family-adm-v32';
-const APP_SHELL=['./','./index.html','./index-ADMIN-v8.html','./manifest.json','./icon-administrador-192.png','./icon-administrador-512.png','./dashboard-ranking-pro.css','./dashboard-ranking-pro.js','./monitor-pro.css','./monitor-pro.js','./rewards-admin-ui-v2.js','./manage-pro.css','./manage-pro.js','./mobile-app-ui.css','./mobile-app-ui.js','./adm-justification-review.js','./adm-early-start-ui.js','./adm-score-history-cards.js','./reset-cache.html'];
+const CACHE_NAME='rotina-family-adm-v33';
+const APP_SHELL=['./','./index.html','./index-ADMIN-v8.html','./manifest.json','./icon-administrador-192.png','./icon-administrador-512.png','./dashboard-ranking-pro.css','./dashboard-ranking-pro.js','./monitor-pro.css','./monitor-pro.js','./rewards-admin-ui-v2.js','./manage-pro.css','./manage-pro.js','./mobile-app-ui.css','./mobile-app-ui.js','./adm-justification-review.js','./adm-early-start-ui.js','./adm-score-history-cards.js','./adm-monitor-history-fix.js','./reset-cache.html'];
 const MODULE_ROOTS=['https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js'];
 const APP_MAIN_URL=new URL('./index-ADMIN-v8.html',self.location.href).href;
 const ENTRY_URL=new URL('./index.html',self.location.href).href;
-const SCORE_ADDON='<script type="module" src="./adm-score-history-cards.js?v=1"><\/script>';
+const ADM_ADDONS=['<script type="module" src="./adm-score-history-cards.js?v=2"><\/script>','<script type="module" src="./adm-monitor-history-fix.js?v=1"><\/script>'].join('\n');
 async function cacheModuleTree(url,cache,seen=new Set()){if(seen.has(url))return;seen.add(url);try{const response=await fetch(url,{mode:'cors'});if(!response.ok)return;await cache.put(url,response.clone());const text=await response.text();const specs=[...text.matchAll(/(?:from\s*|import\s*)["']([^"']+)["']/g)].map(m=>m[1]);await Promise.allSettled(specs.map(spec=>{const next=new URL(spec,url).href;return next.startsWith('https://www.gstatic.com/firebasejs/')?cacheModuleTree(next,cache,seen):Promise.resolve();}));}catch(e){console.warn('Cache de módulo indisponível:',url);}}
-async function respostaComAddon(response){
+async function respostaComAddons(response){
   if(!response)return response;
   const type=response.headers.get('content-type')||'';
   if(!type.includes('text/html'))return response;
   let html=await response.text();
-  if(!html.includes('adm-score-history-cards.js'))html=html.replace('</body>',SCORE_ADDON+'\n</body>');
+  if(!html.includes('adm-score-history-cards.js')||!html.includes('adm-monitor-history-fix.js')){
+    const faltantes=[];
+    if(!html.includes('adm-score-history-cards.js'))faltantes.push('<script type="module" src="./adm-score-history-cards.js?v=2"><\/script>');
+    if(!html.includes('adm-monitor-history-fix.js'))faltantes.push('<script type="module" src="./adm-monitor-history-fix.js?v=1"><\/script>');
+    html=html.replace('</body>',faltantes.join('\n')+'\n</body>');
+  }
   const headers=new Headers(response.headers);headers.delete('content-length');
   return new Response(html,{status:response.status,statusText:response.statusText,headers});
 }
@@ -23,10 +28,10 @@ self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;con
       try{
         const response=await fetch(alvo,{cache:'no-store'});
         if(response&&response.ok){const cache=await caches.open(CACHE_NAME);await cache.put(alvo,response.clone());}
-        return url.pathname.endsWith('index-ADMIN-v8.html')?respostaComAddon(response):response;
+        return url.pathname.endsWith('index-ADMIN-v8.html')?respostaComAddons(response):response;
       }catch(e){
         const cached=(await caches.match(alvo))||(await caches.match(ENTRY_URL))||(await caches.match(APP_MAIN_URL));
-        return url.pathname.endsWith('index-ADMIN-v8.html')?respostaComAddon(cached):cached;
+        return url.pathname.endsWith('index-ADMIN-v8.html')?respostaComAddons(cached):cached;
       }
     })());
     return;
