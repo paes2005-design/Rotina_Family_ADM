@@ -1,5 +1,5 @@
-const CACHE_NAME='rotina-family-adm-v33';
-const APP_SHELL=['./','./index.html','./index-ADMIN-v8.html','./manifest.json','./icon-administrador-192.png','./icon-administrador-512.png','./dashboard-ranking-pro.css','./dashboard-ranking-pro.js','./monitor-pro.css','./monitor-pro.js','./rewards-admin-ui-v2.js','./manage-pro.css','./manage-pro.js','./mobile-app-ui.css','./mobile-app-ui.js','./adm-justification-review.js','./adm-early-start-ui.js','./adm-score-history-cards.js','./adm-monitor-history-fix.js','./reset-cache.html'];
+const CACHE_NAME='rotina-family-adm-v34';
+const APP_SHELL=['./','./index.html','./index-ADMIN-v8.html','./manifest.json?v=34','./icon-administrador-192.png','./icon-administrador-512.png','./dashboard-ranking-pro.css','./dashboard-ranking-pro.js','./monitor-pro.css','./monitor-pro.js','./rewards-admin-ui-v2.js','./manage-pro.css','./manage-pro.js','./mobile-app-ui.css','./mobile-app-ui.js','./adm-justification-review.js','./adm-early-start-ui.js','./adm-score-history-cards.js','./adm-monitor-history-fix.js','./reset-cache.html'];
 const MODULE_ROOTS=['https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js'];
 const APP_MAIN_URL=new URL('./index-ADMIN-v8.html',self.location.href).href;
 const ENTRY_URL=new URL('./index.html',self.location.href).href;
@@ -36,7 +36,7 @@ self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;con
     })());
     return;
   }
-  const isAppAsset=sameOrigin&&(/\.(?:js|css|html)$/.test(url.pathname));
+  const isAppAsset=sameOrigin&&(/\.(?:js|css|html|json)$/.test(url.pathname));
   if(isAppAsset){event.respondWith((async()=>{try{const response=await fetch(event.request,{cache:'no-store'});if(response&&response.ok){const cache=await caches.open(CACHE_NAME);await cache.put(event.request,response.clone());}return response;}catch(e){return caches.match(event.request);}})());return;}
   event.respondWith((async()=>{const cached=await caches.match(event.request);if(cached)return cached;try{const response=await fetch(event.request);if(response&&(response.ok||response.type==='opaque')){const cache=await caches.open(CACHE_NAME);await cache.put(event.request,response.clone());}return response;}catch(e){throw e;}})());
 });
