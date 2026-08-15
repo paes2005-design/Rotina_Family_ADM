@@ -1,0 +1,38 @@
+name: Rotina Family ADM alarm audit
+on:
+  push:
+    paths:
+      - 'family-alarm-admin.js'
+      - 'index.html'
+      - 'sw.js'
+      - '.github/workflows/family-alarm-audit.yml'
+jobs:
+  alarm-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax
+        run: |
+          node --check family-alarm-admin.js
+          node --check sw.js
+      - name: Alarm authority and offline regression
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const alarm=fs.readFileSync('family-alarm-admin.js','utf8');
+          const index=fs.readFileSync('index.html','utf8');
+          const sw=fs.readFileSync('sw.js','utf8');
+          const ok=(v,m)=>{if(!v)throw new Error(m);console.log('OK - '+m)};
+          ok(index.includes('family-alarm-admin.js?v=1'),'ADM entry loads family alarm module');
+          ok(sw.includes("'./family-alarm-admin.js'"),'ADM alarm module is cached offline');
+          ok(sw.includes('family-alarm-admin.js?v=1'),'direct real-page navigation receives alarm addon');
+          ok(alarm.includes("origem:'ADM',bloqueado:ativo"),'ADM active command locks Client dismissal');
+          ok(alarm.includes("collection(db,'despertadorHistorico')"),'alarm actions are written to history');
+          ok(alarm.includes('rotina_family_alarm_admin_pending_v1'),'ADM has persistent offline command queue');
+          ok(alarm.includes("if(!navigator.onLine||!getApps().length){salvarFila(payload)"),'ADM queues command while offline');
+          ok(alarm.includes("window.addEventListener('online',sincronizarFila)"),'ADM pending commands sync after reconnection');
+          ok(alarm.includes("document.getElementById('filtroIntegrante')"),'ADM alarm targets selected family member');
+          ok(alarm.includes("document.getElementById('displayCodigoCliente')"),'ADM alarm is group-scoped');
+          ok(alarm.includes("onSnapshot(doc(getFirestore(getApp()),'despertadores'"),'ADM shows live alarm state');
+          console.log('ALL ADM FAMILY ALARM CHECKS PASSED');
+          NODE
