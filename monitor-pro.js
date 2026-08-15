@@ -1,5 +1,5 @@
 const MONITOR_LABELS=['Horário','Tarefa','Integrante','Dia','Status','Pontos'];
-const estadoMonitor={usuarios:new Set(),tarefas:new Set(),status:new Set(),data:''};
+const estadoMonitor={usuarios:new Set(),tarefas:new Set(),status:new Set(),data:'',periodo:'dia'};
 let monitorPreparado=false;
 let atualizarMonitorOriginal=null;
 
@@ -27,6 +27,33 @@ function abrirRegraTolerancia(){
   m.addEventListener('click',ev=>{if(ev.target===m)fechar();});
 }
 const hojeISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+const dataLocal=v=>{const [a,m,d]=String(v||hojeISO()).split('-').map(Number);return new Date(a,m-1,d,12,0,0,0)};
+const isoLocal=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+function faixaPeriodo(data,periodo=estadoMonitor.periodo){
+  const ref=dataLocal(data),ini=new Date(ref),fim=new Date(ref);
+  if(periodo==='semana'){ini.setDate(ini.getDate()-ini.getDay());fim.setTime(ini.getTime());fim.setDate(fim.getDate()+6);}
+  if(periodo==='mes'){ini.setDate(1);fim.setFullYear(ref.getFullYear(),ref.getMonth()+1,0);}
+  if(periodo==='ano'){ini.setFullYear(ref.getFullYear(),0,1);fim.setFullYear(ref.getFullYear(),11,31);}
+  return {ini,fim};
+}
+function legendaPeriodo(data=estadoMonitor.data||hojeISO(),periodo=estadoMonitor.periodo){
+  const {ini,fim}=faixaPeriodo(data,periodo);
+  if(periodo==='dia')return ini.toLocaleDateString('pt-BR');
+  if(periodo==='mes')return ini.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  if(periodo==='ano')return String(ini.getFullYear());
+  return `${ini.toLocaleDateString('pt-BR')} a ${fim.toLocaleDateString('pt-BR')}`;
+}
+function moverPeriodo(data,direcao){
+  const d=dataLocal(data),p=estadoMonitor.periodo;
+  if(p==='ano')d.setFullYear(d.getFullYear()+direcao);
+  else if(p==='mes')d.setMonth(d.getMonth()+direcao);
+  else d.setDate(d.getDate()+(p==='semana'?7:1)*direcao);
+  return isoLocal(d);
+}
+function atualizarNavegacaoPeriodo(){
+  const label=document.getElementById('monitorPeriodReference');if(label)label.textContent=legendaPeriodo();
+  const atual=document.querySelector('#monitorPeriodNavPro [data-current]');if(atual)atual.textContent=estadoMonitor.periodo==='dia'?'Hoje':'Período atual';
+}
 
 function normalizarStatus(texto=''){
   if(texto.includes('Atrasado')) return 'Atrasado';
@@ -107,12 +134,12 @@ function atualizarResumo(){
   if(count){count.textContent=n;count.classList.toggle('show',n>0);}
   if(!summary)return;
   const partes=[];
-  const d=estadoMonitor.data||hojeISO();
-  try{partes.push(new Date(d+'T12:00:00').toLocaleDateString('pt-BR'));}catch{}
+  try{partes.push(legendaPeriodo());}catch{}
   if(estadoMonitor.usuarios.size)partes.push(`${estadoMonitor.usuarios.size} usuário(s)`);
   if(estadoMonitor.tarefas.size)partes.push(`${estadoMonitor.tarefas.size} tarefa(s)`);
   if(estadoMonitor.status.size)partes.push(`${estadoMonitor.status.size} status`);
   summary.textContent=partes.join(' • ');
+  atualizarNavegacaoPeriodo();
 }
 
 function renderDepoisDoMonitor({repopular=true}={}){
@@ -131,8 +158,10 @@ function executarMonitorBase(){
     else userSelect.value='';
   }
   const dataInput=document.getElementById('filtroData'); if(dataInput)dataInput.value=estadoMonitor.data||hojeISO();
+  const monitorData=document.getElementById('monitorData');if(monitorData)monitorData.value=estadoMonitor.data||hojeISO();
   atualizarMonitorOriginal?.();
   renderDepoisDoMonitor();
+  atualizarResumo();
 }
 
 function aplicarFiltros(){
@@ -160,6 +189,18 @@ function montarFiltroCompacto(){
   const anchor=oldContainer||monitor.querySelector('h2');
   const bloco=document.createElement('div');
   bloco.innerHTML=`
+    <div id="monitorPeriodTabs" class="monitor-period-tabs" role="group" aria-label="Período do monitor">
+      <button type="button" class="active" data-monitor-periodo="dia">Dia</button>
+      <button type="button" data-monitor-periodo="semana">Semana</button>
+      <button type="button" data-monitor-periodo="mes">Mês</button>
+      <button type="button" data-monitor-periodo="ano">Ano</button>
+    </div>
+    <div id="monitorPeriodNavPro" class="monitor-period-nav">
+      <button type="button" data-move="-1" aria-label="Período anterior">‹ Anterior</button>
+      <button type="button" data-current="1">Hoje</button>
+      <button type="button" data-move="1" aria-label="Próximo período">Próximo ›</button>
+      <strong id="monitorPeriodReference">${escM(legendaPeriodo())}</strong>
+    </div>
     <div class="monitor-pro-toolbar">
       <div class="monitor-pro-title"><span>📋</span><span id="monitorFilterSummary" class="monitor-filter-summary">${escM(new Date((estadoMonitor.data||hojeISO())+'T12:00:00').toLocaleDateString('pt-BR'))}</span></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button type="button" id="monitorToleranceRuleBtn" class="monitor-filter-btn">⏱️ Regra</button><button type="button" id="monitorFilterBtn" class="monitor-filter-btn">⚙️ Filtrar <span id="monitorFilterCount" class="monitor-filter-count">0</span></button></div>
@@ -179,6 +220,16 @@ function montarFiltroCompacto(){
   document.getElementById('monitorFilterBtn').onclick=()=>document.getElementById('monitorFilterPanel').classList.toggle('open');
   document.getElementById('monitorAplicar').onclick=aplicarFiltros;
   document.getElementById('monitorLimpar').onclick=limparFiltros;
+  document.querySelectorAll('#monitorPeriodTabs [data-monitor-periodo]').forEach(btn=>btn.addEventListener('click',()=>{
+    estadoMonitor.periodo=btn.dataset.monitorPeriodo||'dia';
+    document.querySelectorAll('#monitorPeriodTabs [data-monitor-periodo]').forEach(x=>x.classList.toggle('active',x===btn));
+    executarMonitorBase();
+    window.dispatchEvent(new CustomEvent('rotina-monitor-period-change',{detail:{periodo:estadoMonitor.periodo,data:estadoMonitor.data}}));
+  }));
+  document.querySelectorAll('#monitorPeriodNavPro [data-move]').forEach(btn=>btn.addEventListener('click',()=>{
+    estadoMonitor.data=moverPeriodo(estadoMonitor.data||hojeISO(),Number(btn.dataset.move));executarMonitorBase();
+  }));
+  document.querySelector('#monitorPeriodNavPro [data-current]').addEventListener('click',()=>{estadoMonitor.data=hojeISO();executarMonitorBase();});
   document.getElementById('monitorData').addEventListener('change',()=>{
     estadoMonitor.data=document.getElementById('monitorData').value||hojeISO();
     const u=valoresMarcados('monitorUsuarios'),s=valoresMarcados('monitorStatus');
@@ -199,6 +250,8 @@ function iniciarMonitorPro(){
   renderDepoisDoMonitor();
   const select=document.getElementById('filtroIntegrante');
   if(select)new MutationObserver(()=>{if(monitorPreparado)atualizarOpcoesFiltro();}).observe(select,{childList:true});
+  window.rotinaMonitorPeriodoAtual=()=>estadoMonitor.periodo;
+  window.addEventListener('rotina-monitor-history-rendered',()=>renderDepoisDoMonitor({repopular:true}));
 }
 
 if(document.readyState==='loading') window.addEventListener('DOMContentLoaded',iniciarMonitorPro);

@@ -46,7 +46,7 @@ jobs:
           assert(h.includes('toleranciaConsumidaSeg'),'exact tolerance consumption is displayed');
           assert(h.includes('inicioExecutadoEm')&&h.includes('terminoExecutadoEm'),'exact execution timestamps are used');
           assert(h.includes("| Consumido: ${formatarSegundos(consumido)}"),'monitor exposes consumed tolerance');
-          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v36'"),'ADM cache is v36');
+          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v37'"),'ADM cache is v37');
           assert(sw.includes("'./adm-monitor-history-fix.js'"),'historical monitor is cached offline');
           assert(entry.includes('adm-monitor-history-fix.js'),'historical monitor is loaded by ADM entry');
           console.log('ALL ADM HISTORICAL MONITOR CHECKS PASSED');

@@ -15,7 +15,7 @@ assert(early.includes("observe(tb,{childList:true,subtree:false})"),'early-start
 assert(!mobile.includes('adm-enhancements.js'),'known freezing enhancement is not imported');
 assert(!sw.includes('adm-enhancements.js'),'known freezing enhancement is outside app shell');
 assert(sw.includes("cache:'no-store'"),'app assets refresh network-first');
-assert(sw.includes("const CACHE_NAME='rotina-family-adm-v36'"),'ADM cache is v36');
+assert(sw.includes("const CACHE_NAME='rotina-family-adm-v37'"),'ADM cache is v37');
 assert(sw.includes("'./rewards-admin-ui-v2.js'"),'rewards admin module is included in ADM app shell');
 assert(sw.includes("'./adm-score-history-cards.js'"),'score-history module is included in ADM app shell');
 assert(manifest.start_url.includes('index-ADMIN-v8.html'),'installed ADM starts directly on real page');
