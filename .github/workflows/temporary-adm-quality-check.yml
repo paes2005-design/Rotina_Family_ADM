@@ -24,13 +24,14 @@ jobs:
           node --check adm-early-start-ui.js
           node --check adm-score-history-cards.js
           node --check adm-monitor-history-fix.js
+          node --check family-alarm-admin.js
           node --check adm-regression-audit.js
           node --check sw.js
           node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8')); console.log('manifest OK')"
       - name: Full ADM regression audit
         run: |
-          sed "s/rotina-family-adm-v32/rotina-family-adm-v33/g; s/ADM cache is v32/ADM cache is v33/g" adm-regression-audit.js > /tmp/adm-regression-audit-v33.js
-          node /tmp/adm-regression-audit-v33.js
+          sed "s/rotina-family-adm-v32/rotina-family-adm-v34/g; s/ADM cache is v32/ADM cache is v34/g" adm-regression-audit.js > /tmp/adm-regression-audit-v34.js
+          node /tmp/adm-regression-audit-v34.js
       - name: Historical monitor regression
         run: |
           node <<'NODE'
@@ -46,7 +47,7 @@ jobs:
           assert(h.includes('toleranciaConsumidaSeg'),'exact tolerance consumption is displayed');
           assert(h.includes('inicioExecutadoEm')&&h.includes('terminoExecutadoEm'),'exact execution timestamps are used');
           assert(h.includes("| Consumido: ${formatarSegundos(consumido)}"),'monitor exposes consumed tolerance');
-          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v33'"),'ADM cache is v33');
+          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v34'"),'ADM cache is v34');
           assert(sw.includes("'./adm-monitor-history-fix.js'"),'historical monitor is cached offline');
           assert(entry.includes('adm-monitor-history-fix.js'),'historical monitor is loaded by ADM entry');
           console.log('ALL ADM HISTORICAL MONITOR CHECKS PASSED');
