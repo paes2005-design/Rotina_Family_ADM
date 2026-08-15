@@ -4,6 +4,7 @@ on:
     paths:
       - 'family-alarm-admin.js'
       - 'index.html'
+      - 'index-ADMIN-v8.html'
       - 'sw.js'
       - '.github/workflows/family-alarm-audit.yml'
 jobs:
@@ -21,18 +22,22 @@ jobs:
           const fs=require('fs');
           const alarm=fs.readFileSync('family-alarm-admin.js','utf8');
           const index=fs.readFileSync('index.html','utf8');
+          const app=fs.readFileSync('index-ADMIN-v8.html','utf8');
           const sw=fs.readFileSync('sw.js','utf8');
           const ok=(v,m)=>{if(!v)throw new Error(m);console.log('OK - '+m)};
-          ok(index.includes('family-alarm-admin.js?v=1'),'ADM entry loads family alarm module');
+          ok(index.includes('family-alarm-admin.js?v=2'),'ADM entry loads task alarm v2');
           ok(sw.includes("'./family-alarm-admin.js'"),'ADM alarm module is cached offline');
-          ok(sw.includes('family-alarm-admin.js?v=1'),'direct real-page navigation receives alarm addon');
-          ok(alarm.includes("origem:'ADM',bloqueado:ativo"),'ADM active command locks Client dismissal');
+          ok(sw.includes('family-alarm-admin.js?v=2'),'direct real-page navigation receives alarm addon');
+          ok(app.includes('data-family-task-id')&&app.includes('data-family-profile-id'),'ADM task rows expose task and profile identity');
+          ok(alarm.includes('family-task-alarm-admin'),'ADM places alarm control on each task');
+          ok(alarm.includes("origem:'ADM',bloqueado:ativo"),'ADM task alarm locks Client removal');
+          ok(alarm.includes('tarefaId')&&alarm.includes('nomeTarefa')&&alarm.includes('horaSugeridaInicio'),'alarm command is bound to one named scheduled task');
           ok(alarm.includes("collection(db,'despertadorHistorico')"),'alarm actions are written to history');
-          ok(alarm.includes('rotina_family_alarm_admin_pending_v1'),'ADM has persistent offline command queue');
-          ok(alarm.includes("if(!navigator.onLine||!getApps().length){salvarFila(payload)"),'ADM queues command while offline');
+          ok(alarm.includes('rotina_family_admin_task_alarm_pending_v2'),'ADM has persistent offline command queue');
+          ok(alarm.includes("if(!navigator.onLine||!getApps().length){enfileirar(payload)"),'ADM queues command while offline');
           ok(alarm.includes("window.addEventListener('online',sincronizarFila)"),'ADM pending commands sync after reconnection');
-          ok(alarm.includes("document.getElementById('filtroIntegrante')"),'ADM alarm targets selected family member');
           ok(alarm.includes("document.getElementById('displayCodigoCliente')"),'ADM alarm is group-scoped');
-          ok(alarm.includes("onSnapshot(doc(getFirestore(getApp()),'despertadores'"),'ADM shows live alarm state');
+          ok(alarm.includes("where('grupoId','==',g)"),'ADM shows live task alarm state');
+          ok(!alarm.includes('familyAlarmAdminBtn'),'disconnected global alarm button was removed');
           console.log('ALL ADM FAMILY ALARM CHECKS PASSED');
           NODE

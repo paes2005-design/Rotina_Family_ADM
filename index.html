@@ -17,7 +17,7 @@
         const addons=[
           '<script type="module" src="./adm-score-history-cards.js?v=2"><\\/script>',
           '<script type="module" src="./adm-monitor-history-fix.js?v=1"><\\/script>',
-          '<script type="module" src="./family-alarm-admin.js?v=1"><\\/script>'
+          '<script type="module" src="./family-alarm-admin.js?v=2"><\\/script>'
         ];
         for(const addon of addons){const m=addon.match(/src="\.\/(.+?)\?/);const nome=m?.[1]||'';if(nome&&!html.includes(nome))html=html.replace('</body>',addon+'\n</body>');}
         document.open();document.write(html);document.close();
