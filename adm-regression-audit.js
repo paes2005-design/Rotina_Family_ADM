@@ -15,7 +15,7 @@ assert(early.includes("observe(tb,{childList:true,subtree:false})"),'early-start
 assert(!mobile.includes('adm-enhancements.js'),'known freezing enhancement is not imported');
 assert(!sw.includes('adm-enhancements.js'),'known freezing enhancement is outside app shell');
 assert(sw.includes("cache:'no-store'"),'app assets refresh network-first');
-assert(sw.includes("const CACHE_NAME='rotina-family-adm-v32'"),'ADM cache is v32');
+assert(sw.includes("const CACHE_NAME='rotina-family-adm-v36'"),'ADM cache is v36');
 assert(sw.includes("'./rewards-admin-ui-v2.js'"),'rewards admin module is included in ADM app shell');
 assert(sw.includes("'./adm-score-history-cards.js'"),'score-history module is included in ADM app shell');
 assert(manifest.start_url.includes('index-ADMIN-v8.html'),'installed ADM starts directly on real page');
@@ -76,9 +76,12 @@ const sm=mobile.match(/function statusCard\(txt=''\)\{[\s\S]*?\n\}/);assert(sm,'
 const box={fn:null};vm.createContext(box);vm.runInContext(sm[0]+';fn=statusCard;',box);
 const eq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 assert(eq(box.fn('No Prazo (100%)'),['ok','100% · No prazo']),'100% status is correct');
-assert(eq(box.fn('No Prazo — atraso leve (75%)'),['partial','75% · atraso leve']),'75% status is correct');
-assert(eq(box.fn('No Prazo — atraso maior (50%)'),['partial','50% · atraso maior']),'50% status is correct');
+assert(eq(box.fn('No Prazo — atraso leve (75%)'),['light','75% · atraso leve']),'75% status is correct');
+assert(eq(box.fn('No Prazo — atraso maior (50%)'),['major','50% · atraso maior']),'50% status is correct');
 assert(eq(box.fn('Atrasado (0%)'),['late','0% · Atrasado']),'0% status is correct');
+assert(html.includes('.badge-75 { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }'),'desktop 75% uses timer yellow band');
+assert(html.includes('.badge-50 { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }'),'desktop 50% uses timer orange band');
+assert(css.includes('.mon-app-status.light{background:#fef9c3')&&css.includes('.mon-app-status.major{background:#ffedd5'),'mobile ADM uses distinct timer bands');
 
 // Existing period navigation
 assert(dash.includes('function moverData(ref, periodo, direcao)'),'shared previous/next period navigator exists');

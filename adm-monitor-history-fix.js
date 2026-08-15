@@ -29,8 +29,11 @@ function statusNormalizado(txt=''){
   if(t.includes('andamento'))return 'Em andamento';
   return 'Pendente';
 }
-function badge(status){
+function badge(x){
+  const status=String(x?.status||'');
   if(status.includes('Atrasado'))return 'badge-falta';
+  if(x?.faixaAtraso==='atraso-maior'||status.includes('50%'))return 'badge-50';
+  if(x?.faixaAtraso==='atraso-leve'||status.includes('75%'))return 'badge-75';
   if(status.includes('Prazo'))return 'badge-ok';
   if(status.toLowerCase().includes('andamento'))return 'badge-andamento';
   return 'badge-pendente';
@@ -81,7 +84,7 @@ function linha(x,p){
   if(x.justificativaRecusada===true)detalhe+=` <span class="tooltip-justificativa" style="color:#6c757d;border-color:#6c757d">Usuário não quis justificar<span class="tooltip-texto">Usuário não quis justificar.</span></span>`;
   const early=x.inicioAntecipado===true?`<button type="button" class="early-start-adm-badge" title="Ver motivo do início antecipado" data-task-name="${esc(x.nome||'')}" data-user="${esc(p.nome)}" data-date="${esc(x.data||x.dataExecucao||'')}" data-schedule="${esc(`${x.horaSugeridaInicio||''} - ${x.horaSugeridaFim||''}`)}" data-early-reason="${esc(x.motivoInicioAntecipado||'')}" data-early-minutes="${esc(x.antecipacaoMin||0)}">🔵 Início antecipado</button>`:'';
   const pontos=`${Number(x.pontosGanhos)||0} / ${Number(x.pontosMaximos)||0} pts`;
-  return `<tr data-history-source="${x.__historico?'historico':'programacao'}"><td><strong>${esc(x.horaSugeridaInicio||'--:--')} - ${esc(x.horaSugeridaFim||'--:--')}</strong><div style="font-size:11px;color:#555;margin-top:3px">${detalhe}</div></td><td>${icon}<strong>${esc(x.nome||'Tarefa')}</strong></td><td>${esc(p.nome)}</td><td>${esc(x.diaSemana||'')}</td><td><span class="badge ${badge(status)}">${esc(status)}</span>${early}</td><td>${esc(pontos)}</td></tr>`;
+  return `<tr data-history-source="${x.__historico?'historico':'programacao'}"><td><strong>${esc(x.horaSugeridaInicio||'--:--')} - ${esc(x.horaSugeridaFim||'--:--')}</strong><div style="font-size:11px;color:#555;margin-top:3px">${detalhe}</div></td><td>${icon}<strong>${esc(x.nome||'Tarefa')}</strong></td><td>${esc(p.nome)}</td><td>${esc(x.diaSemana||'')}</td><td><span class="badge ${badge(x)}">${esc(status)}</span>${early}</td><td>${esc(pontos)}</td></tr>`;
 }
 async function renderHistoricoMonitor(force=false){
   const meuToken=++renderToken;
