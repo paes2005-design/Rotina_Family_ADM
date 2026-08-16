@@ -1,6 +1,6 @@
 const fs=require('fs'),vm=require('vm');
 const read=f=>fs.readFileSync(f,'utf8');
-const html=read('index-ADMIN-v8.html'),dash=read('dashboard-ranking-pro.js'),mon=read('monitor-pro.js'),rewards=read('rewards-admin-ui-v2.js'),manage=read('manage-pro.js'),manageCss=read('manage-pro.css'),mobile=read('mobile-app-ui.js'),css=read('mobile-app-ui.css'),review=read('adm-justification-review.js'),early=read('adm-early-start-ui.js'),scores=read('adm-score-history-cards.js'),sw=read('sw.js'),manifest=JSON.parse(read('manifest.json'));
+const html=read('index-ADMIN-v8.html'),dash=read('dashboard-ranking-pro.js'),mon=read('monitor-pro.js'),rewards=read('rewards-admin-ui-v2.js'),manage=read('manage-pro.js'),manageCss=read('manage-pro.css'),mobile=read('mobile-app-ui.js'),css=read('mobile-app-ui.css'),review=read('adm-justification-review.js'),early=read('adm-early-start-ui.js'),scores=read('adm-score-history-cards.js'),notify=read('reward-redemption-notifications.js'),sw=read('sw.js'),manifest=JSON.parse(read('manifest.json'));
 const assert=(ok,msg)=>{if(!ok)throw new Error(msg);console.log('OK - '+msg)};
 
 // Stability / loading
@@ -15,8 +15,15 @@ assert(early.includes("observe(tb,{childList:true,subtree:false})"),'early-start
 assert(!mobile.includes('adm-enhancements.js'),'known freezing enhancement is not imported');
 assert(!sw.includes('adm-enhancements.js'),'known freezing enhancement is outside app shell');
 assert(sw.includes("cache:'no-store'"),'app assets refresh network-first');
-assert(sw.includes("const CACHE_NAME='rotina-family-adm-v37'"),'ADM cache is v37');
+assert(sw.includes("const CACHE_NAME='rotina-family-adm-v38'"),'ADM cache is v38');
 assert(sw.includes("'./rewards-admin-ui-v2.js'"),'rewards admin module is included in ADM app shell');
+assert(sw.includes("'./reward-redemption-notifications.js'"),'redemption notification module is included in ADM app shell');
+assert(html.includes('reward-redemption-notifications.js'),'redemption notification module loads in the ADM page');
+assert(notify.includes("collection(db, 'resgates')"),'redemption notification listens to the resgates collection');
+assert(notify.includes("String(resgate.status || 'Pendente').toLowerCase() === 'pendente'"),'only pending redemptions trigger alerts');
+assert(notify.includes('Notification.requestPermission()'),'system notification permission is requested from an administrator gesture');
+assert(notify.includes('resgate-tab-badge'),'pending redemptions remain visible as a tab badge');
+assert(sw.includes("self.addEventListener('notificationclick'"),'system redemption notification opens the ADM');
 assert(sw.includes("'./adm-score-history-cards.js'"),'score-history module is included in ADM app shell');
 assert(manifest.start_url.includes('index-ADMIN-v8.html'),'installed ADM starts directly on real page');
 assert(sw.includes('APP_MAIN_URL'),'legacy root navigation is redirected');
