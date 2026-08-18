@@ -60,8 +60,8 @@ function reorganizarRelatorio(){
   toolbar.querySelector('.reward-report-title').appendChild(tabs);
   toolbar.appendChild(grid);
   toolbar.appendChild(resumo);
-  const h3=[...root.querySelectorAll('h3')].find(x=>x.textContent.trim()==='Histórico de Resgates');
-  if(h3&&h3.parentNode===root)h3.remove();
+  const h3=[...root.children].find(x=>x.tagName==='H3'&&x.textContent.trim()==='Histórico de Resgates');
+  if(h3)h3.remove();
   toolbar.appendChild(historico);
   sincronizarLegenda();
   return true;

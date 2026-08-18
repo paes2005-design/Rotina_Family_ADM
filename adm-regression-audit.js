@@ -151,6 +151,8 @@ assert(html.includes("function renderizarRecompensasAdmin(){ const el=document.g
 assert(rewards.includes("catalogoObserver=new MutationObserver"),'reward catalog watches legacy rerenders');
 assert(rewards.includes("if(temItens&&!estaV2)renderCatalogoV2()"),'legacy-only catalog is replaced by V2 controls');
 assert(rewards.includes('reward-admin-v2-item'),'V2 catalog has a stable marker to avoid rerender loops');
+assert(rewards.includes("const h3=[...root.children].find(x=>x.tagName==='H3'"),'legacy reward-history heading is removed from the page root');
+assert(!rewards.includes("root.querySelectorAll('h3')].find"),'new report title is not confused with the legacy title');
 
 // Dashboard / ranking / core flows
 assert(dash.includes('rankingDetalhadoDashboard'),'detailed ranking renderer remains');
