@@ -1,6 +1,7 @@
-const esc = (value = '') => String(value).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const esc = (value = '') => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let groups = [];
 let busy = false;
+let loaded = false;
 
 function statusLabel(group) {
   if (group.protegido) return 'MASTER';
@@ -29,10 +30,8 @@ function renderAdmin(admin, group) {
   const disabled = admin.desativado === true;
   let actions = '<span style="font-size:11px;color:#6b7280">Protegido</span>';
   if (!isMaster) {
-    const toggleLabel = principal
-      ? (group.grupoBloqueado ? 'Ativar grupo' : 'Bloquear grupo')
-      : (disabled ? 'Ativar admin' : 'Desativar admin');
-    actions = `<div style="display:flex;gap:6px;flex-wrap:wrap">${actionButton(toggleLabel,'admin-toggle',`data-uid="${esc(admin.uid)}" data-disabled="${disabled}"`, 'background:#fef3c7;color:#92400e')}${actionButton('Excluir admin','admin-delete',`data-uid="${esc(admin.uid)}" data-email="${esc(admin.email)}"`,'background:#fee2e2;color:#991b1b')}</div>`;
+    const toggleLabel = principal ? (group.grupoBloqueado ? 'Ativar grupo' : 'Bloquear grupo') : (disabled ? 'Ativar admin' : 'Desativar admin');
+    actions = `<div style="display:flex;gap:6px;flex-wrap:wrap">${actionButton(toggleLabel,'admin-toggle',`data-uid="${esc(admin.uid)}" data-disabled="${disabled}"`,'background:#fef3c7;color:#92400e')}${actionButton('Excluir admin','admin-delete',`data-uid="${esc(admin.uid)}" data-email="${esc(admin.email)}"`,'background:#fee2e2;color:#991b1b')}</div>`;
   }
   return `<div style="padding:9px;border:1px solid #e5e7eb;border-radius:10px;background:#fff"><div><strong>${principal ? '👑 ' : '🛡️ '}${esc(admin.email || 'Administrador')}</strong> ${isMaster ? '<span style="font-size:10px;font-weight:800;color:#6d28d9">MASTER</span>' : ''}</div><small>${principal ? 'Administrador principal' : 'Administrador adicional'} · ${disabled ? 'desativado' : 'ativo'}</small><div style="margin-top:7px">${actions}</div></div>`;
 }
@@ -44,10 +43,7 @@ function renderClient(client) {
 function renderTree() {
   const target = document.getElementById('masterFamilyTreeBody');
   if (!target) return;
-  if (!groups.length) {
-    target.innerHTML = '<p style="color:#64748b">Nenhum grupo familiar encontrado.</p>';
-    return;
-  }
+  if (!groups.length) { target.innerHTML = '<p style="color:#64748b">Nenhum grupo familiar encontrado.</p>'; return; }
   target.innerHTML = groups.map(group => {
     const trial = trialText(group);
     const groupActions = group.protegido
@@ -57,18 +53,23 @@ function renderTree() {
   }).join('');
 }
 
-async function loadTree() {
+async function loadTree({ force = false } = {}) {
   if (busy || typeof window.rotinaMasterApi !== 'function') return;
+  if (loaded && !force) return;
   busy = true;
   const target = document.getElementById('masterFamilyTreeBody');
-  if (target) target.innerHTML = '<p>Atualizando árvore…</p>';
+  const button = document.getElementById('masterTreeRefresh');
+  if (target) target.innerHTML = '<p>Consultando a árvore no Firebase…</p>';
+  if (button) { button.disabled = true; button.textContent = 'Carregando…'; }
   try {
     groups = (await window.rotinaMasterApi('/tree')).groups || [];
+    loaded = true;
     renderTree();
   } catch (error) {
-    if (target) target.innerHTML = `<div style="color:#b91c1c">${esc(error?.message || error)}</div>`;
+    if (target) target.innerHTML = `<div style="color:#b91c1c;padding:10px;border:1px solid #fecaca;border-radius:10px;background:#fff7f7"><strong>Não foi possível carregar a árvore.</strong><br><small>${esc(error?.message || error)}</small></div>`;
   } finally {
     busy = false;
+    if (button) { button.disabled = false; button.textContent = loaded ? 'Atualizar árvore' : 'Carregar árvore'; }
   }
 }
 
@@ -78,11 +79,10 @@ function ensurePanel() {
   const panel = document.createElement('div');
   panel.id = 'masterFamilyTree';
   panel.style.cssText = 'margin-top:14px;border:1px solid #d8e2ec;border-radius:16px;background:#fff;padding:14px';
-  panel.innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div><h3 style="margin:0;color:#173a5e">🌳 Árvore completa das famílias</h3><p style="margin:5px 0;color:#64748b;font-size:12px">Visualize cada grupo, administrador principal, administradores adicionais e clientes. Bloqueios comerciais preservam os dados.</p></div><button id="masterTreeRefresh" type="button" style="border:0;border-radius:9px;background:#173a5e;color:#fff;padding:9px 11px;font-weight:800">Atualizar árvore</button></div><div id="masterFamilyTreeBody"><p>Carregando árvore…</p></div>`;
+  panel.innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap"><div><h3 style="margin:0;color:#173a5e">🌳 Árvore completa das famílias</h3><p style="margin:5px 0;color:#64748b;font-size:12px">A árvore não consulta o Firebase automaticamente. Carregue apenas quando precisar administrar grupos e clientes.</p></div><button id="masterTreeRefresh" type="button" style="border:0;border-radius:9px;background:#173a5e;color:#fff;padding:9px 11px;font-weight:800">Carregar árvore</button></div><div id="masterFamilyTreeBody"><p style="color:#64748b">Pronta para consulta.</p></div>`;
   master.appendChild(panel);
-  panel.querySelector('#masterTreeRefresh').addEventListener('click', loadTree);
+  panel.querySelector('#masterTreeRefresh')?.addEventListener('click', () => loadTree({ force: true }));
   panel.addEventListener('click', handleTreeAction);
-  loadTree();
 }
 
 async function handleTreeAction(event) {
@@ -96,43 +96,44 @@ async function handleTreeAction(event) {
     if (!confirm(`${disabled ? 'Bloquear' : 'Reativar'} todo o grupo ${button.dataset.group}?`)) return;
     path = '/groups'; payload = { action: 'set-group-disabled', grupoId: button.dataset.group, disabled };
   } else if (action === 'confirm-group') {
-    if (!confirm(`Confirmar o grupo ${button.dataset.group} como ativo após o período de teste?`)) return;
+    if (!confirm(`Confirmar o grupo ${button.dataset.group} como ativo?`)) return;
     path = '/groups'; payload = { action: 'confirm-group', grupoId: button.dataset.group };
   } else if (action === 'admin-toggle') {
     const disabled = button.dataset.disabled !== 'true';
-    if (!confirm(`${disabled ? 'Desativar' : 'Ativar'} este administrador? Se for o administrador principal, a ação vale para todo o grupo.`)) return;
+    if (!confirm(`${disabled ? 'Desativar' : 'Ativar'} este administrador? Se for o principal, a ação vale para todo o grupo.`)) return;
     path = '/users'; payload = { action: 'set-disabled', targetUid: button.dataset.uid, disabled };
   } else if (action === 'admin-delete') {
-    if (!confirm(`Excluir o login administrativo ${button.dataset.email}? Os dados do grupo serão preservados.`)) return;
+    if (!confirm(`Excluir o login administrativo ${button.dataset.email}?`)) return;
     path = '/users'; payload = { action: 'delete-user', targetUid: button.dataset.uid };
   } else if (action === 'client-toggle') {
     const disabled = button.dataset.disabled !== 'true';
     if (!confirm(`${disabled ? 'Desativar' : 'Ativar'} este cliente?`)) return;
     path = '/profiles'; payload = { action: 'set-profile-disabled', profileId: button.dataset.profile, disabled };
   } else if (action === 'client-delete') {
-    if (!confirm(`Excluir o perfil ${button.dataset.name}? O histórico familiar será preservado para auditoria.`)) return;
+    if (!confirm(`Excluir o perfil ${button.dataset.name}?`)) return;
     path = '/profiles'; payload = { action: 'delete-profile', profileId: button.dataset.profile };
   }
   if (!payload) return;
-  busy = true; button.disabled = true;
+  busy = true;
+  button.disabled = true;
   try {
     await window.rotinaMasterApi(path, { method: 'POST', body: JSON.stringify(payload) });
     window.rotinaLog?.('master.arvore_alterada', { acao: payload.action, grupoId: payload.grupoId || '' });
     alert('Alteração concluída.');
+    loaded = false;
+    await new Promise(resolve => setTimeout(resolve, 700));
+    await loadTree({ force: true });
   } catch (error) {
     alert(error?.message || String(error));
   } finally {
     busy = false;
-    await loadTree();
+    button.disabled = false;
   }
 }
 
-window.addEventListener('rotina-admin-master-ready', event => {
-  if (event.detail?.master === true) setTimeout(ensurePanel, 0);
-});
-
+window.addEventListener('rotina-admin-master-ready', event => { if (event.detail?.master === true) setTimeout(ensurePanel, 0); });
 const timer = setInterval(() => {
   if (window.rotinaMasterSession?.master === true) ensurePanel();
   if (document.getElementById('masterFamilyTree')) clearInterval(timer);
-}, 300);
+}, 500);
 setTimeout(() => clearInterval(timer), 15000);
