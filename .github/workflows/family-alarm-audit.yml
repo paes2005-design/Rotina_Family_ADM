@@ -36,10 +36,10 @@ jobs:
           const mobile=fs.readFileSync('mobile-app-ui.js','utf8');
           const sw=fs.readFileSync('sw.js','utf8');
           const ok=(v,m)=>{if(!v)throw new Error(m);console.log('OK - '+m)};
-          ok(index.includes('family-alarm-admin.js?v=5'),'ADM entry loads responsive dated task alarm v5');
+          ok(index.includes('family-alarm-admin.js?v=6'),'ADM entry loads server-scheduled dated task alarm v6');
           ok(sw.includes("'./family-alarm-admin.js'")&&sw.includes("'./alarm-date-core.js'"),'ADM dated alarm modules are cached offline');
-          ok(sw.includes('family-alarm-admin.js?v=5'),'direct real-page navigation receives dated alarm addon');
-          ok(app.includes('family-alarm-admin.js?v=5'),'canonical ADM page loads the alarm module directly');
+          ok(sw.includes('family-alarm-admin.js?v=6'),'direct real-page navigation receives dated alarm addon');
+          ok(app.includes('family-alarm-admin.js?v=6'),'canonical ADM page loads the alarm module directly');
           ok(alarm.includes("a?.ativo?'🔒 Alarme':'⏰ Programar'"),'ADM alarm control has a visible desktop text label');
           ok(alarm.includes("compacto?(a?.ativo?'🔒':'⏰')")&&alarm.includes("btn.style.maxWidth=compacto?'34px':'100%'"),'ADM alarm control becomes a bounded icon on mobile');
           ok(alarm.includes("btn.style.float=emTabela?'right':'none'"),'ADM table alarm control is aligned to the right of the Task column');
@@ -55,6 +55,8 @@ jobs:
           ok(alarm.includes('ocorrenciasSilenciadas:ativo?[]'),'a newly armed ADM alarm clears stops from an earlier activation');
           ok(alarm.includes('dataAgendada')&&alarm.includes('semanaInicio')&&core.includes('inicioEm')&&core.includes('fimEm'),'ADM command stores exact date and start/end datetimes');
           ok(alarm.includes('versaoAgenda:3'),'ADM command identifies dated schema');
+          ok(alarm.includes('schedulerPendente:true')&&alarm.includes('schedulerVersao:1'),'every ADM alarm change requests server reconciliation');
+          ok(alarm.includes("expiradoPor:'VIRADA_SEMANA',schedulerPendente:true"),'ADM week rollover asks the server to cancel pending OneSignal messages');
           ok(alarm.includes('familyAlarmAdminMoment')&&alarm.includes("['inicio','fim']"),'ADM can schedule start, finish, or both');
           ok(alarm.includes('rotina_family_admin_task_alarm_week_v1')&&alarm.includes('zerarViradaSemana'),'ADM resets dated state at week rollover');
           ok(alarm.includes("expiradoPor:'VIRADA_SEMANA'")&&alarm.includes('expirarAlarmesRemotos'),'ADM explicitly deactivates old remote alarm documents');

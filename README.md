@@ -47,6 +47,10 @@ A solução pode ser utilizada para rotinas infantis, estudos, organização dom
 - GitHub Pages
 - Reconhecimento de fala do navegador para converter justificativas faladas em texto, quando suportado
 
+## Agendamento dos alarmes
+
+Cada ativação ou retirada feita pelo ADM marca o documento do despertador como pendente para o agendador servidor. O Cloudflare Worker versionado no repositório do Cliente cria e cancela as mensagens no OneSignal, sem Firebase Functions e sem exigir o plano Blaze. A virada semanal também solicita o cancelamento de qualquer mensagem que ainda esteja agendada.
+
 ## Aplicativo complementar
 
 Este repositório corresponde ao **Painel do Administrador**. O ecossistema é complementado pelo repositório **Rotina_Family_Cliente**, utilizado pelos integrantes da família.
