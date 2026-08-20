@@ -1,88 +1,27 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import { getFirestore, collection, query, where, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-import { getAuth } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-const API_ROOT = 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
+let stopGroupWatch = null;
 
 function db() {
   if (!getApps().length) throw new Error('Firebase ainda não foi iniciado.');
   return getFirestore(getApp());
 }
 
-function groupState(config = {}) {
-  if (config.grupoBloqueado === true) return 'bloqueado';
-  if (config.grupoConfirmado === true) return 'liberado';
-  if (config.trialAtivo === true) {
-    const end = new Date(config.trialFimEm || '');
-    if (Number.isFinite(end.getTime()) && end.getTime() <= Date.now()) return 'teste-expirado';
-    return 'teste';
-  }
-  return 'legado';
+function isGroupBlocked(config = {}) {
+  return config.grupoBloqueado === true;
 }
 
-function blockMessage(state, individual = false) {
-  if (individual) return 'Este administrador foi bloqueado individualmente pelo ADM Master.';
-  if (state === 'teste-expirado') return 'Sua versão teste de 15 dias terminou. Entre em contato para ativar o grupo familiar.';
+function blockMessage() {
   return 'Este grupo familiar está temporariamente desativado. Entre em contato para regularizar o acesso.';
 }
 
-async function administratorByEmail(email) {
-  const normalized = String(email || '').trim().toLowerCase();
-  const snap = await getDocs(query(collection(db(), 'administradores'), where('email', '==', normalized)));
-  return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
-}
-
-async function administratorByUid(uid) {
-  const value = String(uid || '').trim();
-  if (!value) return null;
-  const snap = await getDocs(query(collection(db(), 'administradores'), where('uid', '==', value)));
-  return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
-}
-
-async function initializeTrialForOwner(email) {
-  if (window.rotinaMasterSession?.master === true) return;
-  const admin = await administratorByEmail(email);
-  if (!admin || String(admin.tipoAcesso || '') !== 'proprietario') return;
-  const user = getAuth(getApp()).currentUser;
-  if (!user || String(user.email || '').trim().toLowerCase() !== String(email || '').trim().toLowerCase()) return;
-  const token = await user.getIdToken(true);
-  const response = await fetch(`${API_ROOT}/commercial/trial`, {
-    method: 'POST',
-    cache: 'no-store',
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: '{}'
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || `Falha HTTP ${response.status}`);
-  window.rotinaLog?.('comercial.teste_iniciado', { grupoId: body.grupoId || '', dias: 15 });
-}
-
-// A tela de login nunca é interceptada pelo comercial. Primeiro o Firebase autentica e
-// o backend decide se é Master. Só depois uma sessão comum é validada comercialmente.
 function installLoginGuard() {
   const original = window.realizarLogin;
-  if (typeof original !== 'function' || original.__commercialGuardSafe) return false;
+  if (typeof original !== 'function' || original.__commercialGroupGuard) return false;
   const wrapped = async (...args) => original(...args);
-  wrapped.__commercialGuardSafe = true;
+  wrapped.__commercialGroupGuard = true;
   window.realizarLogin = wrapped;
-  return true;
-}
-
-function installRegistrationTrial() {
-  const original = window.cadastrarNovoAdministrador;
-  if (typeof original !== 'function' || original.__commercialTrialSafe) return false;
-  const wrapped = async (...args) => {
-    const email = String(document.getElementById('novoAdminEmail')?.value || '').trim().toLowerCase();
-    const invite = String(document.getElementById('novoAdminConvite')?.value || '').trim();
-    const result = await original(...args);
-    if (!invite && email && window.rotinaMasterSession?.master !== true) {
-      try { await initializeTrialForOwner(email); }
-      catch (error) { console.warn('Falha ao iniciar versão teste; cadastro preservado.', error); }
-    }
-    return result;
-  };
-  wrapped.__commercialTrialSafe = true;
-  window.cadastrarNovoAdministrador = wrapped;
   return true;
 }
 
@@ -106,7 +45,7 @@ function waitForMasterResolution(timeoutMs = 5000) {
   });
 }
 
-function showCommercialBlock(text) {
+function showCommercialBlock() {
   document.getElementById('sistemaPrincipal')?.style.setProperty('display', 'none');
   document.getElementById('telaAcesso')?.style.setProperty('display', 'block');
   if (!document.getElementById('commercialBlockNotice')) {
@@ -116,7 +55,37 @@ function showCommercialBlock(text) {
     document.getElementById('telaAcesso')?.prepend(box);
   }
   const box = document.getElementById('commercialBlockNotice');
-  if (box) box.textContent = text;
+  if (box) box.textContent = blockMessage();
+}
+
+async function enforceGroup(groupId) {
+  const group = String(groupId || '').trim();
+  if (!group || window.rotinaMasterSession?.master === true) return true;
+  try {
+    const snap = await getDoc(doc(db(), 'configGrupos', group));
+    if (isGroupBlocked(snap.exists() ? snap.data() : {})) {
+      showCommercialBlock();
+      return false;
+    }
+  } catch (error) {
+    // Em 429/rede, preserva a sessão válida. O comercial nunca derruba o Master.
+    console.warn('Validação comercial do grupo indisponível; acesso preservado.', error);
+  }
+  return true;
+}
+
+function watchGroup(groupId) {
+  stopGroupWatch?.();
+  stopGroupWatch = null;
+  const group = String(groupId || '').trim();
+  if (!group || window.rotinaMasterSession?.master === true) return;
+  stopGroupWatch = onSnapshot(
+    doc(db(), 'configGrupos', group),
+    snap => {
+      if (isGroupBlocked(snap.exists() ? snap.data() : {})) showCommercialBlock();
+    },
+    error => console.warn('Listener comercial do grupo indisponível; sessão preservada.', error)
+  );
 }
 
 async function enforceCurrentSession(event) {
@@ -124,48 +93,25 @@ async function enforceCurrentSession(event) {
   if (detail.master === true || window.rotinaMasterSession?.master === true) return;
   const groupId = String(detail.grupoId || '').trim();
   if (!groupId) return;
-
-  try {
-    const isMaster = await waitForMasterResolution();
-    if (isMaster || window.rotinaMasterSession?.master === true) return;
-
-    const user = getAuth(getApp()).currentUser;
-    if (!user) return;
-
-    // Primeiro o bloqueio individual do administrador comum.
-    let admin = null;
-    try { admin = await administratorByUid(user.uid); }
-    catch (error) { console.warn('Validação individual indisponível; acesso preservado.', error); }
-    if (admin?.bloqueadoComercialIndividual === true) {
-      showCommercialBlock(blockMessage('', true));
-      return;
-    }
-
-    // Depois o estado da família. Se o Firestore estiver indisponível/429, o comercial
-    // falha aberto: não derruba uma sessão válida e nunca interfere com o Master.
-    const snap = await getDoc(doc(db(), 'configGrupos', groupId));
-    const state = groupState(snap.exists() ? snap.data() : {});
-    if (!['bloqueado', 'teste-expirado'].includes(state)) return;
-    showCommercialBlock(blockMessage(state));
-  } catch (error) {
-    console.warn('Validação comercial indisponível; acesso preservado.', error);
-  }
+  const isMaster = await waitForMasterResolution();
+  if (isMaster || window.rotinaMasterSession?.master === true) return;
+  if (await enforceGroup(groupId)) watchGroup(groupId);
 }
 
 window.addEventListener('rotina-admin-session-ready', enforceCurrentSession);
 window.addEventListener('rotina-admin-master-ready', event => {
-  if (event.detail?.master === true) document.getElementById('commercialBlockNotice')?.remove();
+  if (event.detail?.master === true) {
+    stopGroupWatch?.();
+    stopGroupWatch = null;
+    document.getElementById('commercialBlockNotice')?.remove();
+  }
 });
 
 function installHooks() {
   installLoginGuard();
-  installRegistrationTrial();
 }
 
-if (document.readyState === 'loading') {
-  window.addEventListener('DOMContentLoaded', installHooks, { once: true });
-} else {
-  installHooks();
-}
+if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', installHooks, { once: true });
+else installHooks();
 setTimeout(installHooks, 300);
 setTimeout(installHooks, 1000);
