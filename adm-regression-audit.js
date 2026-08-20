@@ -1,6 +1,6 @@
 const fs=require('fs'),vm=require('vm');
 const read=f=>fs.readFileSync(f,'utf8');
-const html=read('index-ADMIN-v8.html'),dash=read('dashboard-ranking-pro.js'),mon=read('monitor-pro.js'),rewards=read('rewards-admin-ui-v2.js'),manage=read('manage-pro.js'),manageCss=read('manage-pro.css'),mobile=read('mobile-app-ui.js'),css=read('mobile-app-ui.css'),review=read('adm-justification-review.js'),early=read('adm-early-start-ui.js'),scores=read('adm-score-history-cards.js'),notify=read('reward-redemption-notifications.js'),sw=read('sw.js'),manifest=JSON.parse(read('manifest.json'));
+const html=read('index-ADMIN-v8.html'),dash=read('dashboard-ranking-pro.js'),mon=read('monitor-pro.js'),rewards=read('rewards-admin-ui-v2.js'),manage=read('manage-pro.js'),manageCss=read('manage-pro.css'),mobile=read('mobile-app-ui.js'),css=read('mobile-app-ui.css'),review=read('adm-justification-review.js'),early=read('adm-early-start-ui.js'),scores=read('adm-score-history-cards.js'),notify=read('reward-redemption-notifications.js'),sw=read('sw.js'),manifest=JSON.parse(read('manifest.json')),master=read('admin-master.js'),appMonitor=read('app-monitoring.js'),appMonitorDashboard=read('app-monitoring-dashboard.js'),adminPush=read('admin-push-onesignal.js');
 const assert=(ok,msg)=>{if(!ok)throw new Error(msg);console.log('OK - '+msg)};
 
 // Stability / loading
@@ -15,7 +15,7 @@ assert(early.includes("observe(tb,{childList:true,subtree:false})"),'early-start
 assert(!mobile.includes('adm-enhancements.js'),'known freezing enhancement is not imported');
 assert(!sw.includes('adm-enhancements.js'),'known freezing enhancement is outside app shell');
 assert(sw.includes("cache:'no-store'"),'app assets refresh network-first');
-assert(sw.includes("const CACHE_NAME='rotina-family-adm-v42'"),'ADM cache is v42');
+assert(sw.includes("const CACHE_NAME='rotina-family-adm-v46'"),'ADM cache is v46');
 assert(sw.includes("'./rewards-admin-ui-v2.js'"),'rewards admin module is included in ADM app shell');
 assert(sw.includes("'./reward-redemption-notifications.js'"),'redemption notification module is included in ADM app shell');
 assert(html.includes('reward-redemption-notifications.js'),'redemption notification module loads in the ADM page');
@@ -28,6 +28,21 @@ assert(sw.includes("'./adm-score-history-cards.js'"),'score-history module is in
 assert(manifest.start_url.includes('index-ADMIN-v8.html'),'installed ADM starts directly on real page');
 assert(sw.includes('APP_MAIN_URL'),'legacy root navigation is redirected');
 assert(mobile.includes('MOBILE_QUERY.matches'),'mobile UI remains viewport-gated');
+
+// ADM Master / protected monitoring / OneSignal launcher placement
+assert(html.includes('admin-master.js?v=1'),'Master authorization module loads before its dashboard');
+assert(html.indexOf('admin-master.js?v=1')<html.indexOf('app-monitoring-dashboard.js?v=2'),'Master authorization loads before protected monitoring UI');
+assert(sw.includes("'./admin-master.js'"),'Master module is included in ADM app shell');
+assert(master.includes("getIdToken(true)"),'Master API uses a fresh Firebase ID token');
+assert(master.includes("window.rotinaMasterSession = { master: false }")&&master.includes('window.rotinaMasterSession = masterSession'),'Master session state cannot remain enabled after logout or denial');
+assert(master.includes("isMaster ? 'Protegido'"),'Master account is protected in the user table');
+for(const action of ['update-email','send-password-reset','set-disabled','delete-user']) assert(master.includes(action),'Master action '+action+' exists');
+assert(!appMonitorDashboard.includes("collection(db, 'appLogs')")&&!appMonitorDashboard.includes("collection(db,'appLogs')"),'monitoring dashboard never reads public Firestore logs directly');
+assert(appMonitorDashboard.includes('window.rotinaMasterApi(`/logs?grupoId='),'monitoring dashboard reads logs only through protected Master API');
+assert(appMonitorDashboard.includes("document.getElementById('adminMaster')")&&!appMonitorDashboard.includes("document.getElementById('dashboard')"),'monitoring is isolated inside the ADM Master tab');
+assert(appMonitor.includes("/app-log'")&&appMonitor.includes('fetch(LOG_ENDPOINT'),'ADM sends sanitized log batches through the Worker');
+assert(adminPush.includes("offset: { bottom: '88px', right: '14px' }"),'OneSignal launcher stays above the mobile bottom navigation');
+assert(adminPush.includes("addEventListener('foregroundWillDisplay'")&&adminPush.includes("addEventListener('click'")&&adminPush.includes("addEventListener('dismiss'"),'ADM records foreground, click and dismiss push events');
 
 // Task-management presentation
 assert(html.includes('<th>Horário sugerido / Tolerância</th>'),'management table header includes tolerance');

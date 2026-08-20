@@ -82,6 +82,7 @@
         enable: true,
         size: 'medium',
         position: 'bottom-right',
+        offset: { bottom: '88px', right: '14px' },
         showCredit: false,
         text: {
           'launcher.button.aria-label': 'Gerenciar notificações',
@@ -99,6 +100,23 @@
           'dialog.blocked.message': 'Siga estas instruções para permitir notificações:'
         }
       }
+    });
+    const pushDetails = event => {
+      const notification = event?.notification || {};
+      const data = notification.additionalData || notification.data || {};
+      return {
+        tipo: String(data.tipo || 'push').slice(0, 60),
+        paginaVisivel: document.visibilityState === 'visible'
+      };
+    };
+    OneSignal.Notifications.addEventListener('foregroundWillDisplay', event => {
+      window.rotinaLog?.('push.onesignal_primeiro_plano', pushDetails(event));
+    });
+    OneSignal.Notifications.addEventListener('click', event => {
+      window.rotinaLog?.('push.onesignal_clicado', pushDetails(event));
+    });
+    OneSignal.Notifications.addEventListener('dismiss', event => {
+      window.rotinaLog?.('push.onesignal_dispensado', pushDetails(event));
     });
     await tagAdmin(OneSignal, localStorage.getItem(GROUP_STORAGE_KEY));
   });

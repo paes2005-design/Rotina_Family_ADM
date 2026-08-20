@@ -55,7 +55,11 @@ O ADM também se inscreve no OneSignal para receber solicitações de recompensa
 
 ## Monitoramento e logs
 
-O Dashboard possui o painel **Monitoramento e logs**, com o estado do Worker Cloudflare, horários dos ciclos, contagens de alarmes, recompensas e auditorias OneSignal, além dos 100 eventos mais recentes do Cliente e do ADM. Os logs não armazenam senha, PIN, e-mail, justificativa ou conteúdo digitado e expiram em sete dias. No plano gratuito do OneSignal, o painel distingue corretamente a entrega ao serviço push; a confirmação individual de recebimento no aparelho não é disponibilizada pelo provedor.
+Uma aba separada chamada **ADM Master** reúne o gerenciamento de logins e o painel **Monitoramento e logs**. Ela é exibida somente para o ADM Master autorizado no Secret do Cloudflare. Os outros administradores mantêm todas as funções operacionais do sistema, mas essa aba não é criada para eles e as APIs continuam bloqueadas. Os eventos são sanitizados, enviados ao Worker, criptografados antes de serem persistidos e expiram em sete dias. Senha, PIN, e-mail, justificativa e conteúdo digitado são descartados.
+
+O ADM Master também possui uma área exclusiva para gerenciar logins administrativos: editar e-mail, enviar redefinição de senha, ativar ou desativar acesso e retirar um login. A identidade Master é validada pelo token do Firebase e pela lista privada do Worker; ela não depende de um campo editável no Firestore. A própria conta Master é protegida contra alteração, desativação e exclusão pelo painel. Retirar um login administrativo não apaga integrantes, tarefas ou o histórico familiar.
+
+No plano gratuito do OneSignal, o monitor distingue a entrega ao serviço push; a confirmação individual de recebimento no aparelho não é disponibilizada pelo provedor. O sino do OneSignal fica acima da navegação inferior no celular para não encobrir a opção **Prêmio**.
 
 ## Aplicativo complementar
 

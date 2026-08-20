@@ -1,8 +1,9 @@
 import { getApps, getApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const WORKER_MONITOR_URL = 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/monitoramento';
 let loading = false;
+let masterEnabled = false;
 
 const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -23,8 +24,8 @@ function detailsText(details = {}) {
 }
 
 function ensurePanel() {
-  const dashboard = document.getElementById('dashboard');
-  if (!dashboard || document.getElementById('appMonitoringPanel')) return;
+  const masterArea = document.getElementById('adminMaster');
+  if (!masterArea || document.getElementById('appMonitoringPanel')) return;
   const panel = document.createElement('section');
   panel.id = 'appMonitoringPanel';
   panel.innerHTML = `
@@ -49,7 +50,7 @@ function ensurePanel() {
       <div class="app-monitor-filters"><select id="appMonitorApp"><option value="">Todos os aplicativos</option><option value="cliente">Cliente</option><option value="adm">ADM</option></select><select id="appMonitorLevel"><option value="">Todos os níveis</option><option value="error">Erros</option><option value="warning">Avisos</option><option value="info">Informações</option></select></div>
       <div id="appMonitorLogs"></div>
     </div>`;
-  dashboard.appendChild(panel);
+  masterArea.appendChild(panel);
   document.getElementById('appMonitorRefresh').onclick = loadMonitoring;
   document.getElementById('appMonitorApp').onchange = renderCachedLogs;
   document.getElementById('appMonitorLevel').onchange = renderCachedLogs;
@@ -71,11 +72,8 @@ function renderCachedLogs() {
 }
 
 async function readLogs(groupId) {
-  if (!getApps().length) return [];
-  const snapshot = await getDocs(query(collection(getFirestore(getApp()), 'appLogs'), where('grupoId', '==', groupId)));
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-    .sort((a, b) => String(b.clienteEm || '').localeCompare(String(a.clienteEm || '')))
-    .slice(0, 100);
+  if (!masterEnabled || !getApps().length || !getAuth(getApp()).currentUser || !window.rotinaMasterApi) return [];
+  return (await window.rotinaMasterApi(`/logs?grupoId=${encodeURIComponent(groupId)}`)).logs || [];
 }
 
 function renderWorkerStatus(monitor = {}) {
@@ -97,7 +95,7 @@ function renderWorkerStatus(monitor = {}) {
 }
 
 async function loadMonitoring() {
-  if (loading) return;
+  if (loading || !masterEnabled) return;
   ensurePanel();
   const groupId = currentGroup();
   if (!groupId) return;
@@ -125,12 +123,22 @@ async function loadMonitoring() {
 }
 
 function install() {
-  ensurePanel();
-  window.addEventListener('rotina-admin-session-ready', () => setTimeout(loadMonitoring, 500));
+  const applyMasterSession = session => {
+    masterEnabled = session?.master === true;
+    if (!masterEnabled) {
+      document.getElementById('appMonitoringPanel')?.remove();
+      return;
+    }
+    ensurePanel();
+    setTimeout(loadMonitoring, 300);
+  };
+  window.addEventListener('rotina-admin-master-ready', event => {
+    applyMasterSession(event.detail);
+  });
+  if (window.rotinaMasterSession) applyMasterSession(window.rotinaMasterSession);
   setInterval(() => {
-    if (document.getElementById('dashboard')?.classList.contains('active')) loadMonitoring();
+    if (masterEnabled && document.getElementById('adminMaster')?.classList.contains('active')) loadMonitoring();
   }, 60_000);
-  if (currentGroup()) loadMonitoring();
 }
 
 if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', install, { once: true });

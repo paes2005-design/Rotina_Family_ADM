@@ -887,7 +887,7 @@
 
         try {
             const cred = await createUserWithEmailAndPassword(auth, email, senha);
-            await addDoc(collection(db, "administradores"), { email, uid: cred.user.uid, codigoAdmin, codigoCliente, grupoId, authVersion: 2 });
+            await addDoc(collection(db, "administradores"), { email, uid: cred.user.uid, codigoAdmin, codigoCliente, grupoId, authVersion: 2, tipoAcesso: codigoConvite ? 'admin' : 'proprietario', criadoEm: new Date().toISOString() });
             alert(`Administrador cadastrado!\nCódigo Admin: ${codigoAdmin}\nCódigo Cliente: ${codigoCliente}`);
         } catch (e) {
             console.error(e);
@@ -1603,7 +1603,7 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=38')
+      navigator.serviceWorker.register('./sw.js?v=39')
         .then(reg => console.log('Service Worker registrado com sucesso!', reg))
         .catch(err => console.error('Erro ao registrar Service Worker:', err));
     });
@@ -1644,7 +1644,8 @@
   <script type="module" src="./dashboard-ranking-pro.js"></script>
 <script type="module" src="./family-alarm-admin.js?v=6"></script>
 <script type="module" src="./reward-redemption-notifications.js?v=2"></script>
-<script type="module" src="./app-monitoring.js?v=1"></script>
-<script type="module" src="./app-monitoring-dashboard.js?v=1"></script>
+<script type="module" src="./app-monitoring.js?v=2"></script>
+<script type="module" src="./admin-master.js?v=1"></script>
+<script type="module" src="./app-monitoring-dashboard.js?v=2"></script>
 </body>
 </html>
