@@ -14,14 +14,92 @@
         const r=await fetch('./index-ADMIN-v8.html',{cache:'no-store'});
         if(!r.ok) throw new Error('Falha ao carregar painel');
         let html=await r.text();
+
+        // O ADM Master é resolvido antes de o fluxo normal do ADM encerrar uma
+        // sessão sem vínculo familiar. A autoridade Master não depende de CLI/grupo.
+        const masterBridge = `    async function aguardarConfirmacaoMaster(user, timeoutMs = 5000) {
+        if (!user) return false;
+        if (window.rotinaMasterSession?.master === true && window.rotinaMasterSession?.uid === user.uid) return true;
+        return await new Promise(resolve => {
+            let finalizado = false;
+            const concluir = valor => {
+                if (finalizado) return;
+                finalizado = true;
+                clearTimeout(timer);
+                window.removeEventListener('rotina-admin-master-ready', aoResolver);
+                resolve(valor === true);
+            };
+            const aoResolver = evento => {
+                const sessao = evento.detail || {};
+                if (sessao.master === true && (!sessao.uid || sessao.uid === user.uid)) concluir(true);
+                else if (sessao.motivo === 'nao-autorizado') concluir(false);
+            };
+            window.addEventListener('rotina-admin-master-ready', aoResolver);
+            const timer = setTimeout(() => concluir(window.rotinaMasterSession?.master === true), timeoutMs);
+            window.dispatchEvent(new CustomEvent('rotina-admin-session-ready', { detail: { grupoId: '', masterCandidate: true } }));
+        });
+    }
+
+    function abrirShellMaster(user) {
+        adminLogadoAtual = {
+            id: 'MASTER-SYSTEM',
+            uid: user.uid,
+            email: String(user.email || '').trim().toLowerCase(),
+            tipoAcesso: 'master',
+            codigoAdmin: 'MASTER',
+            codigoCliente: '',
+            grupoId: ''
+        };
+        document.getElementById('telaAcesso').style.display = 'none';
+        document.getElementById('sistemaPrincipal').style.display = 'block';
+        document.getElementById('displayCodigoAdmin').innerText = 'MASTER';
+        document.getElementById('displayCodigoCliente').innerText = 'SISTEMA';
+        window.dispatchEvent(new CustomEvent('rotina-admin-session-ready', { detail: { grupoId: '', master: true } }));
+    }
+
+`;
+        const loginAnchor = '    window.realizarLogin = async () => {';
+        if(!html.includes('async function aguardarConfirmacaoMaster(') && html.includes(loginAnchor)) {
+          html = html.replace(loginAnchor, masterBridge + loginAnchor);
+        }
+
+        html = html.replace(
+          "            if(snap.empty) throw new Error('Cadastro administrativo não encontrado.');",
+          `            if(snap.empty) {
+                if (await aguardarConfirmacaoMaster(cred.user)) {
+                    abrirShellMaster(cred.user);
+                    return;
+                }
+                throw new Error('Cadastro administrativo não encontrado.');
+            }`
+        );
+
+        html = html.replace(
+          `            if(snap.empty) {
+                await signOut(auth);
+                alert('Sessão autenticada sem cadastro administrativo correspondente.');
+                return;
+            }`,
+          `            if(snap.empty) {
+                if (await aguardarConfirmacaoMaster(user)) {
+                    abrirShellMaster(user);
+                    return;
+                }
+                await signOut(auth);
+                alert('Sessão autenticada sem cadastro administrativo correspondente.');
+                return;
+            }`
+        );
+
+        html = html.replace('./admin-master.js?v=1', './admin-master.js?v=2');
+        html = html.replace('./sw.js?v=39', './sw.js?v=40');
+
         const addons=[
           '<script type="module" src="./adm-score-history-cards.js?v=2"><\\/script>',
           '<script type="module" src="./adm-monitor-history-fix.js?v=3"><\\/script>',
           '<script type="module" src="./family-alarm-admin.js?v=6"><\\/script>',
           '<script type="module" src="./reward-redemption-notifications.js?v=2"><\\/script>',
-          '<script src="./admin-master-integrity-fix.js?v=1"><\\/script>',
-          '<script type="module" src="./commercial-access-admin.js?v=2"><\\/script>',
-          '<script type="module" src="./master-family-tree.js?v=1"><\\/script>'
+          '<script src="./admin-master-integrity-fix.js?v=1"><\\/script>'
         ];
         for(const addon of addons){const m=addon.match(/src="\.\/(.+?)\?/);const nome=m?.[1]||'';if(nome&&!html.includes(nome))html=html.replace('</body>',addon+'\n</body>');}
         document.open();document.write(html);document.close();
