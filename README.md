@@ -55,7 +55,7 @@ O ADM também se inscreve no OneSignal para receber solicitações de recompensa
 
 ## Monitoramento e logs
 
-O Dashboard possui o painel **Monitoramento e logs**, com o estado do Worker Cloudflare, horários dos ciclos, contagens de alarmes, recompensas e auditorias OneSignal, além dos 100 eventos mais recentes do Cliente e do ADM. Os logs não armazenam senha, PIN, e-mail, justificativa ou conteúdo digitado e expiram em sete dias.
+O Dashboard possui o painel **Monitoramento e logs**, com o estado do Worker Cloudflare, horários dos ciclos, contagens de alarmes, recompensas e auditorias OneSignal, além dos 100 eventos mais recentes do Cliente e do ADM. Os logs não armazenam senha, PIN, e-mail, justificativa ou conteúdo digitado e expiram em sete dias. No plano gratuito do OneSignal, o painel distingue corretamente a entrega ao serviço push; a confirmação individual de recebimento no aparelho não é disponibilizada pelo provedor.
 
 ## Aplicativo complementar
 

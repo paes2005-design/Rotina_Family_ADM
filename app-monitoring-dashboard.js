@@ -37,6 +37,7 @@ function ensurePanel() {
       .app-monitor-card{padding:12px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0}.app-monitor-card small{display:block;color:#64748b}.app-monitor-card strong{display:block;margin-top:5px;color:#1e293b}
       .app-monitor-ok{color:#15803d!important}.app-monitor-bad{color:#b91c1c!important}
       .app-monitor-filters{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.app-monitor-filters select{padding:8px;border:1px solid #cbd5e1;border-radius:9px;background:#fff}
+      .app-monitor-note{margin:8px 0 14px;color:#64748b;font-size:12px;line-height:1.45}
       .app-monitor-table-wrap{overflow:auto;max-height:420px;border:1px solid #e2e8f0;border-radius:12px}
       .app-monitor-table{width:100%;border-collapse:collapse;min-width:680px}.app-monitor-table th,.app-monitor-table td{padding:9px;border-bottom:1px solid #edf2f7;text-align:left;font-size:12px;vertical-align:top}.app-monitor-table th{position:sticky;top:0;background:#f8fafc;color:#475569}
       .app-log-error{background:#fff1f2}.app-log-warning{background:#fffbeb}
@@ -44,6 +45,7 @@ function ensurePanel() {
     <div class="app-monitor-panel">
       <div class="app-monitor-head"><div><h2>🩺 Monitoramento e logs</h2><p>Diagnóstico do Cliente, ADM, sincronização, alarmes e notificações.</p></div><button id="appMonitorRefresh" class="app-monitor-refresh" type="button">Atualizar</button></div>
       <div id="appMonitorCards" class="app-monitor-cards"><div class="app-monitor-card"><small>Status</small><strong>Carregando…</strong></div></div>
+      <p class="app-monitor-note">No plano gratuito, o OneSignal confirma a entrega ao serviço push do navegador, mas não fornece a confirmação individual de recebimento no aparelho.</p>
       <div class="app-monitor-filters"><select id="appMonitorApp"><option value="">Todos os aplicativos</option><option value="cliente">Cliente</option><option value="adm">ADM</option></select><select id="appMonitorLevel"><option value="">Todos os níveis</option><option value="error">Erros</option><option value="warning">Avisos</option><option value="info">Informações</option></select></div>
       <div id="appMonitorLogs"></div>
     </div>`;
@@ -80,13 +82,17 @@ function renderWorkerStatus(monitor = {}) {
   const cards = document.getElementById('appMonitorCards');
   if (!cards) return;
   const run = monitor.lastRun || {};
+  const activity = [...(monitor.recentCycles || [])].reverse().find(item => Number(item.processed) > 0) || run;
+  const result = Object.entries(activity.states || {}).map(([state, total]) => `${state}: ${total}`).join(' · ') || 'Sem atividade recente';
   const healthy = monitor.status === 'SAUDAVEL';
   cards.innerHTML = `
     <div class="app-monitor-card"><small>Worker Cloudflare</small><strong class="${healthy ? 'app-monitor-ok' : 'app-monitor-bad'}">${escapeHtml(monitor.status || 'SEM DADOS')}</strong></div>
     <div class="app-monitor-card"><small>Último ciclo</small><strong>${escapeHtml(formatDate(monitor.lastRunAt))}</strong></div>
-    <div class="app-monitor-card"><small>Alarmes processados</small><strong>${Number(run.alarms) || 0}</strong></div>
-    <div class="app-monitor-card"><small>Recompensas processadas</small><strong>${Number(run.rewards) || 0}</strong></div>
-    <div class="app-monitor-card"><small>Auditorias OneSignal</small><strong>${Number(run.audits) || 0}</strong></div>
+    <div class="app-monitor-card"><small>Última atividade</small><strong>${escapeHtml(formatDate(activity.em))}</strong></div>
+    <div class="app-monitor-card"><small>Alarmes processados</small><strong>${Number(activity.alarms) || 0}</strong></div>
+    <div class="app-monitor-card"><small>Recompensas processadas</small><strong>${Number(activity.rewards) || 0}</strong></div>
+    <div class="app-monitor-card"><small>Auditorias OneSignal</small><strong>${Number(activity.audits) || 0}</strong></div>
+    <div class="app-monitor-card"><small>Resultado da atividade</small><strong>${escapeHtml(result)}</strong></div>
     <div class="app-monitor-card"><small>Erros recentes do app</small><strong class="${cachedLogs.some(item => item.nivel === 'error') ? 'app-monitor-bad' : 'app-monitor-ok'}">${cachedLogs.filter(item => item.nivel === 'error').length}</strong></div>`;
 }
 
