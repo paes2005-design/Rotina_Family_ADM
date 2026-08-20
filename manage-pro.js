@@ -29,7 +29,7 @@ function obterLinhaTarefas(){
     const tarefa=celTarefa?.querySelector('strong')?.textContent.trim()||celTarefa?.textContent.trim()||'';
     const icone=celTarefa?.querySelector('.task-icon-cell')?.textContent.trim()||'✅';
     const usuario=row.children[2]?.textContent.trim()||'';
-    return {row,horario,tolerancia,tarefa,icone,usuario,id:pegarId(editar,'preencherEdicaoTarefa')||pegarId(excluir,'excluirTarefa')};
+    return {row,horario,tolerancia,tarefa,icone,usuario,id:row.dataset.familyTaskId||pegarId(editar,'preencherEdicaoTarefa')||pegarId(excluir,'excluirTarefa')};
   });
 }
 
@@ -58,7 +58,7 @@ function renderCardsGerenciar(){
     return;
   }
   cards.innerHTML=linhas.map(x=>`
-    <article class="ger-task-card">
+    <article class="ger-task-card" data-family-task-id="${escG(x.row.dataset.familyTaskId||x.id)}" data-family-task-group="${escG(x.row.dataset.familyTaskGroup||'')}" data-family-task-name="${escG(x.row.dataset.familyTaskName||x.tarefa)}" data-family-task-day="${escG(x.row.dataset.familyTaskDay||gerDiaAtual)}" data-family-task-date="${escG(x.row.dataset.familyTaskDate||'')}" data-family-task-time="${escG(x.row.dataset.familyTaskTime||'')}" data-family-task-end="${escG(x.row.dataset.familyTaskEnd||'')}" data-family-profile-id="${escG(x.row.dataset.familyProfileId||'')}" data-family-profile-name="${escG(x.row.dataset.familyProfileName||x.usuario)}">
       <div class="ger-time-block">
         <div class="ger-time">${escG(x.horario.replace(' às ','–'))}</div>
         <small class="ger-tolerance">Tol. ${escG(x.tolerancia)} min</small>

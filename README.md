@@ -17,6 +17,7 @@ O administrador influencia diretamente o aplicativo do Cliente: tarefas cadastra
 - Filtro por integrante e data de referência.
 - Sequências, conquistas e acompanhamento de desempenho.
 - Catálogo de recompensas e aprovação/recusa de resgates.
+- Programação de alarmes por tarefa e por data, para início, fim ou ambos.
 - Firebase Authentication para administradores.
 - Sincronização em tempo real com o aplicativo Cliente.
 - Suporte PWA e persistência local para uso após uma primeira sincronização online.
@@ -24,6 +25,10 @@ O administrador influencia diretamente o aplicativo do Cliente: tarefas cadastra
 ## Como ADM e Cliente se comunicam
 
 Os dois aplicativos utilizam o mesmo projeto Firebase/Firestore. O ADM registra perfis, tarefas, regras e recompensas. O Cliente consulta essas informações pelo código da família e pelo perfil autorizado. Quando o integrante inicia ou conclui uma tarefa, justifica um atraso ou solicita uma recompensa, os registros são sincronizados com o Firestore e passam a ficar disponíveis para o ADM.
+
+## Contrato dos alarmes
+
+A tarefa recorrente mantém o dia da semana nos valores canônicos `Domingo`, `Segunda`, `Terça`, `Quarta`, `Quinta`, `Sexta` e `Sábado`. Cada alarme do ADM é vinculado à data real da ocorrência e registra `dataAgendada`, `semanaInicio`, `inicioEm` e `fimEm`. Alarmes criados pelo responsável continuam bloqueados para retirada no Cliente. Na virada de domingo para segunda, os documentos antigos são desativados e a nova semana começa sem alarmes herdados.
 
 ## Proposta de valor
 

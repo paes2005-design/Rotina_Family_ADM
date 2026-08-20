@@ -25,6 +25,7 @@ jobs:
           node --check adm-score-history-cards.js
           node --check adm-monitor-history-fix.js
           node --check family-alarm-admin.js
+          node --check alarm-date-core.js
           node --check reward-redemption-notifications.js
           node --check adm-regression-audit.js
           node --check sw.js
@@ -47,7 +48,7 @@ jobs:
           assert(h.includes('toleranciaConsumidaSeg'),'exact tolerance consumption is displayed');
           assert(h.includes('inicioExecutadoEm')&&h.includes('terminoExecutadoEm'),'exact execution timestamps are used');
           assert(h.includes("| Consumido: ${formatarSegundos(consumido)}"),'monitor exposes consumed tolerance');
-          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v38'"),'ADM cache is v38');
+          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v39'"),'ADM cache is v39');
           assert(sw.includes("'./adm-monitor-history-fix.js'"),'historical monitor is cached offline');
           assert(entry.includes('adm-monitor-history-fix.js'),'historical monitor is loaded by ADM entry');
           console.log('ALL ADM HISTORICAL MONITOR CHECKS PASSED');

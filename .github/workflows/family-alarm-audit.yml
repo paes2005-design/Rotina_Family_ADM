@@ -3,6 +3,9 @@ on:
   push:
     paths:
       - 'family-alarm-admin.js'
+      - 'alarm-date-core.js'
+      - 'manage-pro.js'
+      - 'mobile-app-ui.js'
       - 'index.html'
       - 'index-ADMIN-v8.html'
       - 'sw.js'
@@ -10,34 +13,79 @@ on:
 jobs:
   alarm-audit:
     runs-on: ubuntu-latest
+    env:
+      TZ: America/Bahia
     steps:
       - uses: actions/checkout@v4
       - name: Syntax
         run: |
           node --check family-alarm-admin.js
+          node --check alarm-date-core.js
+          node --check manage-pro.js
+          node --check mobile-app-ui.js
           node --check sw.js
-      - name: Alarm authority and offline regression
+      - name: Alarm authority, date, mobile and offline regression
         run: |
           node <<'NODE'
           const fs=require('fs');
           const alarm=fs.readFileSync('family-alarm-admin.js','utf8');
+          const core=fs.readFileSync('alarm-date-core.js','utf8');
           const index=fs.readFileSync('index.html','utf8');
           const app=fs.readFileSync('index-ADMIN-v8.html','utf8');
+          const manage=fs.readFileSync('manage-pro.js','utf8');
+          const mobile=fs.readFileSync('mobile-app-ui.js','utf8');
           const sw=fs.readFileSync('sw.js','utf8');
           const ok=(v,m)=>{if(!v)throw new Error(m);console.log('OK - '+m)};
-          ok(index.includes('family-alarm-admin.js?v=2'),'ADM entry loads task alarm v2');
-          ok(sw.includes("'./family-alarm-admin.js'"),'ADM alarm module is cached offline');
-          ok(sw.includes('family-alarm-admin.js?v=2'),'direct real-page navigation receives alarm addon');
+          ok(index.includes('family-alarm-admin.js?v=3'),'ADM entry loads dated task alarm v3');
+          ok(sw.includes("'./family-alarm-admin.js'")&&sw.includes("'./alarm-date-core.js'"),'ADM dated alarm modules are cached offline');
+          ok(sw.includes('family-alarm-admin.js?v=3'),'direct real-page navigation receives dated alarm addon');
           ok(app.includes('data-family-task-id')&&app.includes('data-family-profile-id'),'ADM task rows expose task and profile identity');
-          ok(alarm.includes('family-task-alarm-admin'),'ADM places alarm control on each task');
-          ok(alarm.includes("origem:'ADM',bloqueado:ativo"),'ADM task alarm locks Client removal');
-          ok(alarm.includes('tarefaId')&&alarm.includes('nomeTarefa')&&alarm.includes('horaSugeridaInicio'),'alarm command is bound to one named scheduled task');
-          ok(alarm.includes("collection(db,'despertadorHistorico')"),'alarm actions are written to history');
-          ok(alarm.includes('rotina_family_admin_task_alarm_pending_v2'),'ADM has persistent offline command queue');
-          ok(alarm.includes("if(!navigator.onLine||!getApps().length){enfileirar(payload)"),'ADM queues command while offline');
-          ok(alarm.includes("window.addEventListener('online',sincronizarFila)"),'ADM pending commands sync after reconnection');
-          ok(alarm.includes("document.getElementById('displayCodigoCliente')"),'ADM alarm is group-scoped');
-          ok(alarm.includes("where('grupoId','==',g)"),'ADM shows live task alarm state');
-          ok(!alarm.includes('familyAlarmAdminBtn'),'disconnected global alarm button was removed');
-          console.log('ALL ADM FAMILY ALARM CHECKS PASSED');
+          ok(app.includes('data-family-task-end'),'ADM task rows expose finish time');
+          ok(manage.includes('ger-task-card')&&manage.includes('data-family-task-date'),'Manage mobile cards expose dated alarm identity');
+          ok(mobile.includes('mon-app-card')&&mobile.includes('data-family-task-id')&&mobile.includes('data-family-task-date'),'Monitor mobile cards expose dated alarm identity');
+          ok(alarm.includes("document.querySelectorAll('[data-family-task-id]')"),'ADM decorates desktop rows and mobile cards');
+          ok(alarm.includes('family-task-alarm-admin'),'ADM places alarm control on every task presentation');
+          ok(alarm.includes("origem:'ADM',bloqueado:ativo"),'ADM alarm still locks Client removal');
+          ok(alarm.includes('dataAgendada')&&alarm.includes('semanaInicio')&&core.includes('inicioEm')&&core.includes('fimEm'),'ADM command stores exact date and start/end datetimes');
+          ok(alarm.includes('versaoAgenda:3'),'ADM command identifies dated schema');
+          ok(alarm.includes('familyAlarmAdminMoment')&&alarm.includes("['inicio','fim']"),'ADM can schedule start, finish, or both');
+          ok(alarm.includes('rotina_family_admin_task_alarm_week_v1')&&alarm.includes('zerarViradaSemana'),'ADM resets dated state at week rollover');
+          ok(alarm.includes("expiradoPor:'VIRADA_SEMANA'")&&alarm.includes('expirarAlarmesRemotos'),'ADM explicitly deactivates old remote alarm documents');
+          ok(alarm.includes('filter(p=>naSemanaAtual(p))'),'old-week offline ADM commands are discarded');
+          ok(alarm.includes("collection(db,'despertadorHistorico')"),'dated alarm actions remain audited');
+          ok(alarm.includes('rotina_family_admin_task_alarm_pending_v3'),'ADM keeps a persistent dated offline queue');
+          ok(alarm.includes("if(!navigator.onLine||!getApps().length){enfileirar(payload)"),'ADM queues dated command while offline');
+          ok(alarm.includes("window.addEventListener('online',()=>{sincronizarFila();expirarAlarmesRemotos()})"),'ADM pending commands and expiration sync after reconnection');
+          ok(alarm.includes("document.getElementById('displayCodigoCliente')"),'ADM alarm remains group-scoped');
+          ok(alarm.includes("where('grupoId','==',g)"),'ADM shows live current-week alarm state');
+          ok(core.includes("['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado']"),'ADM uses the canonical seven-day contract');
+          ok(!alarm.includes('familyAlarmAdminBtn'),'disconnected global alarm button stays removed');
+          console.log('ALL ADM DATE ALARM CHECKS PASSED');
+          NODE
+      - name: ADM seven-day date generation regression
+        run: |
+          node --input-type=module <<'NODE'
+          import {agendaDaTarefa,dataDaSemana,semanaInicioISO} from './alarm-date-core.js';
+          const ok=(v,m)=>{if(!v)throw new Error(m);console.log('OK - '+m)};
+          const referencia=new Date('2026-08-20T12:00:00');
+          const dias=[
+            ['Segunda','2026-08-17'],['Terça','2026-08-18'],['Quarta','2026-08-19'],
+            ['Quinta','2026-08-20'],['Sexta','2026-08-21'],['Sábado','2026-08-22'],['Domingo','2026-08-23']
+          ];
+          ok(semanaInicioISO(referencia)==='2026-08-17','ADM week starts on Monday');
+          for(const [dia,data] of dias){
+            ok(dataDaSemana(dia,referencia)===data,'ADM maps '+dia+' to '+data);
+            const agenda=agendaDaTarefa({diaSemana:dia,horaSugeridaInicio:'07:00',horaSugeridaFim:'07:30'},referencia);
+            ok(agenda.dataAgendada===data&&agenda.semanaInicio==='2026-08-17',dia+' ADM payload receives exact date');
+            ok(agenda.inicioEm===data+'T07:00:00'&&agenda.fimEm===data+'T07:30:00',dia+' ADM payload receives exact datetimes');
+          }
+          ok(dataDaSemana('Quarta-feira',referencia)==='2026-08-19','ADM normalizes legacy display labels');
+          const madrugada=agendaDaTarefa({diaSemana:'Quinta',horaSugeridaInicio:'23:50',horaSugeridaFim:'00:10'},referencia);
+          ok(madrugada.fimEm==='2026-08-21T00:10:00','ADM advances finish date when task crosses midnight');
+          const nova=agendaDaTarefa({diaSemana:'Segunda',horaSugeridaInicio:'07:00',horaSugeridaFim:'07:30'},new Date('2026-08-24T12:00:00'));
+          ok(nova.dataAgendada==='2026-08-24'&&nova.semanaInicio==='2026-08-24','ADM creates a fresh occurrence after week rollover');
+          ok(dataDaSemana('Domingo',new Date('2026-12-31T12:00:00'))==='2027-01-03','ADM week mapping crosses the year boundary safely');
+          const anoNovo=agendaDaTarefa({diaSemana:'Segunda',horaSugeridaInicio:'07:00',horaSugeridaFim:'07:30'},new Date('2027-01-04T12:00:00'));
+          ok(anoNovo.dataAgendada==='2027-01-04'&&anoNovo.semanaInicio==='2027-01-04','ADM starts the first new-year week cleanly');
+          console.log('ALL ADM SEVEN-DAY CHECKS PASSED');
           NODE

@@ -49,7 +49,7 @@ function dadosMonitor(){
         detalhes=(clone.textContent||'').replace(/\s+/g,' ').trim();
       }
       const status=c[4]?.querySelector('.badge')?.textContent.trim()||c[4]?.textContent.trim()||'Pendente';
-      return{horario,tarefa,icone,usuario:c[2]?.textContent.trim()||'',dia:c[3]?.textContent.trim()||'',status,pontos:c[5]?.textContent.trim()||'',detalhes,justificativa,data,inicioAntecipado:!!early,motivoInicioAntecipado:early?.dataset.earlyReason||'',antecipacaoMin:early?.dataset.earlyMinutes||'',dataAntecipacao:early?.dataset.date||data};
+      return{horario,tarefa,icone,usuario:c[2]?.textContent.trim()||'',dia:c[3]?.textContent.trim()||'',status,pontos:c[5]?.textContent.trim()||'',detalhes,justificativa,data,inicioAntecipado:!!early,motivoInicioAntecipado:early?.dataset.earlyReason||'',antecipacaoMin:early?.dataset.earlyMinutes||'',dataAntecipacao:early?.dataset.date||data,tarefaId:r.dataset.familyTaskId||'',tarefaGrupoId:r.dataset.familyTaskGroup||'',dataAgendada:r.dataset.familyTaskDate||data,horaInicio:r.dataset.familyTaskTime||'',horaFim:r.dataset.familyTaskEnd||'',perfilId:r.dataset.familyProfileId||'',perfilNome:r.dataset.familyProfileName||c[2]?.textContent.trim()||''};
     });
 }
 
@@ -70,9 +70,11 @@ function renderCardsMonitor(){
     const[cls,label]=statusCard(x.status);
     const flag=x.justificativa?`<button type="button" class="mon-just-flag" aria-label="Abrir justificativa de ${escUI(x.tarefa)}" title="Ver justificativa" data-task-name="${escUI(x.tarefa)}" data-user="${escUI(x.usuario)}" data-day="${escUI(x.dia)}" data-date="${escUI(x.data)}" data-schedule="${escUI(x.horario)}" data-justification="${escUI(x.justificativa)}">🚩</button>`:'';
     const early=x.inicioAntecipado?`<button type="button" class="early-start-adm-badge" title="Ver motivo do início antecipado" data-task-name="${escUI(x.tarefa)}" data-user="${escUI(x.usuario)}" data-date="${escUI(x.dataAntecipacao)}" data-schedule="${escUI(x.horario)}" data-early-reason="${escUI(x.motivoInicioAntecipado)}" data-early-minutes="${escUI(x.antecipacaoMin)}">🔵 Início antecipado</button>`:'';
-    return`<article class="mon-app-card"><div class="mon-app-time">${escUI(x.horario.replace(' às ','–'))}</div><div class="mon-app-main"><span class="task-icon-badge" aria-hidden="true">${escUI(x.icone||iconeTarefa(x.tarefa))}</span><div class="mon-app-copy"><strong>${escUI(x.tarefa)}</strong><span>${escUI(x.usuario)}</span></div></div><div class="mon-app-side"><span class="mon-app-status ${cls}">${escUI(label)}</span>${early}<span class="mon-app-points">${escUI(x.pontos)}</span></div><div class="mon-app-meta"><span>${escUI(x.dia)}</span><span class="real-time">${escUI(x.detalhes)}</span>${flag}</div></article>`;
+    return`<article class="mon-app-card" data-family-task-id="${escUI(x.tarefaId)}" data-family-task-group="${escUI(x.tarefaGrupoId)}" data-family-task-name="${escUI(x.tarefa)}" data-family-task-day="${escUI(x.dia)}" data-family-task-date="${escUI(x.dataAgendada)}" data-family-task-time="${escUI(x.horaInicio)}" data-family-task-end="${escUI(x.horaFim)}" data-family-profile-id="${escUI(x.perfilId)}" data-family-profile-name="${escUI(x.perfilNome)}"><div class="mon-app-time">${escUI(x.horario.replace(' às ','–'))}</div><div class="mon-app-main"><span class="task-icon-badge" aria-hidden="true">${escUI(x.icone||iconeTarefa(x.tarefa))}</span><div class="mon-app-copy"><strong>${escUI(x.tarefa)}</strong><span>${escUI(x.usuario)}</span></div></div><div class="mon-app-side"><span class="mon-app-status ${cls}">${escUI(label)}</span>${early}<span class="mon-app-points">${escUI(x.pontos)}</span></div><div class="mon-app-meta"><span>${escUI(x.dia)}</span><span class="real-time">${escUI(x.detalhes)}</span>${flag}</div></article>`;
   }).join('');
-  if(cards.innerHTML!==novoHtml)cards.innerHTML=novoHtml;
+  const atual=cards.cloneNode(true);
+  atual.querySelectorAll('.family-task-alarm-admin').forEach(btn=>btn.remove());
+  if(atual.innerHTML!==novoHtml)cards.innerHTML=novoHtml;
 }
 window.addEventListener('rotina-early-start-updated',()=>renderCardsMonitor());
 

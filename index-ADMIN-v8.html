@@ -1311,7 +1311,7 @@
 
         tarefasFiltradas.forEach(t => {
             tbody.innerHTML += `
-                <tr data-family-task-id="${escaparHtml(t.id)}" data-family-task-group="${escaparHtml(t.tarefaGrupoId||'')}" data-family-task-name="${escaparHtml(t.nome)}" data-family-task-day="${escaparHtml(t.diaSemana||'')}" data-family-task-time="${escaparHtml(t.horaSugeridaInicio||'')}" data-family-profile-id="${escaparHtml(t.perfilId||'')}" data-family-profile-name="${escaparHtml(t.perfilNome||'')}">
+                <tr data-family-task-id="${escaparHtml(t.id)}" data-family-task-group="${escaparHtml(t.tarefaGrupoId||'')}" data-family-task-name="${escaparHtml(t.nome)}" data-family-task-day="${escaparHtml(t.diaSemana||'')}" data-family-task-time="${escaparHtml(t.horaSugeridaInicio||'')}" data-family-task-end="${escaparHtml(t.horaSugeridaFim||'')}" data-family-profile-id="${escaparHtml(t.perfilId||'')}" data-family-profile-name="${escaparHtml(t.perfilNome||'')}">
                     <td><strong>${t.horaSugeridaInicio} às ${t.horaSugeridaFim}</strong><br><small style="color:#64748b">Tolerância: ${Number(t.tempoLimite)||0} min</small></td>
                     <td><span class="task-icon-cell" aria-hidden="true">${escaparHtml(normalizarIconeTarefa(t.icone,t.nome))}</span><strong>${escaparHtml(t.nome)}</strong></td>
                     <td>${escaparHtml(t.perfilNome)}</td>
@@ -1517,7 +1517,7 @@
             }
 
             tbody.innerHTML += `
-                <tr data-family-task-id="${escaparHtml(t.id)}" data-family-task-group="${escaparHtml(t.tarefaGrupoId||'')}" data-family-task-name="${escaparHtml(t.nome)}" data-family-task-day="${escaparHtml(t.diaSemana||'')}" data-family-task-time="${escaparHtml(t.horaSugeridaInicio||'')}" data-family-profile-id="${escaparHtml(t.perfilId||'')}" data-family-profile-name="${escaparHtml(t.perfilNome||'')}">
+                <tr data-family-task-id="${escaparHtml(t.id)}" data-family-task-group="${escaparHtml(t.tarefaGrupoId||'')}" data-family-task-name="${escaparHtml(t.nome)}" data-family-task-day="${escaparHtml(t.diaSemana||'')}" data-family-task-time="${escaparHtml(t.horaSugeridaInicio||'')}" data-family-task-end="${escaparHtml(t.horaSugeridaFim||'')}" data-family-profile-id="${escaparHtml(t.perfilId||'')}" data-family-profile-name="${escaparHtml(t.perfilNome||'')}">
                     <td>${horariosHtml}</td>
                     <td><span class="task-icon-cell" aria-hidden="true">${escaparHtml(normalizarIconeTarefa(t.icone,t.nome))}</span><strong>${escaparHtml(t.nome)}</strong></td>
                     <td>${escaparHtml(t.perfilNome)}</td>
@@ -1599,7 +1599,7 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=34')
+      navigator.serviceWorker.register('./sw.js?v=35')
         .then(reg => console.log('Service Worker registrado com sucesso!', reg))
         .catch(err => console.error('Erro ao registrar Service Worker:', err));
     });
