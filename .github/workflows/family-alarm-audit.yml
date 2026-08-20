@@ -36,11 +36,13 @@ jobs:
           const mobile=fs.readFileSync('mobile-app-ui.js','utf8');
           const sw=fs.readFileSync('sw.js','utf8');
           const ok=(v,m)=>{if(!v)throw new Error(m);console.log('OK - '+m)};
-          ok(index.includes('family-alarm-admin.js?v=4'),'ADM entry loads visible dated task alarm v4');
+          ok(index.includes('family-alarm-admin.js?v=5'),'ADM entry loads responsive dated task alarm v5');
           ok(sw.includes("'./family-alarm-admin.js'")&&sw.includes("'./alarm-date-core.js'"),'ADM dated alarm modules are cached offline');
-          ok(sw.includes('family-alarm-admin.js?v=4'),'direct real-page navigation receives dated alarm addon');
-          ok(app.includes('family-alarm-admin.js?v=4'),'canonical ADM page loads the alarm module directly');
-          ok(alarm.includes("texto=a?.ativo?'🔒 Alarme':'⏰ Programar'"),'ADM alarm control has a visible text label');
+          ok(sw.includes('family-alarm-admin.js?v=5'),'direct real-page navigation receives dated alarm addon');
+          ok(app.includes('family-alarm-admin.js?v=5'),'canonical ADM page loads the alarm module directly');
+          ok(alarm.includes("a?.ativo?'🔒 Alarme':'⏰ Programar'"),'ADM alarm control has a visible desktop text label');
+          ok(alarm.includes("compacto?(a?.ativo?'🔒':'⏰')")&&alarm.includes("btn.style.maxWidth=compacto?'34px':'100%'"),'ADM alarm control becomes a bounded icon on mobile');
+          ok(alarm.includes("btn.style.float=emTabela?'right':'none'"),'ADM table alarm control is aligned to the right of the Task column');
           ok(alarm.includes('new MutationObserver(solicitarDecoracao).observe(document.body'),'late desktop and mobile renderers receive alarm controls immediately');
           ok(alarm.includes('const proximos={}')&&alarm.includes("origem:s.metadata.fromCache?'cache':'servidor'"),'remote snapshot replaces stale device state');
           ok(app.includes('data-family-task-id')&&app.includes('data-family-profile-id'),'ADM task rows expose task and profile identity');
@@ -50,6 +52,7 @@ jobs:
           ok(alarm.includes("document.querySelectorAll('[data-family-task-id]')"),'ADM decorates desktop rows and mobile cards');
           ok(alarm.includes('family-task-alarm-admin'),'ADM places alarm control on every task presentation');
           ok(alarm.includes("origem:'ADM',bloqueado:ativo"),'ADM alarm still locks Client removal');
+          ok(alarm.includes('ocorrenciasSilenciadas:ativo?[]'),'a newly armed ADM alarm clears stops from an earlier activation');
           ok(alarm.includes('dataAgendada')&&alarm.includes('semanaInicio')&&core.includes('inicioEm')&&core.includes('fimEm'),'ADM command stores exact date and start/end datetimes');
           ok(alarm.includes('versaoAgenda:3'),'ADM command identifies dated schema');
           ok(alarm.includes('familyAlarmAdminMoment')&&alarm.includes("['inicio','fim']"),'ADM can schedule start, finish, or both');

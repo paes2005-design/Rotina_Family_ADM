@@ -1,9 +1,9 @@
-const CACHE_NAME='rotina-family-adm-v40';
+const CACHE_NAME='rotina-family-adm-v41';
 const APP_SHELL=['./','./index.html','./index-ADMIN-v8.html','./manifest.json?v=34','./icon-administrador-192.png','./icon-administrador-512.png','./dashboard-ranking-pro.css','./dashboard-ranking-pro.js','./monitor-pro.css','./monitor-pro.js','./rewards-admin-ui-v2.js','./reward-redemption-notifications.js','./manage-pro.css','./manage-pro.js','./mobile-app-ui.css','./mobile-app-ui.js','./adm-justification-review.js','./adm-early-start-ui.js','./adm-score-history-cards.js','./adm-monitor-history-fix.js','./family-alarm-admin.js','./alarm-date-core.js','./reset-cache.html'];
 const MODULE_ROOTS=['https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js'];
 const APP_MAIN_URL=new URL('./index-ADMIN-v8.html',self.location.href).href;
 const ENTRY_URL=new URL('./index.html',self.location.href).href;
-const ADM_ADDONS=['<script type="module" src="./adm-score-history-cards.js?v=2"><\/script>','<script type="module" src="./adm-monitor-history-fix.js?v=3"><\/script>','<script type="module" src="./family-alarm-admin.js?v=4"><\/script>','<script type="module" src="./reward-redemption-notifications.js?v=1"><\/script>'].join('\n');
+const ADM_ADDONS=['<script type="module" src="./adm-score-history-cards.js?v=2"><\/script>','<script type="module" src="./adm-monitor-history-fix.js?v=3"><\/script>','<script type="module" src="./family-alarm-admin.js?v=5"><\/script>','<script type="module" src="./reward-redemption-notifications.js?v=1"><\/script>'].join('\n');
 async function cacheModuleTree(url,cache,seen=new Set()){if(seen.has(url))return;seen.add(url);try{const response=await fetch(url,{mode:'cors'});if(!response.ok)return;await cache.put(url,response.clone());const text=await response.text();const specs=[...text.matchAll(/(?:from\s*|import\s*)["']([^"']+)["']/g)].map(m=>m[1]);await Promise.allSettled(specs.map(spec=>{const next=new URL(spec,url).href;return next.startsWith('https://www.gstatic.com/firebasejs/')?cacheModuleTree(next,cache,seen):Promise.resolve();}));}catch(e){console.warn('Cache de módulo indisponível:',url);}}
 async function respostaComAddons(response){
   if(!response)return response;
@@ -13,7 +13,7 @@ async function respostaComAddons(response){
   const faltantes=[];
   if(!html.includes('adm-score-history-cards.js'))faltantes.push('<script type="module" src="./adm-score-history-cards.js?v=2"><\/script>');
   if(!html.includes('adm-monitor-history-fix.js'))faltantes.push('<script type="module" src="./adm-monitor-history-fix.js?v=3"><\/script>');
-  if(!html.includes('family-alarm-admin.js'))faltantes.push('<script type="module" src="./family-alarm-admin.js?v=4"><\/script>');
+  if(!html.includes('family-alarm-admin.js'))faltantes.push('<script type="module" src="./family-alarm-admin.js?v=5"><\/script>');
   if(!html.includes('reward-redemption-notifications.js'))faltantes.push('<script type="module" src="./reward-redemption-notifications.js?v=1"><\/script>');
   if(faltantes.length)html=html.replace('</body>',faltantes.join('\n')+'\n</body>');
   const headers=new Headers(response.headers);headers.delete('content-length');
