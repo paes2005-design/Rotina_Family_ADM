@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - teste-arvore-comercial-segura-2026-08-20
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -59,4 +62,4 @@ jobs:
           print('ADM comercial seguro: OK')
 
       - name: Confirm production untouched
-        run: echo "Teste executado apenas na branch segura; main não é alterado."
+        run: echo "PR de teste validado; main não é alterado."
