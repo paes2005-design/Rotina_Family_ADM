@@ -1,3 +1,5 @@
+import('./admin-master-diagnostics.js').catch(error => console.warn('Diagnóstico ADM Master indisponível:', error));
+
 const APP_KIND = 'adm';
 const MONITOR_VERSION = 2;
 const LOG_ENDPOINT = 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/app-log';
