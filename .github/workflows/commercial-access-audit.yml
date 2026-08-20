@@ -1,0 +1,36 @@
+name: Commercial access audit
+
+on:
+  push:
+    paths:
+      - 'commercial-access-admin.js'
+      - 'master-family-tree.js'
+      - 'index.html'
+      - 'sw.js'
+      - '.github/workflows/commercial-access-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: JavaScript syntax
+        run: |
+          node --check commercial-access-admin.js
+          node --check master-family-tree.js
+          node --check sw.js
+      - name: Integration markers
+        run: |
+          grep -q "commercial-access-admin.js" index.html
+          grep -q "master-family-tree.js" index.html
+          grep -q "trialFimEm" commercial-access-admin.js
+          grep -q "set-group-disabled" master-family-tree.js
+          grep -q "delete-profile" master-family-tree.js
+          grep -q "rotina-family-adm-v49" sw.js
