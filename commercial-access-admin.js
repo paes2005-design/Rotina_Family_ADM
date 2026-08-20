@@ -1,8 +1,8 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import { getFirestore, collection, query, where, getDocs, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { getFirestore, collection, query, where, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { getAuth, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
-const TRIAL_DAYS = 15;
+const API_ROOT = 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
 
 function db() {
   if (!getApps().length) throw new Error('Firebase ainda não foi iniciado.');
@@ -41,24 +41,18 @@ async function accessForAdministrator(admin) {
 async function initializeTrialForOwner(email) {
   const admin = await administratorByEmail(email);
   if (!admin || String(admin.tipoAcesso || '') !== 'proprietario') return;
-  const groupId = String(admin.codigoCliente || admin.grupoId || '').trim();
-  if (!groupId) return;
-  const ref = doc(db(), 'configGrupos', groupId);
-  const current = await getDoc(ref);
-  if (current.exists()) return;
-  const start = new Date();
-  const end = new Date(start.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
-  await setDoc(ref, {
-    grupoId: groupId,
-    trialAtivo: true,
-    trialDias: TRIAL_DAYS,
-    trialInicioEm: start.toISOString(),
-    trialFimEm: end.toISOString(),
-    grupoConfirmado: false,
-    grupoBloqueado: false,
-    criadoEm: start.toISOString()
-  }, { merge: true });
-  window.rotinaLog?.('comercial.teste_iniciado', { grupoId: groupId, dias: TRIAL_DAYS });
+  const user = getAuth(getApp()).currentUser;
+  if (!user || String(user.email || '').trim().toLowerCase() !== String(email || '').trim().toLowerCase()) return;
+  const token = await user.getIdToken(true);
+  const response = await fetch(`${API_ROOT}/commercial/trial`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: '{}'
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || `Falha HTTP ${response.status}`);
+  window.rotinaLog?.('comercial.teste_iniciado', { grupoId: body.grupoId || '', dias: 15 });
 }
 
 function installLoginGuard() {
