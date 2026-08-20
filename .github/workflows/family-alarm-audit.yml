@@ -36,9 +36,13 @@ jobs:
           const mobile=fs.readFileSync('mobile-app-ui.js','utf8');
           const sw=fs.readFileSync('sw.js','utf8');
           const ok=(v,m)=>{if(!v)throw new Error(m);console.log('OK - '+m)};
-          ok(index.includes('family-alarm-admin.js?v=3'),'ADM entry loads dated task alarm v3');
+          ok(index.includes('family-alarm-admin.js?v=4'),'ADM entry loads visible dated task alarm v4');
           ok(sw.includes("'./family-alarm-admin.js'")&&sw.includes("'./alarm-date-core.js'"),'ADM dated alarm modules are cached offline');
-          ok(sw.includes('family-alarm-admin.js?v=3'),'direct real-page navigation receives dated alarm addon');
+          ok(sw.includes('family-alarm-admin.js?v=4'),'direct real-page navigation receives dated alarm addon');
+          ok(app.includes('family-alarm-admin.js?v=4'),'canonical ADM page loads the alarm module directly');
+          ok(alarm.includes("texto=a?.ativo?'🔒 Alarme':'⏰ Programar'"),'ADM alarm control has a visible text label');
+          ok(alarm.includes('new MutationObserver(solicitarDecoracao).observe(document.body'),'late desktop and mobile renderers receive alarm controls immediately');
+          ok(alarm.includes('const proximos={}')&&alarm.includes("origem:s.metadata.fromCache?'cache':'servidor'"),'remote snapshot replaces stale device state');
           ok(app.includes('data-family-task-id')&&app.includes('data-family-profile-id'),'ADM task rows expose task and profile identity');
           ok(app.includes('data-family-task-end'),'ADM task rows expose finish time');
           ok(manage.includes('ger-task-card')&&manage.includes('data-family-task-date'),'Manage mobile cards expose dated alarm identity');

@@ -925,9 +925,8 @@
         document.getElementById('telaAcesso').style.display='none'; document.getElementById('sistemaPrincipal').style.display='block';
         document.getElementById('displayCodigoAdmin').innerText=adminLogadoAtual.codigoAdmin || 'ADM-Gen';
         document.getElementById('displayCodigoCliente').innerText=adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId || 'CLI-Gen';
-        await verificarEExecutarResetSemanal(adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId);
-        await carregarRegraAtraso();
         iniciarEscutasFirebase();
+        Promise.allSettled([verificarEExecutarResetSemanal(adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId),carregarRegraAtraso()]);
     };
 
     window.esqueciSenha = async () => {
@@ -939,9 +938,9 @@
 
     function iniciarEscutasFirebase() {
         const gId = adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId;
-        if(unsubscribePerfis) unsubscribePerfis(); if(unsubscribeTarefasAdmin) unsubscribeTarefasAdmin();
+        [unsubscribePerfis,unsubscribeTarefasAdmin,unsubscribeHistoricoGrupo,unsubscribeRecompensas,unsubscribeResgates].forEach(u=>u&&u());
         const qPerfis = query(collection(db, "perfis"), where("grupoId", "==", gId));
-        unsubscribePerfis = onSnapshot(qPerfis, async (snapshot) => {
+        unsubscribePerfis = onSnapshot(qPerfis,{includeMetadataChanges:true}, async (snapshot) => {
             perfisCache = snapshot.docs.map(d => ({ id: d.id, perfilId: d.data().perfilId || d.id, ...d.data() }));
             for (const perfil of perfisCache) {
                 if (perfil.pin && !perfil.pinHash) {
@@ -953,10 +952,11 @@
             migrarTarefasLegadas().catch(console.error);
         });
         const qTarefas = query(collection(db, "tarefas"), where("grupoId", "==", gId));
-        unsubscribeTarefasAdmin = onSnapshot(qTarefas, async (snapshot) => {
+        unsubscribeTarefasAdmin = onSnapshot(qTarefas,{includeMetadataChanges:true}, async (snapshot) => {
             tarefasCache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
             await migrarTarefasLegadas();
             atualizarMonitor(); renderizarTabelaExclusao(); renderizarDashboard();
+            window.dispatchEvent(new CustomEvent('rotina-family-tasks-rendered',{detail:{origem:snapshot.metadata.fromCache?'cache':'servidor'}}));
         });
         unsubscribeHistoricoGrupo = onSnapshot(query(collection(db,"historico"),where("grupoId","==",gId)), s => { historicoGrupoCache=s.docs.map(d=>({id:d.id,...d.data()})); renderizarDashboard(); });
         unsubscribeRecompensas = onSnapshot(query(collection(db,"recompensas"),where("grupoId","==",gId)), s => { recompensasCache=s.docs.map(d=>({id:d.id,...d.data()})); renderizarRecompensasAdmin(); });
@@ -1590,16 +1590,15 @@
             document.getElementById('sistemaPrincipal').style.display='block';
             document.getElementById('displayCodigoAdmin').innerText=adminLogadoAtual.codigoAdmin || 'ADM-Gen';
             document.getElementById('displayCodigoCliente').innerText=adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId || 'CLI-Gen';
-            await verificarEExecutarResetSemanal(adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId);
-            await carregarRegraAtraso();
             iniciarEscutasFirebase();
+            Promise.allSettled([verificarEExecutarResetSemanal(adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId),carregarRegraAtraso()]);
         } catch(e) { console.error('Falha ao restaurar sessão administrativa',e); }
     });
 </script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=35')
+      navigator.serviceWorker.register('./sw.js?v=36')
         .then(reg => console.log('Service Worker registrado com sucesso!', reg))
         .catch(err => console.error('Erro ao registrar Service Worker:', err));
     });
@@ -1638,6 +1637,7 @@
 })();
 </script>
   <script type="module" src="./dashboard-ranking-pro.js"></script>
+<script type="module" src="./family-alarm-admin.js?v=4"></script>
 <script type="module" src="./reward-redemption-notifications.js?v=1"></script>
 </body>
 </html>

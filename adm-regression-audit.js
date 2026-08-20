@@ -15,7 +15,7 @@ assert(early.includes("observe(tb,{childList:true,subtree:false})"),'early-start
 assert(!mobile.includes('adm-enhancements.js'),'known freezing enhancement is not imported');
 assert(!sw.includes('adm-enhancements.js'),'known freezing enhancement is outside app shell');
 assert(sw.includes("cache:'no-store'"),'app assets refresh network-first');
-assert(sw.includes("const CACHE_NAME='rotina-family-adm-v39'"),'ADM cache is v39');
+assert(sw.includes("const CACHE_NAME='rotina-family-adm-v40'"),'ADM cache is v40');
 assert(sw.includes("'./rewards-admin-ui-v2.js'"),'rewards admin module is included in ADM app shell');
 assert(sw.includes("'./reward-redemption-notifications.js'"),'redemption notification module is included in ADM app shell');
 assert(html.includes('reward-redemption-notifications.js'),'redemption notification module loads in the ADM page');

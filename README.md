@@ -30,6 +30,8 @@ Os dois aplicativos utilizam o mesmo projeto Firebase/Firestore. O ADM registra 
 
 A tarefa recorrente mantém o dia da semana nos valores canônicos `Domingo`, `Segunda`, `Terça`, `Quarta`, `Quinta`, `Sexta` e `Sábado`. Cada alarme do ADM é vinculado à data real da ocorrência e registra `dataAgendada`, `semanaInicio`, `inicioEm` e `fimEm`. Alarmes criados pelo responsável continuam bloqueados para retirada no Cliente. Na virada de domingo para segunda, os documentos antigos são desativados e a nova semana começa sem alarmes herdados.
 
+O controle do alarme é carregado diretamente pela página principal do ADM e identificado pelo texto `Programar`, tanto nas tabelas quanto nos cartões móveis. A sincronização usa o snapshot remoto como fonte de verdade e preserva apenas comandos offline ainda pendentes no aparelho.
+
 ## Proposta de valor
 
 O Rotina Family transforma a rotina doméstica em uma experiência organizada, transparente e motivadora. Pais e responsáveis mantêm o controle das regras e do acompanhamento, enquanto os integrantes visualizam suas próprias metas, pontuação, conquistas e recompensas.
