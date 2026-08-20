@@ -34,6 +34,7 @@ assert(html.includes('admin-master.js?v=1'),'Master authorization module loads b
 assert(html.indexOf('admin-master.js?v=1')<html.indexOf('app-monitoring-dashboard.js?v=2'),'Master authorization loads before protected monitoring UI');
 assert(sw.includes("'./admin-master.js'"),'Master module is included in ADM app shell');
 assert(master.includes("getIdToken(true)"),'Master API uses a fresh Firebase ID token');
+assert(master.includes("session?.master !== true"),'Master tab requires an explicit authorization response from the Worker');
 assert(master.includes("window.rotinaMasterSession = { master: false }")&&master.includes('window.rotinaMasterSession = masterSession'),'Master session state cannot remain enabled after logout or denial');
 assert(master.includes("isMaster ? 'Protegido'"),'Master account is protected in the user table');
 for(const action of ['update-email','send-password-reset','set-disabled','delete-user']) assert(master.includes(action),'Master action '+action+' exists');
@@ -41,6 +42,7 @@ assert(!appMonitorDashboard.includes("collection(db, 'appLogs')")&&!appMonitorDa
 assert(appMonitorDashboard.includes('window.rotinaMasterApi(`/logs?grupoId='),'monitoring dashboard reads logs only through protected Master API');
 assert(appMonitorDashboard.includes("document.getElementById('adminMaster')")&&!appMonitorDashboard.includes("document.getElementById('dashboard')"),'monitoring is isolated inside the ADM Master tab');
 assert(appMonitor.includes("/app-log'")&&appMonitor.includes('fetch(LOG_ENDPOINT'),'ADM sends sanitized log batches through the Worker');
+assert(appMonitor.includes('Number(result.accepted) !== batch.length'),'ADM keeps queued logs until the Worker confirms the full batch');
 assert(adminPush.includes("offset: { bottom: '88px', right: '14px' }"),'OneSignal launcher stays above the mobile bottom navigation');
 assert(adminPush.includes("addEventListener('foregroundWillDisplay'")&&adminPush.includes("addEventListener('click'")&&adminPush.includes("addEventListener('dismiss'"),'ADM records foreground, click and dismiss push events');
 

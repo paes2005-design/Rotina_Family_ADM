@@ -147,7 +147,9 @@ async function checkMaster() {
     return;
   }
   try {
-    masterSession = await masterApi('/session');
+    const session = await masterApi('/session');
+    if (session?.master !== true) throw new Error('Worker ainda não confirmou o acesso Master.');
+    masterSession = session;
     window.rotinaMasterSession = masterSession;
     ensureMasterUi();
     window.dispatchEvent(new CustomEvent('rotina-admin-master-ready', { detail: masterSession }));
