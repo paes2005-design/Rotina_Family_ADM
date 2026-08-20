@@ -1,0 +1,173 @@
+name: Experiment - fix ADM Master tab conflict
+
+on:
+  push:
+    branches:
+      - experimento-admin-protegido-comercial
+    paths:
+      - '.github/workflows/experiment-fix-master-tab-conflict.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: experimento-admin-protegido-comercial
+          fetch-depth: 0
+
+      - name: Bring resilient Master UI without commercial/tree modules
+        run: |
+          git fetch origin main --depth=1
+          git show origin/main:admin-master.js > /tmp/admin-master-main.js
+          ! grep -q 'commercial-access-admin\|master-family-tree' /tmp/admin-master-main.js
+          cp /tmp/admin-master-main.js admin-master.js
+
+      - name: Protect authenticated Master from normal ADM restoration
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p = Path('index-ADMIN-v8.html')
+          s = p.read_text(encoding='utf-8')
+
+          anchor = "    window.realizarLogin = async () => {"
+          if anchor not in s:
+              raise SystemExit('login anchor not found')
+
+          helper = r'''    async function aguardarConfirmacaoMaster(user, timeoutMs = 5000) {
+        if (!user) return false;
+        if (window.rotinaMasterSession?.master === true && window.rotinaMasterSession?.uid === user.uid) return true;
+        return await new Promise(resolve => {
+            let finalizado = false;
+            const concluir = valor => {
+                if (finalizado) return;
+                finalizado = true;
+                clearTimeout(timer);
+                window.removeEventListener('rotina-admin-master-ready', aoResolver);
+                resolve(valor === true);
+            };
+            const aoResolver = evento => {
+                const sessao = evento.detail || {};
+                if (sessao.master === true && (!sessao.uid || sessao.uid === user.uid)) concluir(true);
+                else if (sessao.motivo === 'nao-autorizado') concluir(false);
+            };
+            window.addEventListener('rotina-admin-master-ready', aoResolver);
+            const timer = setTimeout(() => concluir(window.rotinaMasterSession?.master === true), timeoutMs);
+            window.dispatchEvent(new CustomEvent('rotina-admin-session-ready', { detail: { grupoId: '', masterCandidate: true } }));
+        });
+    }
+
+    function abrirShellMaster(user) {
+        adminLogadoAtual = {
+            id: 'MASTER-SYSTEM',
+            uid: user.uid,
+            email: String(user.email || '').trim().toLowerCase(),
+            tipoAcesso: 'master',
+            codigoAdmin: 'MASTER',
+            codigoCliente: '',
+            grupoId: ''
+        };
+        document.getElementById('telaAcesso').style.display = 'none';
+        document.getElementById('sistemaPrincipal').style.display = 'block';
+        document.getElementById('displayCodigoAdmin').innerText = 'MASTER';
+        document.getElementById('displayCodigoCliente').innerText = 'SISTEMA';
+        window.dispatchEvent(new CustomEvent('rotina-admin-session-ready', { detail: { grupoId: '', master: true } }));
+    }
+
+'''
+          if 'async function aguardarConfirmacaoMaster(' not in s:
+              s = s.replace(anchor, helper + anchor, 1)
+
+          old_login = '''            const snap = await getDocs(query(collection(db, "administradores"), where("email", "==", email)));
+            if(snap.empty) throw new Error('Cadastro administrativo não encontrado.');
+            adminDoc=snap.docs[0]; adminData=adminDoc.data();
+            if(!adminData.uid) await updateDoc(adminDoc.ref,{uid:cred.user.uid,authVersion:2});'''
+          new_login = '''            const snap = await getDocs(query(collection(db, "administradores"), where("email", "==", email)));
+            if(snap.empty) {
+                if (await aguardarConfirmacaoMaster(cred.user)) {
+                    abrirShellMaster(cred.user);
+                    return;
+                }
+                throw new Error('Cadastro administrativo não encontrado.');
+            }
+            adminDoc=snap.docs[0]; adminData=adminDoc.data();
+            if(!adminData.uid) await updateDoc(adminDoc.ref,{uid:cred.user.uid,authVersion:2});'''
+          if old_login not in s:
+              raise SystemExit('normal login Firestore block not found')
+          s = s.replace(old_login, new_login, 1)
+
+          old_restore = '''            const snap = await getDocs(query(collection(db,'administradores'), where('uid','==',user.uid)));
+            if(snap.empty) {
+                await signOut(auth);
+                alert('Sessão autenticada sem cadastro administrativo correspondente.');
+                return;
+            }
+            const adminDoc=snap.docs[0];'''
+          new_restore = '''            const snap = await getDocs(query(collection(db,'administradores'), where('uid','==',user.uid)));
+            if(snap.empty) {
+                if (await aguardarConfirmacaoMaster(user)) {
+                    abrirShellMaster(user);
+                    return;
+                }
+                await signOut(auth);
+                alert('Sessão autenticada sem cadastro administrativo correspondente.');
+                return;
+            }
+            const adminDoc=snap.docs[0];'''
+          if old_restore not in s:
+              raise SystemExit('restore Firestore block not found')
+          s = s.replace(old_restore, new_restore, 1)
+
+          s = s.replace('./admin-master.js?v=1', './admin-master.js?v=2')
+          p.write_text(s, encoding='utf-8')
+
+      - name: Keep experimental boot free from commercial/tree modules
+        shell: python
+        run: |
+          from pathlib import Path
+          for name in ['index.html', 'sw.js']:
+              s = Path(name).read_text(encoding='utf-8')
+              if 'commercial-access-admin.js' in s or 'master-family-tree.js' in s:
+                  raise SystemExit(f'{name} still injects commercial/tree modules')
+
+      - name: Make existing audit match frozen experimental cache
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('.github/workflows/temporary-adm-quality-check.yml')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace("assert(sw.includes(\"const CACHE_NAME='rotina-family-adm-v42'\"),'ADM cache is v42');",
+                        "assert(/const CACHE_NAME='rotina-family-adm-v\\d+'/.test(sw),'ADM cache has an explicit version');")
+          p.write_text(s, encoding='utf-8')
+
+      - name: Static audit
+        run: |
+          node --check admin-master.js
+          node --check sw.js
+          grep -F "MASTER_UID_KEY = 'rotinaFamilyMasterConfirmedUid'" admin-master.js
+          grep -F "A tela Master continuará disponível" admin-master.js
+          grep -F "async function aguardarConfirmacaoMaster" index-ADMIN-v8.html
+          grep -F "abrirShellMaster(cred.user)" index-ADMIN-v8.html
+          grep -F "abrirShellMaster(user)" index-ADMIN-v8.html
+          grep -F "./admin-master.js?v=2" index-ADMIN-v8.html
+          ! grep -F 'commercial-access-admin.js' sw.js
+          ! grep -F 'master-family-tree.js' sw.js
+          ! grep -F 'commercial-access-admin.js' index.html
+          ! grep -F 'master-family-tree.js' index.html
+
+      - name: Existing ADM regression audit
+        run: |
+          node adm-regression-audit.js
+
+      - name: Commit experimental fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- admin-master.js index-ADMIN-v8.html .github/workflows/temporary-adm-quality-check.yml
+          git diff --cached --check
+          git diff --cached --quiet || git commit -m "Experiment: isolate ADM Master session from group restoration"
+          git push origin HEAD:experimento-admin-protegido-comercial
