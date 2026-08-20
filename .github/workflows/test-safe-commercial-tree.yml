@@ -1,0 +1,62 @@
+name: Teste ADM comercial seguro
+
+on:
+  push:
+    branches:
+      - teste-arvore-comercial-segura-2026-08-20
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  safety-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax checks
+        run: |
+          node --check master-family-tree.js
+          node --check commercial-access-admin.js
+          node --check app-monitoring-dashboard.js
+          node --check admin-master.js
+
+      - name: Architecture invariants
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          index = Path('index.html').read_text(encoding='utf-8')
+          tree = Path('master-family-tree.js').read_text(encoding='utf-8')
+          commercial = Path('commercial-access-admin.js').read_text(encoding='utf-8')
+          monitor = Path('app-monitoring-dashboard.js').read_text(encoding='utf-8')
+
+          assert 'commercial-access-admin.js?v=safe1' in index
+          assert 'master-family-tree.js?v=safe1' in index
+          assert 'TESTE COMERCIAL SEGURO' in index
+
+          assert 'setInterval(' not in tree, 'Árvore voltou a usar polling'
+          assert "path = '/admin-access'" in tree, 'Admin adicional não usa rota comercial individual'
+          assert "action: 'set-group-blocked'" in tree, 'Bloqueio da família ausente'
+          assert 'Master fora do comercial' in tree
+          assert 'contemMasterLegado' in tree
+          assert "path = '/users';\n    payload = { action: 'set-disabled'" not in tree, 'Árvore voltou a desativar Auth para comercial'
+
+          assert 'signOut(' not in commercial, 'Comercial não pode encerrar Firebase Auth'
+          assert 'waitForMasterResolution' in commercial
+          assert 'Validação comercial indisponível; acesso preservado.' in commercial
+          enforce = re.search(r'async function enforceCurrentSession\(event\) \{.*?\n\}', commercial, re.S)
+          assert enforce, 'enforceCurrentSession ausente'
+          text = enforce.group(0)
+          assert text.find('waitForMasterResolution') < text.find("getDoc(doc(db(), 'configGrupos'"), 'Master deve ser resolvido antes da leitura comercial'
+
+          assert 'Promise.allSettled' in monitor, 'Logs e monitor voltaram a ser acoplados'
+          assert 'rotina-master-log-group' in monitor
+          assert 'Todos os grupos' in monitor
+
+          print('ADM comercial seguro: OK')
+
+      - name: Confirm production untouched
+        run: echo "Teste executado apenas na branch segura; main não é alterado."
