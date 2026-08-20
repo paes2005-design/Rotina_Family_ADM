@@ -51,6 +51,12 @@ A solução pode ser utilizada para rotinas infantis, estudos, organização dom
 
 Cada ativação ou retirada feita pelo ADM marca o documento do despertador como pendente para o agendador servidor. O Cloudflare Worker versionado no repositório do Cliente cria e cancela as mensagens no OneSignal, sem Firebase Functions e sem exigir o plano Blaze. A virada semanal também solicita o cancelamento de qualquer mensagem que ainda esteja agendada.
 
+O ADM também se inscreve no OneSignal para receber solicitações de recompensas em segundo plano. Ao aprovar ou recusar um pedido, o registro é marcado para que o Worker envie o resultado ao Cliente.
+
+## Monitoramento e logs
+
+O Dashboard possui o painel **Monitoramento e logs**, com o estado do Worker Cloudflare, horários dos ciclos, contagens de alarmes, recompensas e auditorias OneSignal, além dos 100 eventos mais recentes do Cliente e do ADM. Os logs não armazenam senha, PIN, e-mail, justificativa ou conteúdo digitado e expiram em sete dias.
+
 ## Aplicativo complementar
 
 Este repositório corresponde ao **Painel do Administrador**. O ecossistema é complementado pelo repositório **Rotina_Family_Cliente**, utilizado pelos integrantes da família.

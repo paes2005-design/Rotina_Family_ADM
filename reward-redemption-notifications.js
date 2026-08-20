@@ -125,7 +125,7 @@ function mostrarProximo() {
   modal.setAttribute('role', 'dialog');
   modal.setAttribute('aria-modal', 'true');
   modal.setAttribute('aria-labelledby', 'resgateAlertTitle');
-  const permitirNotificacao = 'Notification' in window && Notification.permission === 'default';
+  const permitirNotificacao = typeof window.ativarPushAdmin === 'function' || ('Notification' in window && Notification.permission === 'default');
   modal.innerHTML = `<section class="resgate-alert-card">
     <div class="resgate-alert-icon" aria-hidden="true">🎁</div>
     <h2 id="resgateAlertTitle">Novo pedido de resgate</h2>
@@ -142,13 +142,17 @@ function mostrarProximo() {
   document.getElementById('resgateVerPedido').onclick = () => concluirAviso(true);
   const ativar = document.getElementById('resgateAtivarNotificacao');
   if (ativar) ativar.onclick = async () => {
-    const permissao = await Notification.requestPermission();
-    if (permissao === 'granted') {
+    const estado = typeof window.ativarPushAdmin === 'function'
+      ? await window.ativarPushAdmin()
+      : { optedIn: (await Notification.requestPermission()) === 'granted' };
+    if (estado.optedIn) {
       ativar.remove();
+      window.rotinaLog?.('push.adm_ativado', { assinatura: Boolean(estado.id) });
       await mostrarNotificacaoSistema(resgate);
     } else {
       ativar.textContent = 'Notificação não autorizada';
       ativar.disabled = true;
+      window.rotinaLog?.('push.adm_nao_autorizado', {}, 'warning');
     }
   };
   mostrarNotificacaoSistema(resgate);

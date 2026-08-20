@@ -13,6 +13,8 @@
     <meta name="apple-mobile-web-app-title" content="Rotina Family ADM">
     <link rel="apple-touch-icon" href="icon-administrador-192.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-administrador-192.png">
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script src="./admin-push-onesignal.js?v=1" defer></script>
 
     <style>
         :root {
@@ -925,6 +927,7 @@
         document.getElementById('telaAcesso').style.display='none'; document.getElementById('sistemaPrincipal').style.display='block';
         document.getElementById('displayCodigoAdmin').innerText=adminLogadoAtual.codigoAdmin || 'ADM-Gen';
         document.getElementById('displayCodigoCliente').innerText=adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId || 'CLI-Gen';
+        window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));
         iniciarEscutasFirebase();
         Promise.allSettled([verificarEExecutarResetSemanal(adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId),carregarRegraAtraso()]);
     };
@@ -980,6 +983,7 @@
     }
 
     window.realizarLogout = () => {
+        window.desvincularAdmDoPush?.();
         signOut(auth).catch(()=>{});
         if(unsubscribePerfis) unsubscribePerfis();
         if(unsubscribeTarefasAdmin) unsubscribeTarefasAdmin();
@@ -1564,7 +1568,7 @@
     window.excluirRecompensa=async id=>{ if(confirm('Excluir recompensa?')) await deleteDoc(doc(db,'recompensas',id)); };
     function renderizarRecompensasAdmin(){ const el=document.getElementById('listaRecompensasAdmin'); if(!el)return; el.innerHTML=recompensasCache.map(r=>`<div class="recompensa-item"><strong>${escaparHtml(r.nome)}</strong> — ${Number(r.pontos)||0} pts <button onclick="excluirRecompensa('${r.id}')">Excluir</button></div>`).join('')||'<p>Nenhuma recompensa.</p>'; }
     const resgatesEmDecisao=new Set();
-    window.decidirResgate=async(id,status)=>{ if(resgatesEmDecisao.has(id)) return; const atual=resgatesCache.find(r=>r.id===id); if(!atual||atual.status!=='Pendente') return; resgatesEmDecisao.add(id); try{ await updateDoc(doc(db,'resgates',id),{status,decididoEm:new Date().toISOString()}); } finally { resgatesEmDecisao.delete(id); } };
+    window.decidirResgate=async(id,status)=>{ if(resgatesEmDecisao.has(id)) return; const atual=resgatesCache.find(r=>r.id===id); if(!atual||atual.status!=='Pendente'||!['Aprovado','Recusado'].includes(status)) return; resgatesEmDecisao.add(id); try{ const agora=new Date().toISOString(); await updateDoc(doc(db,'resgates',id),{status,decididoEm:agora,pushClientePendente:true,pushClienteSolicitadoEm:agora,pushClienteTentativas:0});window.rotinaLog?.('recompensa.decidida',{resgateId:id,status}); } finally { resgatesEmDecisao.delete(id); } };
     function renderizarResgatesAdmin(){ const el=document.getElementById('listaResgatesAdmin'); if(!el)return; const lista=[...resgatesCache].sort((a,b)=>(b.criadoEm||'').localeCompare(a.criadoEm||'')); el.innerHTML=lista.map(r=>`<div class="resgate-item"><strong>${escaparHtml(r.perfilNome)}</strong> pediu <strong>${escaparHtml(r.recompensaNome)}</strong> (${Number(r.pontos)||0} pts) — ${escaparHtml(r.status||'Pendente')} ${r.status==='Pendente'?`<button onclick="decidirResgate('${r.id}','Aprovado')">Aprovar</button> <button onclick="decidirResgate('${r.id}','Recusado')">Recusar</button>`:''}</div>`).join('')||'<p>Nenhum pedido.</p>'; }
 
     // Sessão administrativa validada pelo Firebase Authentication.
@@ -1590,6 +1594,7 @@
             document.getElementById('sistemaPrincipal').style.display='block';
             document.getElementById('displayCodigoAdmin').innerText=adminLogadoAtual.codigoAdmin || 'ADM-Gen';
             document.getElementById('displayCodigoCliente').innerText=adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId || 'CLI-Gen';
+            window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));
             iniciarEscutasFirebase();
             Promise.allSettled([verificarEExecutarResetSemanal(adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId),carregarRegraAtraso()]);
         } catch(e) { console.error('Falha ao restaurar sessão administrativa',e); }
@@ -1598,7 +1603,7 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=37')
+      navigator.serviceWorker.register('./sw.js?v=38')
         .then(reg => console.log('Service Worker registrado com sucesso!', reg))
         .catch(err => console.error('Erro ao registrar Service Worker:', err));
     });
@@ -1638,6 +1643,8 @@
 </script>
   <script type="module" src="./dashboard-ranking-pro.js"></script>
 <script type="module" src="./family-alarm-admin.js?v=6"></script>
-<script type="module" src="./reward-redemption-notifications.js?v=1"></script>
+<script type="module" src="./reward-redemption-notifications.js?v=2"></script>
+<script type="module" src="./app-monitoring.js?v=1"></script>
+<script type="module" src="./app-monitoring-dashboard.js?v=1"></script>
 </body>
 </html>
