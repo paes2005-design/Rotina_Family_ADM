@@ -17,6 +17,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Sintaxe e regressão geral do ADM
+        run: |
+          node --check dashboard-ranking-pro.js
+          node --check monitor-pro.js
+          node --check rewards-admin-ui-v2.js
+          node --check manage-pro.js
+          node --check mobile-app-ui.js
+          node --check adm-justification-review.js
+          node --check adm-early-start-ui.js
+          node --check adm-score-history-cards.js
+          node --check adm-monitor-history-fix.js
+          node --check family-alarm-admin.js
+          node --check alarm-date-core.js
+          node --check reward-redemption-notifications.js
+          node --check adm-regression-audit.js
+          node --check sw.js
+          node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8')); console.log('manifest OK')"
+          node adm-regression-audit.js
       - name: Validar invariantes do vínculo Master
         run: |
           node <<'NODE'
