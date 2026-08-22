@@ -1,4 +1,4 @@
-const CACHE_NAME='rotina-family-adm-v54';
+const CACHE_NAME='rotina-family-adm-v55';
 const APP_SHELL=['./','./index.html','./index-ADMIN-v8.html','./manifest.json?v=34','./icon-administrador-192.png','./icon-administrador-512.png','./admin-push-onesignal.js','./admin-master.js','./admin-master-integrity-fix.js','./app-monitoring.js','./app-monitoring-dashboard.js','./commercial-access-admin.js','./master-family-tree.js','./dashboard-ranking-pro.css','./dashboard-ranking-pro.js','./monitor-pro.css','./monitor-pro.js','./rewards-admin-ui-v2.js','./reward-redemption-notifications.js','./manage-pro.css','./manage-pro.js','./mobile-app-ui.css','./mobile-app-ui.js','./adm-justification-review.js','./adm-early-start-ui.js','./adm-score-history-cards.js','./adm-monitor-history-fix.js','./family-alarm-admin.js','./alarm-date-core.js','./reset-cache.html'];
 const MODULE_ROOTS=['https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js'];
 const APP_MAIN_URL=new URL('./index-ADMIN-v8.html',self.location.href).href;
@@ -15,7 +15,7 @@ async function respostaComAddons(response){
   if(!html.includes('family-alarm-admin.js'))faltantes.push('<script type="module" src="./family-alarm-admin.js?v=6"><\/script>');
   if(!html.includes('reward-redemption-notifications.js'))faltantes.push('<script type="module" src="./reward-redemption-notifications.js?v=2"><\/script>');
   if(!html.includes('commercial-access-admin.js'))faltantes.push('<script type="module" src="./commercial-access-admin.js?v=2"><\/script>');
-  if(!html.includes('master-family-tree.js'))faltantes.push('<script src="./master-family-tree.js?v=2"><\/script>');
+  if(!html.includes('master-family-tree.js'))faltantes.push('<script src="./master-family-tree.js?v=3"><\/script>');
   if(!html.includes('app-monitoring-dashboard.js'))faltantes.push('<script type="module" src="./app-monitoring-dashboard.js?v=2"><\/script>');
   if(!html.includes('admin-master-integrity-fix.js'))faltantes.push('<script src="./admin-master-integrity-fix.js?v=1"><\/script>');
   if(faltantes.length)html=html.replace('</body>',faltantes.join('\n')+'\n</body>');
