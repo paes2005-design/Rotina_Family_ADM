@@ -1,0 +1,42 @@
+name: Test integrated Master tree
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integrated-master-tree:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax
+        run: node --check master-family-tree.js
+      - name: Preserve user actions and integrated tree contract
+        shell: python
+        run: |
+          from pathlib import Path
+          master=Path('admin-master.js').read_text(encoding='utf-8')
+          tree=Path('master-family-tree.js').read_text(encoding='utf-8')
+          for marker in ['update-email','send-password-reset','set-disabled','delete-user']:
+              assert marker in master, marker
+          assert "COMMERCIAL_EXEMPT_GROUPS = new Set(['CLI-4071'])" in tree
+          assert 'window.rotinaMasterIntegratedTree = true' in tree
+          assert 'proprietarioUid' in tree
+          assert 'data-master-group-toggle' in tree
+          assert 'Administrador principal' in tree
+          assert 'Administradores convidados' in tree
+          assert 'Integrantes do grupo' in tree
+          assert 'set-group-blocked' in tree
+          assert 'confirm-group' in tree
+          assert 'master-integrated-tree-row' in tree
+          assert 'master-integrated-tree-mobile' in tree
+          assert 'masterCommercialGroupSelect' not in tree
+          assert 'function ensurePanel' not in tree
+          print('OK: ações individuais preservadas + árvore integrada ao principal')
