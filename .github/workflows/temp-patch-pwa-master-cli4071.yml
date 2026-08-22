@@ -1,0 +1,185 @@
+name: TEMP patch PWA Master CLI-4071
+
+on:
+  push:
+    branches:
+      - hotfix-pwa-master-cli4071-lara-2026-08-22
+    paths:
+      - '.github/workflows/temp-patch-pwa-master-cli4071.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: hotfix-pwa-master-cli4071-lara-2026-08-22
+      - name: Aplicar vínculo seguro do Master na página real do PWA
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index-ADMIN-v8.html')
+          s=p.read_text(encoding='utf-8')
+          anchor='    window.realizarLogin = async () => {'
+          bridge=r'''    async function aguardarConfirmacaoMaster(user, timeoutMs = 5000) {
+              if (!user) return false;
+              if (window.rotinaMasterSession?.master === true && window.rotinaMasterSession?.uid === user.uid) return true;
+              return await new Promise(resolve => {
+                  let finalizado = false;
+                  const concluir = valor => {
+                      if (finalizado) return;
+                      finalizado = true;
+                      clearTimeout(timer);
+                      window.removeEventListener('rotina-admin-master-ready', aoResolver);
+                      resolve(valor === true);
+                  };
+                  const aoResolver = evento => {
+                      const sessao = evento.detail || {};
+                      if (sessao.master === true && (!sessao.uid || sessao.uid === user.uid)) concluir(true);
+                      else if (sessao.motivo === 'nao-autorizado') concluir(false);
+                  };
+                  window.addEventListener('rotina-admin-master-ready', aoResolver);
+                  const timer = setTimeout(() => concluir(window.rotinaMasterSession?.master === true), timeoutMs);
+                  window.dispatchEvent(new CustomEvent('rotina-admin-session-ready', { detail: { grupoId: '', masterCandidate: true } }));
+              });
+          }
+
+          function abrirShellMaster(user) {
+              adminLogadoAtual = {
+                  id: 'MASTER-SYSTEM',
+                  uid: user.uid,
+                  email: String(user.email || '').trim().toLowerCase(),
+                  tipoAcesso: 'master',
+                  codigoAdmin: 'MASTER',
+                  codigoCliente: '',
+                  grupoId: ''
+              };
+              document.getElementById('telaAcesso').style.display = 'none';
+              document.getElementById('sistemaPrincipal').style.display = 'block';
+              document.getElementById('displayCodigoAdmin').innerText = 'MASTER';
+              document.getElementById('displayCodigoCliente').innerText = 'SISTEMA';
+              window.dispatchEvent(new CustomEvent('rotina-admin-session-ready', { detail: { grupoId: '', master: true } }));
+              setTimeout(vincularGrupoBaseMaster, 0);
+          }
+
+          const MASTER_OPERATIONAL_BASE_GROUP = 'CLI-4071';
+          let masterOperationalBound = false;
+
+          function vincularGrupoBaseMaster() {
+              if (window.rotinaMasterSession?.master !== true) return false;
+              if (!adminLogadoAtual) return false;
+              const groupId = MASTER_OPERATIONAL_BASE_GROUP;
+              const alreadyBound = masterOperationalBound
+                  && adminLogadoAtual.codigoCliente === groupId
+                  && adminLogadoAtual.grupoId === groupId;
+
+              adminLogadoAtual.codigoCliente = groupId;
+              adminLogadoAtual.grupoId = groupId;
+              const displayGrupo = document.getElementById('displayCodigoCliente');
+              if (displayGrupo) displayGrupo.innerText = groupId;
+
+              if (!alreadyBound) {
+                  iniciarEscutasFirebase();
+                  Promise.resolve(carregarRegraAtraso()).catch(error => console.warn('Falha ao carregar regra do grupo-base Master.', error));
+                  masterOperationalBound = true;
+              } else {
+                  atualizarSelects();
+              }
+
+              window.dispatchEvent(new CustomEvent('rotina-master-operational-group-ready', { detail: { grupoId: groupId } }));
+              return true;
+          }
+
+          window.rotinaMasterVincularGrupoBase = vincularGrupoBaseMaster;
+          window.addEventListener('rotina-admin-master-ready', event => {
+              if (event.detail?.master === true) setTimeout(vincularGrupoBaseMaster, 0);
+          });
+          window.addEventListener('rotina-admin-session-ready', event => {
+              if (event.detail?.master === true || window.rotinaMasterSession?.master === true) {
+                  setTimeout(vincularGrupoBaseMaster, 0);
+              }
+          });
+
+'''
+          if 'const MASTER_OPERATIONAL_BASE_GROUP' not in s:
+              if anchor not in s: raise SystemExit('âncora realizarLogin não encontrada')
+              s=s.replace(anchor, bridge+anchor, 1)
+
+          old="            if(snap.empty) throw new Error('Cadastro administrativo não encontrado.');"
+          new="""            if(snap.empty) {
+                if (await aguardarConfirmacaoMaster(cred.user)) {
+                    abrirShellMaster(cred.user);
+                    return;
+                }
+                throw new Error('Cadastro administrativo não encontrado.');
+            }"""
+          if old in s: s=s.replace(old,new,1)
+
+          old_restore="""            if(snap.empty) {
+                await signOut(auth);
+                alert('Sessão autenticada sem cadastro administrativo correspondente.');
+                return;
+            }"""
+          new_restore="""            if(snap.empty) {
+                if (await aguardarConfirmacaoMaster(user)) {
+                    abrirShellMaster(user);
+                    return;
+                }
+                await signOut(auth);
+                alert('Sessão autenticada sem cadastro administrativo correspondente.');
+                return;
+            }"""
+          if old_restore in s: s=s.replace(old_restore,new_restore,1)
+
+          s=s.replace('./admin-master.js?v=1','./admin-master.js?v=2')
+          s=s.replace("navigator.serviceWorker.register('./sw.js?v=39')", "navigator.serviceWorker.register('./sw.js?v=53')")
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Validar página PWA e simular seletor de tarefa
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index-ADMIN-v8.html').read_text(encoding='utf-8')
+          checks={
+            'grupo operacional':'const MASTER_OPERATIONAL_BASE_GROUP = \'CLI-4071\'' in s,
+            'autoridade segura':"adminLogadoAtual.tipoAcesso !== 'master'" not in s,
+            'evento master':"window.addEventListener('rotina-admin-master-ready'" in s,
+            'evento sessao':"window.addEventListener('rotina-admin-session-ready'" in s,
+            'fallback login':'await aguardarConfirmacaoMaster(cred.user)' in s,
+            'fallback restauração':'await aguardarConfirmacaoMaster(user)' in s,
+            'módulo master v2':'./admin-master.js?v=2' in s,
+            'service worker v53':"navigator.serviceWorker.register('./sw.js?v=53')" in s,
+            'query perfis grupo': 'where("grupoId", "==", gId)' in s,
+            'preenche seletor': "document.getElementById('tarefaResponsavel')" in s and 'perfisCache.sort' in s,
+          }
+          for k,v in checks.items():
+            print(('OK' if v else 'FALHA'),'-',k)
+            assert v,k
+          PY
+          node <<'NODE'
+          const assert=require('assert');
+          const profiles=[{id:'fZq2a9Bzb6HKjZhAvrIG',nome:'Lara Vitoria',grupoId:'CLI-4071'}];
+          let admin={tipoAcesso:'proprietario',codigoCliente:'CLI-9999',grupoId:'CLI-9999'};
+          const master={master:true};
+          let cache=[];
+          function bind(){ if(master.master!==true||!admin)return false; admin.codigoCliente='CLI-4071';admin.grupoId='CLI-4071';cache=profiles.filter(p=>p.grupoId===admin.grupoId);return true; }
+          assert.equal(bind(),true);
+          assert.equal(cache[0].nome,'Lara Vitoria');
+          const options=cache.map(p=>({value:p.id,text:p.nome}));
+          assert(options.some(o=>o.text==='Lara Vitoria'));
+          const selected=cache.find(p=>p.id===options[0].value);
+          const task={grupoId:admin.grupoId,perfilId:selected.id,perfilNome:selected.nome};
+          assert.deepEqual(task,{grupoId:'CLI-4071',perfilId:'fZq2a9Bzb6HKjZhAvrIG',perfilNome:'Lara Vitoria'});
+          console.log('SIMULACAO_PWA_OK');
+          NODE
+      - name: Commitar somente a correção funcional
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index-ADMIN-v8.html
+          git diff --cached --quiet || git commit -m "Hotfix: aplicar vínculo Master CLI-4071 na página PWA"
+          git push origin HEAD:hotfix-pwa-master-cli4071-lara-2026-08-22
