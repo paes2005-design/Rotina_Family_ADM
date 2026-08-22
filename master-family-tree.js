@@ -193,13 +193,13 @@ function decorateDesktop() {
     const groupId = extractGroupId(cells[1].textContent || '');
     const uid = row.querySelector('button[data-uid]')?.dataset.uid || '';
     const ownerGroup = ownerGroupFor(email, groupId, uid);
-    if (!ownerGroup) continue;
-    const id = normalizeGroupId(ownerGroup.grupoId);
+    const id = normalizeGroupId(ownerGroup?.grupoId || groupId);
+    if (!id) continue;
     row.dataset.masterTreeDecorated = '1';
     const emailStrong = cells[0].querySelector('strong');
-    if (emailStrong) emailStrong.innerHTML = `${principalButton(email || ownerGroup.proprietarioEmail, id, 'owner')}<span class="master-principal-badge">PRINCIPAL</span>`;
+    if (emailStrong && ownerGroup) emailStrong.innerHTML = `${principalButton(email || ownerGroup.proprietarioEmail, id, 'owner')}<span class="master-principal-badge">PRINCIPAL</span>`;
     const small = cells[1].querySelector('small')?.outerHTML || '';
-    cells[1].innerHTML = `${principalButton(ownerGroup.proprietarioEmail, id, 'group')}<br>${small}`;
+    cells[1].innerHTML = `${principalButton(ownerGroup?.proprietarioEmail || email, id, 'group')}<br>${small}`;
     const detailRow = document.createElement('tr');
     detailRow.className = 'master-integrated-tree-row';
     detailRow.innerHTML = `<td colspan="6"><div data-master-group-detail="${esc(id)}" style="display:none"></div></td>`;
@@ -218,11 +218,11 @@ function decorateMobile() {
     const groupId = extractGroupId(groupStrong?.textContent || fields[0]?.textContent || '');
     const uid = card.querySelector('button[data-uid]')?.dataset.uid || '';
     const ownerGroup = ownerGroupFor(email, groupId, uid);
-    if (!ownerGroup) continue;
-    const id = normalizeGroupId(ownerGroup.grupoId);
+    const id = normalizeGroupId(ownerGroup?.grupoId || groupId);
+    if (!id) continue;
     card.dataset.masterTreeDecorated = '1';
-    if (emailEl) emailEl.innerHTML = `${principalButton(email || ownerGroup.proprietarioEmail, id, 'owner')}<span class="master-principal-badge">PRINCIPAL</span>`;
-    if (groupStrong) groupStrong.innerHTML = principalButton(ownerGroup.proprietarioEmail, id, 'group');
+    if (emailEl && ownerGroup) emailEl.innerHTML = `${principalButton(email || ownerGroup.proprietarioEmail, id, 'owner')}<span class="master-principal-badge">PRINCIPAL</span>`;
+    if (groupStrong) groupStrong.innerHTML = principalButton(ownerGroup?.proprietarioEmail || email, id, 'group');
     const actions = card.querySelector('.master-actions');
     const detail = document.createElement('div');
     detail.className = 'master-integrated-tree-mobile';
@@ -235,7 +235,7 @@ function decorateMobile() {
 function decorateRecords() {
   const legacy = document.getElementById('masterFamilyTree');
   if (legacy) legacy.remove();
-  if (!document.getElementById('masterUsers') || !allGroups.length) return;
+  if (!document.getElementById('masterUsers')) return;
   ensureStyles();
   decorateDesktop();
   decorateMobile();
