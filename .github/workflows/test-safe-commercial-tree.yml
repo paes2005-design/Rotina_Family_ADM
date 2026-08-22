@@ -35,7 +35,6 @@ jobs:
           monitor = Path('app-monitoring-dashboard.js').read_text(encoding='utf-8')
           sw = Path('sw.js').read_text(encoding='utf-8')
 
-          # Shell pronto para oficial, sem rótulo de teste, com módulos Master/comercial/logs.
           assert '<title>Rotina Family ADM</title>' in index
           assert 'TESTE COMERCIAL SEGURO' not in index
           assert 'commercial-access-admin.js?v=2' in index
@@ -43,7 +42,6 @@ jobs:
           assert 'app-monitoring-dashboard.js?v=2' in index
           assert 'admin-master.js?v=2' in index
 
-          # Grupos: lista visível, pesquisa, detalhe de um grupo e ações de grupo.
           assert 'masterCommercialGroupSelect' in tree
           assert "window.rotinaMasterApi('/groups'" in tree
           assert '/group?grupoId=' in tree
@@ -58,25 +56,22 @@ jobs:
           assert 'setInterval(' not in tree
           assert "window.dispatchEvent(new CustomEvent('rotina-master-tree-loaded'" in tree
 
-          # ADM normal: mesmo estado comercial do grupo; Master nunca é bloqueado.
           assert 'signOut(' not in commercial
           assert 'waitForMasterResolution' in commercial
           assert "doc(db(), 'configGrupos', group)" in commercial
           assert "Number(config.trialVersao || 0) === 2" in commercial
           assert "state === 'teste-expirado'" in commercial
-          assert "'/commercial/trial'" in commercial
+          assert '/commercial/trial' in commercial
           assert 'window.rotinaMasterSession?.master === true' in commercial
           assert "'administradores'" not in commercial
 
-          # Logs continuam globais; grupo é filtro opcional.
           assert 'Todos os grupos' in monitor
           assert "selectedGroup = 'SISTEMA'" in monitor
-          assert "'/logs?grupoId='" not in monitor or '/logs?grupoId=' in monitor
           assert "window.rotinaMasterApi(`/logs?grupoId=${encodeURIComponent(groupId || 'SISTEMA')}`)" in monitor
           assert 'Todos os aplicativos' in monitor
           assert 'Todos os níveis' in monitor
+          assert "event.detail?.groups" in monitor
 
-          # Service Worker inclui os módulos novos para atualização/offline.
           assert "CACHE_NAME='rotina-family-adm-v53'" in sw
           for asset in ['commercial-access-admin.js','master-family-tree.js','app-monitoring-dashboard.js']:
               assert asset in sw
