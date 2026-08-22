@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rotina Family ADM — Teste Comercial Seguro</title>
+  <title>Rotina Family ADM</title>
   <style>body{font-family:Segoe UI,Tahoma,sans-serif;background:#f4f7f6;color:#334155;margin:0;display:grid;place-items:center;min-height:100vh}.loading{padding:24px;text-align:center}</style>
 </head>
 <body>
-  <div class="loading">Carregando ambiente de teste...</div>
+  <div class="loading">Carregando Rotina Family ADM...</div>
   <script>
     (async()=>{
       try{
@@ -15,6 +15,8 @@
         if(!r.ok) throw new Error('Falha ao carregar painel');
         let html=await r.text();
 
+        // O ADM Master é resolvido antes do fluxo normal do ADM encerrar uma sessão
+        // sem vínculo familiar. A autoridade Master não depende de CLI/grupo/comercial.
         const masterBridge = `    async function aguardarConfirmacaoMaster(user, timeoutMs = 5000) {
         if (!user) return false;
         if (window.rotinaMasterSession?.master === true && window.rotinaMasterSession?.uid === user.uid) return true;
@@ -88,22 +90,24 @@
         );
 
         html=html.replace('./admin-master.js?v=1','./admin-master.js?v=2');
-        html=html.replace('./sw.js?v=39','./sw.js?v=41');
-        html=html.replace('<body>',`<body><div id="safeCommercialTestBadge" style="position:fixed;top:6px;right:6px;z-index:99999;background:#7c3aed;color:#fff;padding:4px 7px;border-radius:999px;font:700 9px Segoe UI,sans-serif;opacity:.9">TESTE COMERCIAL SEGURO</div>`);
+        html=html.replace('./sw.js?v=39','./sw.js?v=42');
+        html=html.replace('./sw.js?v=40','./sw.js?v=42');
+        html=html.replace('./sw.js?v=41','./sw.js?v=42');
 
         const addons=[
           '<script type="module" src="./adm-score-history-cards.js?v=2"><\\/script>',
           '<script type="module" src="./adm-monitor-history-fix.js?v=3"><\\/script>',
           '<script type="module" src="./family-alarm-admin.js?v=6"><\\/script>',
           '<script type="module" src="./reward-redemption-notifications.js?v=2"><\\/script>',
-          '<script type="module" src="./commercial-access-admin.js?v=safe1"><\\/script>',
-          '<script src="./master-family-tree.js?v=safe1"><\\/script>',
+          '<script type="module" src="./commercial-access-admin.js?v=2"><\\/script>',
+          '<script src="./master-family-tree.js?v=2"><\\/script>',
+          '<script type="module" src="./app-monitoring-dashboard.js?v=2"><\\/script>',
           '<script src="./admin-master-integrity-fix.js?v=1"><\\/script>'
         ];
         for(const addon of addons){const m=addon.match(/src="\.\/(.+?)\?/);const nome=m?.[1]||'';if(nome&&!html.includes(nome))html=html.replace('</body>',addon+'\n</body>');}
         document.open();document.write(html);document.close();
       }catch(e){
-        document.body.innerHTML='<div class="loading"><strong>Não foi possível abrir o painel de teste.</strong></div>';
+        document.body.innerHTML='<div class="loading"><strong>Não foi possível abrir o painel.</strong><br><a href="./index-ADMIN-v8.html">Tentar abrir diretamente</a></div>';
       }
     })();
   </script>
