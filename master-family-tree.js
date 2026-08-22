@@ -21,6 +21,15 @@ function normalizeEmail(value = '') {
   return String(value || '').trim().toLowerCase();
 }
 
+function sameAdministrator(a = {}, b = {}) {
+  const aUid = String(a?.uid || '').trim();
+  const bUid = String(b?.uid || '').trim();
+  if (aUid && bUid && aUid === bUid) return true;
+  const aEmail = normalizeEmail(a?.email || '');
+  const bEmail = normalizeEmail(b?.email || '');
+  return Boolean(aEmail && bEmail && aEmail === bEmail);
+}
+
 function isCommercialExemptGroup(groupId = '') {
   return COMMERCIAL_EXEMPT_GROUPS.has(normalizeGroupId(groupId));
 }
@@ -105,7 +114,10 @@ function ensureStyles() {
 function treeHtml(group) {
   if (!group) return '<div class="master-tree-loading">Carregando grupo…</div>';
   const owner = group.administradorPrincipal || {};
-  const admins = (group.administradores || []).filter(admin => !admin.principal && !admin.master);
+  const admins = (group.administradores || []).filter(admin => {
+    if (admin?.master || admin?.principal) return false;
+    return !sameAdministrator(admin, owner);
+  });
   const clients = group.clientes || [];
   const info = stateInfo(group);
   const exempt = isCommercialExemptGroup(group.grupoId);
