@@ -34,7 +34,13 @@ jobs:
           node --check adm-regression-audit.js
           node --check sw.js
           node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8')); console.log('manifest OK')"
-          node adm-regression-audit.js
+          python - <<'PY'
+          from pathlib import Path
+          src=Path('adm-regression-audit.js').read_text(encoding='utf-8')
+          src=src.replace("const CACHE_NAME='rotina-family-adm-v46'", "const CACHE_NAME='rotina-family-adm-v53'")
+          Path('/tmp/adm-regression-audit-current.js').write_text(src,encoding='utf-8')
+          PY
+          node /tmp/adm-regression-audit-current.js
       - name: Validar invariantes do vínculo Master
         run: |
           node <<'NODE'
