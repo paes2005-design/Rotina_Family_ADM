@@ -1,4 +1,4 @@
-const CACHE_NAME='rotina-family-adm-v53';
+const CACHE_NAME='rotina-family-adm-v54';
 const APP_SHELL=['./','./index.html','./index-ADMIN-v8.html','./manifest.json?v=34','./icon-administrador-192.png','./icon-administrador-512.png','./admin-push-onesignal.js','./admin-master.js','./admin-master-integrity-fix.js','./app-monitoring.js','./app-monitoring-dashboard.js','./commercial-access-admin.js','./master-family-tree.js','./dashboard-ranking-pro.css','./dashboard-ranking-pro.js','./monitor-pro.css','./monitor-pro.js','./rewards-admin-ui-v2.js','./reward-redemption-notifications.js','./manage-pro.css','./manage-pro.js','./mobile-app-ui.css','./mobile-app-ui.js','./adm-justification-review.js','./adm-early-start-ui.js','./adm-score-history-cards.js','./adm-monitor-history-fix.js','./family-alarm-admin.js','./alarm-date-core.js','./reset-cache.html'];
 const MODULE_ROOTS=['https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js'];
 const APP_MAIN_URL=new URL('./index-ADMIN-v8.html',self.location.href).href;
@@ -27,14 +27,14 @@ self.addEventListener('activate',event=>{event.waitUntil((async()=>{const keys=a
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;const url=new URL(event.request.url);const staticCdn=url.hostname==='www.gstatic.com'&&url.pathname.startsWith('/firebasejs/');const sameOrigin=url.origin===self.location.origin;if(!sameOrigin&&!staticCdn)return;
   if(event.request.mode==='navigate'){
     event.respondWith((async()=>{
-      const alvo=(url.href===ENTRY_URL||url.pathname.endsWith('/'))?ENTRY_URL:event.request;
+      const legacyDirect=url.pathname.endsWith('index-ADMIN-v8.html');
+      const alvo=(url.href===ENTRY_URL||url.pathname.endsWith('/')||legacyDirect)?ENTRY_URL:event.request;
       try{
         const response=await fetch(alvo,{cache:'no-store'});
         if(response&&response.ok){const cache=await caches.open(CACHE_NAME);await cache.put(alvo,response.clone());}
-        return url.pathname.endsWith('index-ADMIN-v8.html')?respostaComAddons(response):response;
+        return response;
       }catch(e){
-        const cached=(await caches.match(alvo))||(await caches.match(ENTRY_URL))||(await caches.match(APP_MAIN_URL));
-        return url.pathname.endsWith('index-ADMIN-v8.html')?respostaComAddons(cached):cached;
+        return (await caches.match(alvo))||(await caches.match(ENTRY_URL))||(await caches.match(APP_MAIN_URL));
       }
     })());
     return;
