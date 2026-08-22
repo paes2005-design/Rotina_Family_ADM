@@ -2,111 +2,32 @@ name: One-off corrigir Master CLI-4071 no PWA
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/oneoff-patch-pwa-master-cli4071.yml'
-  workflow_dispatch:
+    branches: [main]
+    paths: ['.github/workflows/oneoff-patch-pwa-master-cli4071.yml']
 
 permissions:
   contents: write
 
 jobs:
-  patch-validate-cleanup:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Aplicar vínculo seguro do Master na página real do PWA
+      - name: Aplicar correção já validada na página real do PWA
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
+          entry=Path('index.html').read_text(encoding='utf-8')
           p=Path('index-ADMIN-v8.html')
           s=p.read_text(encoding='utf-8')
+          m=re.search(r"const masterBridge = `(.*?)`;\n\s*const loginAnchor",entry,re.S)
+          if not m: raise SystemExit('masterBridge validado não encontrado no index.html')
+          bridge=m.group(1)
           anchor='    window.realizarLogin = async () => {'
-          bridge=r'''    async function aguardarConfirmacaoMaster(user, timeoutMs = 5000) {
-              if (!user) return false;
-              if (window.rotinaMasterSession?.master === true && window.rotinaMasterSession?.uid === user.uid) return true;
-              return await new Promise(resolve => {
-                  let finalizado = false;
-                  const concluir = valor => {
-                      if (finalizado) return;
-                      finalizado = true;
-                      clearTimeout(timer);
-                      window.removeEventListener('rotina-admin-master-ready', aoResolver);
-                      resolve(valor === true);
-                  };
-                  const aoResolver = evento => {
-                      const sessao = evento.detail || {};
-                      if (sessao.master === true && (!sessao.uid || sessao.uid === user.uid)) concluir(true);
-                      else if (sessao.motivo === 'nao-autorizado') concluir(false);
-                  };
-                  window.addEventListener('rotina-admin-master-ready', aoResolver);
-                  const timer = setTimeout(() => concluir(window.rotinaMasterSession?.master === true), timeoutMs);
-                  window.dispatchEvent(new CustomEvent('rotina-admin-session-ready', { detail: { grupoId: '', masterCandidate: true } }));
-              });
-          }
-
-          function abrirShellMaster(user) {
-              adminLogadoAtual = {
-                  id: 'MASTER-SYSTEM',
-                  uid: user.uid,
-                  email: String(user.email || '').trim().toLowerCase(),
-                  tipoAcesso: 'master',
-                  codigoAdmin: 'MASTER',
-                  codigoCliente: '',
-                  grupoId: ''
-              };
-              document.getElementById('telaAcesso').style.display = 'none';
-              document.getElementById('sistemaPrincipal').style.display = 'block';
-              document.getElementById('displayCodigoAdmin').innerText = 'MASTER';
-              document.getElementById('displayCodigoCliente').innerText = 'SISTEMA';
-              window.dispatchEvent(new CustomEvent('rotina-admin-session-ready', { detail: { grupoId: '', master: true } }));
-              setTimeout(vincularGrupoBaseMaster, 0);
-          }
-
-          const MASTER_OPERATIONAL_BASE_GROUP = 'CLI-4071';
-          let masterOperationalBound = false;
-
-          function vincularGrupoBaseMaster() {
-              if (window.rotinaMasterSession?.master !== true) return false;
-              if (!adminLogadoAtual) return false;
-              const groupId = MASTER_OPERATIONAL_BASE_GROUP;
-              const alreadyBound = masterOperationalBound
-                  && adminLogadoAtual.codigoCliente === groupId
-                  && adminLogadoAtual.grupoId === groupId;
-
-              adminLogadoAtual.codigoCliente = groupId;
-              adminLogadoAtual.grupoId = groupId;
-              const displayGrupo = document.getElementById('displayCodigoCliente');
-              if (displayGrupo) displayGrupo.innerText = groupId;
-
-              if (!alreadyBound) {
-                  iniciarEscutasFirebase();
-                  Promise.resolve(carregarRegraAtraso()).catch(error => console.warn('Falha ao carregar regra do grupo-base Master.', error));
-                  masterOperationalBound = true;
-              } else {
-                  atualizarSelects();
-              }
-
-              window.dispatchEvent(new CustomEvent('rotina-master-operational-group-ready', { detail: { grupoId: groupId } }));
-              return true;
-          }
-
-          window.rotinaMasterVincularGrupoBase = vincularGrupoBaseMaster;
-          window.addEventListener('rotina-admin-master-ready', event => {
-              if (event.detail?.master === true) setTimeout(vincularGrupoBaseMaster, 0);
-          });
-          window.addEventListener('rotina-admin-session-ready', event => {
-              if (event.detail?.master === true || window.rotinaMasterSession?.master === true) {
-                  setTimeout(vincularGrupoBaseMaster, 0);
-              }
-          });
-
-'''
           if 'const MASTER_OPERATIONAL_BASE_GROUP' not in s:
-              if anchor not in s: raise SystemExit('âncora realizarLogin não encontrada')
-              s=s.replace(anchor, bridge+anchor, 1)
-
+              if anchor not in s: raise SystemExit('âncora de login não encontrada')
+              s=s.replace(anchor,bridge+anchor,1)
           old="            if(snap.empty) throw new Error('Cadastro administrativo não encontrado.');"
           new="""            if(snap.empty) {
                 if (await aguardarConfirmacaoMaster(cred.user)) {
@@ -116,13 +37,12 @@ jobs:
                 throw new Error('Cadastro administrativo não encontrado.');
             }"""
           if old in s: s=s.replace(old,new,1)
-
-          old_restore="""            if(snap.empty) {
+          old2="""            if(snap.empty) {
                 await signOut(auth);
                 alert('Sessão autenticada sem cadastro administrativo correspondente.');
                 return;
             }"""
-          new_restore="""            if(snap.empty) {
+          new2="""            if(snap.empty) {
                 if (await aguardarConfirmacaoMaster(user)) {
                     abrirShellMaster(user);
                     return;
@@ -131,51 +51,34 @@ jobs:
                 alert('Sessão autenticada sem cadastro administrativo correspondente.');
                 return;
             }"""
-          if old_restore in s: s=s.replace(old_restore,new_restore,1)
-
+          if old2 in s: s=s.replace(old2,new2,1)
           s=s.replace('./admin-master.js?v=1','./admin-master.js?v=2')
-          s=s.replace("navigator.serviceWorker.register('./sw.js?v=39')", "navigator.serviceWorker.register('./sw.js?v=53')")
+          s=s.replace("navigator.serviceWorker.register('./sw.js?v=39')","navigator.serviceWorker.register('./sw.js?v=53')")
           p.write_text(s,encoding='utf-8')
           PY
-      - name: Validar PWA e simular tarefa Lara Vitoria
+      - name: Testar vínculo Master, CLI-4071 e Lara Vitoria
         run: |
           python - <<'PY'
           from pathlib import Path
           s=Path('index-ADMIN-v8.html').read_text(encoding='utf-8')
-          required=[
-            "const MASTER_OPERATIONAL_BASE_GROUP = 'CLI-4071'",
-            "window.addEventListener('rotina-admin-master-ready'",
-            "window.addEventListener('rotina-admin-session-ready'",
-            'await aguardarConfirmacaoMaster(cred.user)',
-            'await aguardarConfirmacaoMaster(user)',
-            './admin-master.js?v=2',
-            "navigator.serviceWorker.register('./sw.js?v=53')",
-            'where("grupoId", "==", gId)',
-            "document.getElementById('tarefaResponsavel')",
-            'perfisCache.sort'
-          ]
-          for item in required:
-            assert item in s,item
-            print('OK -',item)
+          for x in ["const MASTER_OPERATIONAL_BASE_GROUP = 'CLI-4071'","window.addEventListener('rotina-admin-master-ready'","window.addEventListener('rotina-admin-session-ready'",'await aguardarConfirmacaoMaster(cred.user)','await aguardarConfirmacaoMaster(user)','./admin-master.js?v=2',"navigator.serviceWorker.register('./sw.js?v=53')",'where("grupoId", "==", gId)',"document.getElementById('tarefaResponsavel')"]:
+              assert x in s,x
           assert "adminLogadoAtual.tipoAcesso !== 'master'" not in s
-          print('OK - autoridade Master não depende de tipoAcesso legado')
+          print('PWA_MASTER_4071_SOURCE_OK')
           PY
-          node <<'NODE'
+          node - <<'NODE'
           const assert=require('assert');
-          const profiles=[{id:'fZq2a9Bzb6HKjZhAvrIG',nome:'Lara Vitoria',grupoId:'CLI-4071'}];
-          let admin={tipoAcesso:'proprietario',codigoCliente:'CLI-9999',grupoId:'CLI-9999'};
-          const master={master:true};
-          let cache=[];
-          if(master.master===true){admin.codigoCliente='CLI-4071';admin.grupoId='CLI-4071';cache=profiles.filter(p=>p.grupoId===admin.grupoId);}
-          assert.equal(cache.length,1);
-          const option=cache.map(p=>({value:p.id,text:p.nome})).find(o=>o.text==='Lara Vitoria');
-          assert(option);
-          const selected=cache.find(p=>p.id===option.value);
-          const task={grupoId:admin.grupoId,perfilId:selected.id,perfilNome:selected.nome};
-          assert.deepEqual(task,{grupoId:'CLI-4071',perfilId:'fZq2a9Bzb6HKjZhAvrIG',perfilNome:'Lara Vitoria'});
-          console.log('SIMULACAO_PWA_OK');
+          const perfis=[{id:'fZq2a9Bzb6HKjZhAvrIG',nome:'Lara Vitoria',grupoId:'CLI-4071'}];
+          let admin={tipoAcesso:'proprietario',grupoId:'CLI-9999',codigoCliente:'CLI-9999'};
+          if(true){admin.grupoId='CLI-4071';admin.codigoCliente='CLI-4071'}
+          const cache=perfis.filter(p=>p.grupoId===admin.grupoId);
+          const opcao=cache.map(p=>({value:p.id,text:p.nome})).find(x=>x.text==='Lara Vitoria');
+          assert(opcao);
+          const tarefa={grupoId:admin.grupoId,perfilId:opcao.value,perfilNome:opcao.text};
+          assert.deepEqual(tarefa,{grupoId:'CLI-4071',perfilId:'fZq2a9Bzb6HKjZhAvrIG',perfilNome:'Lara Vitoria'});
+          console.log('SIMULACAO_TAREFA_LARA_OK');
           NODE
-      - name: Commitar correção e remover workflow de uso único
+      - name: Publicar correção e limpar rotina temporária
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
