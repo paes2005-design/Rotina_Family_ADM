@@ -1,0 +1,98 @@
+name: Temp fix duplicate owner in Master tree
+
+on:
+  push:
+    branches:
+      - fix-no-duplicate-owner-2026-08-22
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix-no-duplicate-owner-2026-08-22
+          fetch-depth: 0
+      - name: Patch tree duplicate owner filter and bump PWA version
+        shell: python
+        run: |
+          from pathlib import Path
+
+          tree_path = Path('master-family-tree.js')
+          tree = tree_path.read_text(encoding='utf-8')
+
+          tree = tree.replace('window.rotinaMasterTreeVersion = 5;', 'window.rotinaMasterTreeVersion = 6;')
+
+          anchor = "function normalizeEmail(value = '') {\n  return String(value || '').trim().toLowerCase();\n}\n"
+          helper = """function normalizeEmail(value = '') {
+  return String(value || '').trim().toLowerCase();
+}
+
+function sameAdministrator(a = {}, b = {}) {
+  const aUid = String(a?.uid || '').trim();
+  const bUid = String(b?.uid || '').trim();
+  if (aUid && bUid && aUid === bUid) return true;
+  const aEmail = normalizeEmail(a?.email || '');
+  const bEmail = normalizeEmail(b?.email || '');
+  return Boolean(aEmail && bEmail && aEmail === bEmail);
+}
+"""
+          if 'function sameAdministrator(' not in tree:
+              if anchor not in tree:
+                  raise SystemExit('normalizeEmail anchor not found')
+              tree = tree.replace(anchor, helper, 1)
+
+          old = "  const admins = (group.administradores || []).filter(admin => !admin.principal && !admin.master);"
+          new = """  const admins = (group.administradores || []).filter(admin => {
+    if (admin?.master || admin?.principal) return false;
+    return !sameAdministrator(admin, owner);
+  });"""
+          if old not in tree:
+              raise SystemExit('guest admin filter anchor not found')
+          tree = tree.replace(old, new, 1)
+          tree_path.write_text(tree, encoding='utf-8')
+
+          index_path = Path('index.html')
+          index = index_path.read_text(encoding='utf-8')
+          index = index.replace("./master-family-tree.js?v=5", "./master-family-tree.js?v=6")
+          index = index.replace("./sw.js?v=57", "./sw.js?v=58")
+          index_path.write_text(index, encoding='utf-8')
+
+          sw_path = Path('sw.js')
+          sw = sw_path.read_text(encoding='utf-8')
+          sw = sw.replace("rotina-family-adm-v57", "rotina-family-adm-v58")
+          sw = sw.replace("./master-family-tree.js?v=5", "./master-family-tree.js?v=6")
+          sw_path.write_text(sw, encoding='utf-8')
+
+          checks = {
+              'sameAdministrator helper': 'function sameAdministrator(' in tree,
+              'uid comparison': 'aUid && bUid && aUid === bUid' in tree,
+              'email comparison': 'aEmail && bEmail && aEmail === bEmail' in tree,
+              'owner excluded from guests': '!sameAdministrator(admin, owner)' in tree,
+              'principal excluded': 'admin?.principal' in tree,
+              'tree v6': 'window.rotinaMasterTreeVersion = 6;' in tree,
+              'index tree v6': './master-family-tree.js?v=6' in index,
+              'sw v58': "rotina-family-adm-v58" in sw,
+          }
+          failed = [name for name, ok in checks.items() if not ok]
+          if failed:
+              raise SystemExit('Checks failed: ' + ', '.join(failed))
+          print('Duplicate-owner fix contract: OK')
+
+      - name: Syntax check
+        run: |
+          node --check master-family-tree.js
+          node --check admin-master.js
+          node --check sw.js
+      - name: Commit functional fix and remove temporary workflow
+        run: |
+          rm -f .github/workflows/temp-fix-duplicate-owner.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add master-family-tree.js index.html sw.js .github/workflows/temp-fix-duplicate-owner.yml
+          git commit -m "Fix: não repetir administrador principal nos convidados"
+          git push origin HEAD:fix-no-duplicate-owner-2026-08-22
