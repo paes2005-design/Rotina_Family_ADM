@@ -3,9 +3,18 @@ import { getAuth } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth
 import { getFirestore, doc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 const WORKER_ROOT = 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
+const COMMERCIAL_EXEMPT_GROUPS = new Set(['CLI-4071']);
 let stopGroupWatch = null;
 let blockedByCommercial = false;
 let trialStartedFor = '';
+
+function normalizeGroupId(value = '') {
+  return String(value || '').trim().toUpperCase();
+}
+
+function isCommercialExemptGroup(groupId = '') {
+  return COMMERCIAL_EXEMPT_GROUPS.has(normalizeGroupId(groupId));
+}
 
 function db() {
   if (!getApps().length) throw new Error('Firebase ainda não foi iniciado.');
@@ -86,8 +95,8 @@ function clearCommercialBlock() {
 }
 
 async function ensureTrial(groupId) {
-  const group = String(groupId || '').trim().toUpperCase();
-  if (!group || trialStartedFor === group || window.rotinaMasterSession?.master === true || !getApps().length) return;
+  const group = normalizeGroupId(groupId);
+  if (!group || isCommercialExemptGroup(group) || trialStartedFor === group || window.rotinaMasterSession?.master === true || !getApps().length) return;
   const user = getAuth(getApp()).currentUser;
   if (!user) return;
   try {
@@ -109,8 +118,8 @@ async function ensureTrial(groupId) {
 }
 
 async function enforceGroup(groupId) {
-  const group = String(groupId || '').trim();
-  if (!group || window.rotinaMasterSession?.master === true) return true;
+  const group = normalizeGroupId(groupId);
+  if (!group || isCommercialExemptGroup(group) || window.rotinaMasterSession?.master === true) return true;
   try {
     const snap = await getDoc(doc(db(), 'configGrupos', group));
     const state = commercialState(snap.exists() ? snap.data() : {});
@@ -129,8 +138,8 @@ async function enforceGroup(groupId) {
 function watchGroup(groupId) {
   stopGroupWatch?.();
   stopGroupWatch = null;
-  const group = String(groupId || '').trim();
-  if (!group || window.rotinaMasterSession?.master === true) return;
+  const group = normalizeGroupId(groupId);
+  if (!group || isCommercialExemptGroup(group) || window.rotinaMasterSession?.master === true) return;
   stopGroupWatch = onSnapshot(
     doc(db(), 'configGrupos', group),
     snap => {
@@ -145,8 +154,14 @@ function watchGroup(groupId) {
 async function enforceCurrentSession(event) {
   const detail = event.detail || {};
   if (detail.master === true || window.rotinaMasterSession?.master === true) return;
-  const groupId = String(detail.grupoId || '').trim();
+  const groupId = normalizeGroupId(detail.grupoId || '');
   if (!groupId) return;
+  if (isCommercialExemptGroup(groupId)) {
+    stopGroupWatch?.();
+    stopGroupWatch = null;
+    clearCommercialBlock();
+    return;
+  }
   const isMaster = await waitForMasterResolution();
   if (isMaster || window.rotinaMasterSession?.master === true) return;
   await ensureTrial(groupId);
