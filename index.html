@@ -55,16 +55,19 @@
         document.getElementById('displayCodigoAdmin').innerText = 'MASTER';
         document.getElementById('displayCodigoCliente').innerText = 'SISTEMA';
         window.dispatchEvent(new CustomEvent('rotina-admin-session-ready', { detail: { grupoId: '', master: true } }));
+        setTimeout(vincularGrupoBaseMaster, 0);
     }
 
     // O Master permanece uma identidade global. Este vínculo é apenas operacional:
     // permite que as telas normais do ADM leiam perfis/tarefas do grupo-base CLI-4071.
+    // A autoridade Master vem exclusivamente da sessão segura confirmada pelo Worker;
+    // não depende do tipoAcesso legado salvo no documento de administradores.
     const MASTER_OPERATIONAL_BASE_GROUP = 'CLI-4071';
     let masterOperationalBound = false;
 
     function vincularGrupoBaseMaster() {
         if (window.rotinaMasterSession?.master !== true) return false;
-        if (!adminLogadoAtual || adminLogadoAtual.tipoAcesso !== 'master') return false;
+        if (!adminLogadoAtual) return false;
         const groupId = MASTER_OPERATIONAL_BASE_GROUP;
         const alreadyBound = masterOperationalBound
             && adminLogadoAtual.codigoCliente === groupId
@@ -72,6 +75,8 @@
 
         adminLogadoAtual.codigoCliente = groupId;
         adminLogadoAtual.grupoId = groupId;
+        const displayGrupo = document.getElementById('displayCodigoCliente');
+        if (displayGrupo) displayGrupo.innerText = groupId;
 
         if (!alreadyBound) {
             iniciarEscutasFirebase();
@@ -88,6 +93,11 @@
     window.rotinaMasterVincularGrupoBase = vincularGrupoBaseMaster;
     window.addEventListener('rotina-admin-master-ready', event => {
         if (event.detail?.master === true) setTimeout(vincularGrupoBaseMaster, 0);
+    });
+    window.addEventListener('rotina-admin-session-ready', event => {
+        if (event.detail?.master === true || window.rotinaMasterSession?.master === true) {
+            setTimeout(vincularGrupoBaseMaster, 0);
+        }
     });
 
 `;
