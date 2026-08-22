@@ -15,8 +15,8 @@
         if(!r.ok) throw new Error('Falha ao carregar painel');
         let html=await r.text();
 
-        // O ADM Master é resolvido antes de o fluxo normal do ADM encerrar uma
-        // sessão sem vínculo familiar. A autoridade Master não depende de CLI/grupo.
+        // O ADM Master é resolvido antes do fluxo normal do ADM encerrar uma sessão
+        // sem vínculo familiar. A autoridade Master não depende de CLI/grupo/comercial.
         const masterBridge = `    async function aguardarConfirmacaoMaster(user, timeoutMs = 5000) {
         if (!user) return false;
         if (window.rotinaMasterSession?.master === true && window.rotinaMasterSession?.uid === user.uid) return true;
@@ -59,11 +59,9 @@
 
 `;
         const loginAnchor = '    window.realizarLogin = async () => {';
-        if(!html.includes('async function aguardarConfirmacaoMaster(') && html.includes(loginAnchor)) {
-          html = html.replace(loginAnchor, masterBridge + loginAnchor);
-        }
+        if(!html.includes('async function aguardarConfirmacaoMaster(') && html.includes(loginAnchor)) html=html.replace(loginAnchor,masterBridge+loginAnchor);
 
-        html = html.replace(
+        html=html.replace(
           "            if(snap.empty) throw new Error('Cadastro administrativo não encontrado.');",
           `            if(snap.empty) {
                 if (await aguardarConfirmacaoMaster(cred.user)) {
@@ -74,7 +72,7 @@
             }`
         );
 
-        html = html.replace(
+        html=html.replace(
           `            if(snap.empty) {
                 await signOut(auth);
                 alert('Sessão autenticada sem cadastro administrativo correspondente.');
@@ -91,14 +89,19 @@
             }`
         );
 
-        html = html.replace('./admin-master.js?v=1', './admin-master.js?v=2');
-        html = html.replace('./sw.js?v=39', './sw.js?v=40');
+        html=html.replace('./admin-master.js?v=1','./admin-master.js?v=2');
+        html=html.replace('./sw.js?v=39','./sw.js?v=42');
+        html=html.replace('./sw.js?v=40','./sw.js?v=42');
+        html=html.replace('./sw.js?v=41','./sw.js?v=42');
 
         const addons=[
           '<script type="module" src="./adm-score-history-cards.js?v=2"><\\/script>',
           '<script type="module" src="./adm-monitor-history-fix.js?v=3"><\\/script>',
           '<script type="module" src="./family-alarm-admin.js?v=6"><\\/script>',
           '<script type="module" src="./reward-redemption-notifications.js?v=2"><\\/script>',
+          '<script type="module" src="./commercial-access-admin.js?v=2"><\\/script>',
+          '<script src="./master-family-tree.js?v=2"><\\/script>',
+          '<script type="module" src="./app-monitoring-dashboard.js?v=2"><\\/script>',
           '<script src="./admin-master-integrity-fix.js?v=1"><\\/script>'
         ];
         for(const addon of addons){const m=addon.match(/src="\.\/(.+?)\?/);const nome=m?.[1]||'';if(nome&&!html.includes(nome))html=html.replace('</body>',addon+'\n</body>');}

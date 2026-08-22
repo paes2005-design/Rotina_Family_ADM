@@ -1,83 +1,56 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import { getFirestore, collection, query, where, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-const API_ROOT = 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
+const WORKER_ROOT = 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
+const COMMERCIAL_EXEMPT_GROUPS = new Set(['CLI-4071']);
+let stopGroupWatch = null;
+let blockedByCommercial = false;
+let trialStartedFor = '';
+
+function normalizeGroupId(value = '') {
+  return String(value || '').trim().toUpperCase();
+}
+
+function isCommercialExemptGroup(groupId = '') {
+  return COMMERCIAL_EXEMPT_GROUPS.has(normalizeGroupId(groupId));
+}
 
 function db() {
   if (!getApps().length) throw new Error('Firebase ainda não foi iniciado.');
   return getFirestore(getApp());
 }
 
-function groupState(config = {}) {
+function commercialState(config = {}, now = Date.now()) {
   if (config.grupoBloqueado === true) return 'bloqueado';
-  if (config.grupoConfirmado === true) return 'liberado';
-  if (config.trialAtivo === true) {
-    const end = new Date(config.trialFimEm || '');
-    if (Number.isFinite(end.getTime()) && end.getTime() <= Date.now()) return 'teste-expirado';
+  if (config.grupoConfirmado === true) return 'confirmado';
+  if (Number(config.trialVersao || 0) === 2 && config.trialAtivo === true) {
+    const expires = Date.parse(String(config.trialFimEm || ''));
+    if (Number.isFinite(expires) && now >= expires) return 'teste-expirado';
     return 'teste';
   }
-  return 'legado';
+  return 'liberado-legado';
+}
+
+function blockedState(state) {
+  return state === 'bloqueado' || state === 'teste-expirado';
 }
 
 function blockMessage(state) {
-  if (state === 'teste-expirado') return 'Sua versão teste de 15 dias terminou. Entre em contato para ativar o grupo familiar.';
+  if (state === 'teste-expirado') return 'O período de teste de 15 dias desta família terminou. Aguarde a liberação do ADM Master.';
   return 'Este grupo familiar está temporariamente desativado. Entre em contato para regularizar o acesso.';
 }
 
-async function administratorByEmail(email) {
-  const snap = await getDocs(query(collection(db(), 'administradores'), where('email', '==', String(email || '').trim().toLowerCase())));
-  return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
-}
-
-async function initializeTrialForOwner(email) {
-  const admin = await administratorByEmail(email);
-  if (!admin || String(admin.tipoAcesso || '') !== 'proprietario') return;
-  const user = getAuth(getApp()).currentUser;
-  if (!user || String(user.email || '').trim().toLowerCase() !== String(email || '').trim().toLowerCase()) return;
-  const token = await user.getIdToken(true);
-  const response = await fetch(`${API_ROOT}/commercial/trial`, {
-    method: 'POST',
-    cache: 'no-store',
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: '{}'
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || `Falha HTTP ${response.status}`);
-  window.rotinaLog?.('comercial.teste_iniciado', { grupoId: body.grupoId || '', dias: 15 });
-}
-
-// O bloqueio comercial não é aplicado antes do login. Primeiro o Firebase autentica
-// e o backend confirma se a sessão pertence ao ADM Master. Isso evita que o Master
-// seja expulso pelo estado comercial do próprio grupo durante a corrida de inicialização.
 function installLoginGuard() {
   const original = window.realizarLogin;
-  if (typeof original !== 'function' || original.__commercialGuard) return false;
+  if (typeof original !== 'function' || original.__commercialGroupGuard) return false;
   const wrapped = async (...args) => original(...args);
-  wrapped.__commercialGuard = true;
+  wrapped.__commercialGroupGuard = true;
   window.realizarLogin = wrapped;
   return true;
 }
 
-function installRegistrationTrial() {
-  const original = window.cadastrarNovoAdministrador;
-  if (typeof original !== 'function' || original.__commercialTrial) return false;
-  const wrapped = async (...args) => {
-    const email = String(document.getElementById('novoAdminEmail')?.value || '').trim().toLowerCase();
-    const invite = String(document.getElementById('novoAdminConvite')?.value || '').trim();
-    const result = await original(...args);
-    if (!invite && email) {
-      try { await initializeTrialForOwner(email); }
-      catch (error) { console.error('Falha ao iniciar versão teste do grupo.', error); }
-    }
-    return result;
-  };
-  wrapped.__commercialTrial = true;
-  window.cadastrarNovoAdministrador = wrapped;
-  return true;
-}
-
-function waitForMasterResolution(timeoutMs = 2500) {
+function waitForMasterResolution(timeoutMs = 5000) {
   if (window.rotinaMasterSession?.master === true) return Promise.resolve(true);
   return new Promise(resolve => {
     let done = false;
@@ -88,36 +61,130 @@ function waitForMasterResolution(timeoutMs = 2500) {
       window.removeEventListener('rotina-admin-master-ready', onReady);
       resolve(value === true);
     };
-    const onReady = event => finish(event.detail?.master === true);
-    window.addEventListener('rotina-admin-master-ready', onReady, { once: true });
+    const onReady = event => {
+      if (event.detail?.master === true) finish(true);
+      else if (event.detail?.motivo === 'nao-autorizado') finish(false);
+    };
+    window.addEventListener('rotina-admin-master-ready', onReady);
     const timer = setTimeout(() => finish(window.rotinaMasterSession?.master === true), timeoutMs);
   });
 }
 
-async function enforceCurrentSession(event) {
-  const groupId = String(event.detail?.grupoId || '').trim();
-  if (!groupId) return;
-  try {
-    const isMaster = await waitForMasterResolution();
-    if (isMaster || window.rotinaMasterSession?.master === true) return;
-    const snap = await getDoc(doc(db(), 'configGrupos', groupId));
-    const state = groupState(snap.exists() ? snap.data() : {});
-    if (!['bloqueado', 'teste-expirado'].includes(state)) return;
-    document.getElementById('sistemaPrincipal')?.style.setProperty('display', 'none');
-    document.getElementById('telaAcesso')?.style.setProperty('display', 'block');
-    alert(blockMessage(state));
-  } catch (error) {
-    console.warn('Falha na validação comercial da sessão.', error);
+function showCommercialBlock(state) {
+  blockedByCommercial = true;
+  document.getElementById('sistemaPrincipal')?.style.setProperty('display', 'none');
+  document.getElementById('telaAcesso')?.style.setProperty('display', 'block');
+  if (!document.getElementById('commercialBlockNotice')) {
+    const box = document.createElement('div');
+    box.id = 'commercialBlockNotice';
+    box.style.cssText = 'margin:12px auto;max-width:520px;padding:12px;border:1px solid #fecaca;border-radius:12px;background:#fff7f7;color:#991b1b;font-weight:700';
+    document.getElementById('telaAcesso')?.prepend(box);
+  }
+  const box = document.getElementById('commercialBlockNotice');
+  if (box) box.textContent = blockMessage(state);
+}
+
+function clearCommercialBlock() {
+  if (!blockedByCommercial) return;
+  blockedByCommercial = false;
+  document.getElementById('commercialBlockNotice')?.remove();
+  if (getApps().length && getAuth(getApp()).currentUser && window.rotinaMasterSession?.master !== true) {
+    document.getElementById('telaAcesso')?.style.setProperty('display', 'none');
+    document.getElementById('sistemaPrincipal')?.style.setProperty('display', 'block');
   }
 }
 
-window.addEventListener('rotina-admin-session-ready', enforceCurrentSession);
+async function ensureTrial(groupId) {
+  const group = normalizeGroupId(groupId);
+  if (!group || isCommercialExemptGroup(group) || trialStartedFor === group || window.rotinaMasterSession?.master === true || !getApps().length) return;
+  const user = getAuth(getApp()).currentUser;
+  if (!user) return;
+  try {
+    const token = await user.getIdToken();
+    const response = await fetch(`${WORKER_ROOT}/commercial/trial`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ grupoId: group })
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+    trialStartedFor = group;
+    window.rotinaLog?.('comercial.teste_verificado', { grupoId: group, estado: body.estado || '' });
+  } catch (error) {
+    // Não derruba uma sessão válida por indisponibilidade de rede/Worker.
+    console.warn('Não foi possível inicializar/verificar o teste comercial agora.', error);
+  }
+}
 
-let attempts = 0;
-const timer = setInterval(() => {
-  attempts += 1;
-  const loginReady = installLoginGuard();
-  const registerReady = installRegistrationTrial();
-  if ((loginReady || window.realizarLogin?.__commercialGuard) && (registerReady || window.cadastrarNovoAdministrador?.__commercialTrial)) clearInterval(timer);
-  if (attempts > 40) clearInterval(timer);
-}, 100);
+async function enforceGroup(groupId) {
+  const group = normalizeGroupId(groupId);
+  if (!group || isCommercialExemptGroup(group) || window.rotinaMasterSession?.master === true) return true;
+  try {
+    const snap = await getDoc(doc(db(), 'configGrupos', group));
+    const state = commercialState(snap.exists() ? snap.data() : {});
+    if (blockedState(state)) {
+      showCommercialBlock(state);
+      return false;
+    }
+    clearCommercialBlock();
+  } catch (error) {
+    // Em 429/rede, preserva a sessão válida. O comercial nunca derruba o Master.
+    console.warn('Validação comercial do grupo indisponível; acesso preservado.', error);
+  }
+  return true;
+}
+
+function watchGroup(groupId) {
+  stopGroupWatch?.();
+  stopGroupWatch = null;
+  const group = normalizeGroupId(groupId);
+  if (!group || isCommercialExemptGroup(group) || window.rotinaMasterSession?.master === true) return;
+  stopGroupWatch = onSnapshot(
+    doc(db(), 'configGrupos', group),
+    snap => {
+      const state = commercialState(snap.exists() ? snap.data() : {});
+      if (blockedState(state)) showCommercialBlock(state);
+      else clearCommercialBlock();
+    },
+    error => console.warn('Listener comercial do grupo indisponível; sessão preservada.', error)
+  );
+}
+
+async function enforceCurrentSession(event) {
+  const detail = event.detail || {};
+  if (detail.master === true || window.rotinaMasterSession?.master === true) return;
+  const groupId = normalizeGroupId(detail.grupoId || '');
+  if (!groupId) return;
+  if (isCommercialExemptGroup(groupId)) {
+    stopGroupWatch?.();
+    stopGroupWatch = null;
+    clearCommercialBlock();
+    return;
+  }
+  const isMaster = await waitForMasterResolution();
+  if (isMaster || window.rotinaMasterSession?.master === true) return;
+  await ensureTrial(groupId);
+  if (await enforceGroup(groupId)) watchGroup(groupId);
+  else watchGroup(groupId);
+}
+
+window.addEventListener('rotina-admin-session-ready', enforceCurrentSession);
+window.addEventListener('rotina-admin-master-ready', event => {
+  if (event.detail?.master === true) {
+    stopGroupWatch?.();
+    stopGroupWatch = null;
+    trialStartedFor = '';
+    blockedByCommercial = false;
+    document.getElementById('commercialBlockNotice')?.remove();
+  }
+});
+
+function installHooks() {
+  installLoginGuard();
+}
+
+if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', installHooks, { once: true });
+else installHooks();
+setTimeout(installHooks, 300);
+setTimeout(installHooks, 1000);
