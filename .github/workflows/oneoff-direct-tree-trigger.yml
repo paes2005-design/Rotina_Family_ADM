@@ -1,0 +1,92 @@
+name: One-off direct tree trigger
+
+on:
+  push:
+    branches:
+      - fix-direct-tree-trigger-2026-08-22
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix-direct-tree-trigger-2026-08-22
+          fetch-depth: 0
+
+      - name: Patch integrated tree trigger
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p=Path('master-family-tree.js')
+          s=p.read_text(encoding='utf-8')
+
+          s=s.replace("if (!document.getElementById('masterUsers') || !allGroups.length) return;", "if (!document.getElementById('masterUsers')) return;")
+
+          old_desktop="""    const ownerGroup = ownerGroupFor(email, groupId, uid);\n    if (!ownerGroup) continue;\n    const id = normalizeGroupId(ownerGroup.grupoId);\n    row.dataset.masterTreeDecorated = '1';\n    const emailStrong = cells[0].querySelector('strong');\n    if (emailStrong) emailStrong.innerHTML = `${principalButton(email || ownerGroup.proprietarioEmail, id, 'owner')}<span class=\"master-principal-badge\">PRINCIPAL</span>`;\n    const small = cells[1].querySelector('small')?.outerHTML || '';\n    cells[1].innerHTML = `${principalButton(ownerGroup.proprietarioEmail, id, 'group')}<br>${small}`;\n"""
+          new_desktop="""    const ownerGroup = ownerGroupFor(email, groupId, uid);\n    const id = normalizeGroupId(ownerGroup?.grupoId || groupId);\n    if (!id) continue;\n    row.dataset.masterTreeDecorated = '1';\n    const emailStrong = cells[0].querySelector('strong');\n    if (emailStrong && ownerGroup) emailStrong.innerHTML = `${principalButton(email || ownerGroup.proprietarioEmail, id, 'owner')}<span class=\"master-principal-badge\">PRINCIPAL</span>`;\n    const small = cells[1].querySelector('small')?.outerHTML || '';\n    cells[1].innerHTML = `${principalButton(ownerGroup?.proprietarioEmail || email, id, 'group')}<br>${small}`;\n"""
+          if old_desktop not in s:
+            raise SystemExit('desktop block not found')
+          s=s.replace(old_desktop,new_desktop,1)
+
+          old_mobile="""    const ownerGroup = ownerGroupFor(email, groupId, uid);\n    if (!ownerGroup) continue;\n    const id = normalizeGroupId(ownerGroup.grupoId);\n    card.dataset.masterTreeDecorated = '1';\n    if (emailEl) emailEl.innerHTML = `${principalButton(email || ownerGroup.proprietarioEmail, id, 'owner')}<span class=\"master-principal-badge\">PRINCIPAL</span>`;\n    if (groupStrong) groupStrong.innerHTML = principalButton(ownerGroup.proprietarioEmail, id, 'group');\n"""
+          new_mobile="""    const ownerGroup = ownerGroupFor(email, groupId, uid);\n    const id = normalizeGroupId(ownerGroup?.grupoId || groupId);\n    if (!id) continue;\n    card.dataset.masterTreeDecorated = '1';\n    if (emailEl && ownerGroup) emailEl.innerHTML = `${principalButton(email || ownerGroup.proprietarioEmail, id, 'owner')}<span class=\"master-principal-badge\">PRINCIPAL</span>`;\n    if (groupStrong) groupStrong.innerHTML = principalButton(ownerGroup?.proprietarioEmail || email, id, 'group');\n"""
+          if old_mobile not in s:
+            raise SystemExit('mobile block not found')
+          s=s.replace(old_mobile,new_mobile,1)
+          p.write_text(s,encoding='utf-8')
+
+          entry=Path('index.html')
+          html=entry.read_text(encoding='utf-8')
+          html=html.replace('./master-family-tree.js?v=3','./master-family-tree.js?v=4')
+          marker="html=html.replace('./sw.js?v=54','./sw.js?v=55');"
+          if marker not in html:
+            raise SystemExit('sw v55 marker not found')
+          html=html.replace(marker, marker+"\n        html=html.replace('./sw.js?v=55','./sw.js?v=56');",1)
+          entry.write_text(html,encoding='utf-8')
+
+          sw=Path('sw.js')
+          sws=sw.read_text(encoding='utf-8')
+          if "rotina-family-adm-v55" not in sws:
+            raise SystemExit('cache v55 not found')
+          sws=sws.replace("rotina-family-adm-v55","rotina-family-adm-v56",1)
+          sws=sws.replace('./master-family-tree.js?v=3','./master-family-tree.js?v=4')
+          sw.write_text(sws,encoding='utf-8')
+
+      - name: Audit direct group trigger
+        shell: python
+        run: |
+          from pathlib import Path
+          tree=Path('master-family-tree.js').read_text(encoding='utf-8')
+          entry=Path('index.html').read_text(encoding='utf-8')
+          sw=Path('sw.js').read_text(encoding='utf-8')
+          master=Path('admin-master.js').read_text(encoding='utf-8')
+          assert "if (!document.getElementById('masterUsers')) return;" in tree
+          assert "ownerGroup?.grupoId || groupId" in tree
+          assert "groupStrong.innerHTML = principalButton(ownerGroup?.proprietarioEmail || email, id, 'group')" in tree
+          assert "window.rotinaMasterApi(`/group?grupoId=${encodeURIComponent(id)}`)" in tree
+          assert 'Integrantes do grupo' in tree
+          assert './master-family-tree.js?v=4' in entry
+          assert "CACHE_NAME='rotina-family-adm-v56'" in sw
+          for marker in ['update-email','send-password-reset','set-disabled','delete-user']:
+            assert marker in master
+          print('OK: CLI abre árvore diretamente sem depender do índice /groups')
+
+      - name: Syntax
+        run: |
+          node --check master-family-tree.js
+          node --check admin-master.js
+          node --check sw.js
+
+      - name: Remove workflow and commit
+        run: |
+          git rm .github/workflows/oneoff-direct-tree-trigger.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add master-family-tree.js index.html sw.js
+          git commit -m "Fix: abrir árvore diretamente pelo CLI no ADM Master"
+          git push origin HEAD:fix-direct-tree-trigger-2026-08-22
