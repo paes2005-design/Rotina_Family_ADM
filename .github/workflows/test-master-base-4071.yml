@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - hotfix-master-vinculo-lara-4071-2026-08-22
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -18,7 +21,6 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          import re
           index = Path('index.html').read_text(encoding='utf-8')
           base = Path('index-ADMIN-v8.html').read_text(encoding='utf-8')
           assert "MASTER_OPERATIONAL_BASE_GROUP = 'CLI-4071'" in index
