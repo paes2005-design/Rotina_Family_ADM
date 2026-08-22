@@ -1,0 +1,27 @@
+name: TEMP validar Integrante Master
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'index.html'
+      - 'master-integrante-fallback-test.js'
+      - '.github/workflows/temp-master-integrante-fallback.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar fallback do campo Integrante
+        run: node master-integrante-fallback-test.js
+      - name: Validar estrutura do ADM
+        run: |
+          node --check adm-regression-audit.js
+          node --check admin-master.js
+          node --check master-family-tree.js
+          node --check sw.js
