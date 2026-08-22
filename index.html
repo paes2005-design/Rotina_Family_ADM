@@ -57,6 +57,39 @@
         window.dispatchEvent(new CustomEvent('rotina-admin-session-ready', { detail: { grupoId: '', master: true } }));
     }
 
+    // O Master permanece uma identidade global. Este vínculo é apenas operacional:
+    // permite que as telas normais do ADM leiam perfis/tarefas do grupo-base CLI-4071.
+    const MASTER_OPERATIONAL_BASE_GROUP = 'CLI-4071';
+    let masterOperationalBound = false;
+
+    function vincularGrupoBaseMaster() {
+        if (window.rotinaMasterSession?.master !== true) return false;
+        if (!adminLogadoAtual || adminLogadoAtual.tipoAcesso !== 'master') return false;
+        const groupId = MASTER_OPERATIONAL_BASE_GROUP;
+        const alreadyBound = masterOperationalBound
+            && adminLogadoAtual.codigoCliente === groupId
+            && adminLogadoAtual.grupoId === groupId;
+
+        adminLogadoAtual.codigoCliente = groupId;
+        adminLogadoAtual.grupoId = groupId;
+
+        if (!alreadyBound) {
+            iniciarEscutasFirebase();
+            Promise.resolve(carregarRegraAtraso()).catch(error => console.warn('Falha ao carregar regra do grupo-base Master.', error));
+            masterOperationalBound = true;
+        } else {
+            atualizarSelects();
+        }
+
+        window.dispatchEvent(new CustomEvent('rotina-master-operational-group-ready', { detail: { grupoId: groupId } }));
+        return true;
+    }
+
+    window.rotinaMasterVincularGrupoBase = vincularGrupoBaseMaster;
+    window.addEventListener('rotina-admin-master-ready', event => {
+        if (event.detail?.master === true) setTimeout(vincularGrupoBaseMaster, 0);
+    });
+
 `;
         const loginAnchor = '    window.realizarLogin = async () => {';
         if(!html.includes('async function aguardarConfirmacaoMaster(') && html.includes(loginAnchor)) html=html.replace(loginAnchor,masterBridge+loginAnchor);
