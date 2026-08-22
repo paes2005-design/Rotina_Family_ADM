@@ -59,11 +59,69 @@
     }
 
     // O Master permanece uma identidade global. Este vínculo é apenas operacional:
-    // permite que as telas normais do ADM leiam perfis/tarefas do grupo-base CLI-4071.
-    // A autoridade Master vem exclusivamente da sessão segura confirmada pelo Worker;
-    // não depende do tipoAcesso legado salvo no documento de administradores.
+    // permite que as telas normais do ADM operem sobre o grupo-base CLI-4071.
+    // A autoridade Master vem exclusivamente da sessão segura confirmada pelo Worker.
     const MASTER_OPERATIONAL_BASE_GROUP = 'CLI-4071';
     let masterOperationalBound = false;
+    let masterOperationalProfiles = [];
+    let masterProfileSyncInFlight = null;
+
+    function mesclarPerfisOperacionaisMaster() {
+        if (window.rotinaMasterSession?.master !== true || !masterOperationalProfiles.length) return;
+        const merged = new Map();
+        const locais = Array.isArray(perfisCache) ? perfisCache : [];
+        [...locais, ...masterOperationalProfiles].forEach(perfil => {
+            const id = String(perfil?.id || perfil?.perfilId || '').trim();
+            if (!id) return;
+            merged.set(id, { ...(merged.get(id) || {}), ...perfil, id, perfilId: perfil.perfilId || id });
+        });
+        perfisCache = [...merged.values()];
+    }
+
+    const atualizarSelectsOriginalMaster = atualizarSelects;
+    atualizarSelects = function atualizarSelectsComPerfisMaster() {
+        mesclarPerfisOperacionaisMaster();
+        return atualizarSelectsOriginalMaster();
+    };
+
+    async function sincronizarPerfisOperacionaisMaster(groupId = MASTER_OPERATIONAL_BASE_GROUP) {
+        if (window.rotinaMasterSession?.master !== true) return false;
+        if (typeof window.rotinaMasterApi !== 'function') return false;
+        if (masterProfileSyncInFlight) return masterProfileSyncInFlight;
+        masterProfileSyncInFlight = (async () => {
+            try {
+                const result = await window.rotinaMasterApi('/group?grupoId=' + encodeURIComponent(groupId));
+                const clientes = Array.isArray(result?.grupo?.clientes) ? result.grupo.clientes : [];
+                masterOperationalProfiles = clientes.map(cliente => {
+                    const id = String(cliente?.perfilId || cliente?.id || '').trim();
+                    return {
+                        id,
+                        perfilId: id,
+                        nome: String(cliente?.nome || 'Integrante'),
+                        grupoId: groupId,
+                        sexo: '—',
+                        pinHash: '__master_api__',
+                        _masterApi: true
+                    };
+                }).filter(perfil => perfil.id);
+                mesclarPerfisOperacionaisMaster();
+                atualizarSelects();
+                window.dispatchEvent(new CustomEvent('rotina-master-operational-profiles-ready', {
+                    detail: { grupoId: groupId, total: masterOperationalProfiles.length }
+                }));
+                return masterOperationalProfiles.length > 0;
+            } catch (error) {
+                console.error('Falha ao carregar integrantes do grupo-base pelo Worker Master.', error);
+                window.dispatchEvent(new CustomEvent('rotina-master-operational-profiles-error', {
+                    detail: { grupoId: groupId, erro: String(error?.message || error) }
+                }));
+                return false;
+            } finally {
+                masterProfileSyncInFlight = null;
+            }
+        })();
+        return masterProfileSyncInFlight;
+    }
 
     function vincularGrupoBaseMaster() {
         if (window.rotinaMasterSession?.master !== true) return false;
@@ -86,11 +144,19 @@
             atualizarSelects();
         }
 
+        // A lista do campo Integrante vem da rota Master segura. Ela permanece em cache
+        // mesmo que a leitura direta do Firestore retorne vazia para a identidade Master.
+        setTimeout(() => sincronizarPerfisOperacionaisMaster(groupId), 80);
+        setTimeout(() => {
+            if (!masterOperationalProfiles.length) sincronizarPerfisOperacionaisMaster(groupId);
+        }, 1200);
+
         window.dispatchEvent(new CustomEvent('rotina-master-operational-group-ready', { detail: { grupoId: groupId } }));
         return true;
     }
 
     window.rotinaMasterVincularGrupoBase = vincularGrupoBaseMaster;
+    window.rotinaMasterSincronizarIntegrantes = sincronizarPerfisOperacionaisMaster;
     window.addEventListener('rotina-admin-master-ready', event => {
         if (event.detail?.master === true) setTimeout(vincularGrupoBaseMaster, 0);
     });
@@ -133,9 +199,11 @@
         );
 
         html=html.replace('./admin-master.js?v=1','./admin-master.js?v=2');
-        html=html.replace('./sw.js?v=39','./sw.js?v=42');
-        html=html.replace('./sw.js?v=40','./sw.js?v=42');
-        html=html.replace('./sw.js?v=41','./sw.js?v=42');
+        html=html.replace('./sw.js?v=39','./sw.js?v=54');
+        html=html.replace('./sw.js?v=40','./sw.js?v=54');
+        html=html.replace('./sw.js?v=41','./sw.js?v=54');
+        html=html.replace('./sw.js?v=42','./sw.js?v=54');
+        html=html.replace('./sw.js?v=53','./sw.js?v=54');
 
         const addons=[
           '<script type="module" src="./adm-score-history-cards.js?v=2"><\\/script>',
