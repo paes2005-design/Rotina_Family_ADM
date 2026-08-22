@@ -1,18 +1,34 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import { getAuth } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { getFirestore, doc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
+const WORKER_ROOT = 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
 let stopGroupWatch = null;
+let blockedByCommercial = false;
+let trialStartedFor = '';
 
 function db() {
   if (!getApps().length) throw new Error('Firebase ainda não foi iniciado.');
   return getFirestore(getApp());
 }
 
-function isGroupBlocked(config = {}) {
-  return config.grupoBloqueado === true;
+function commercialState(config = {}, now = Date.now()) {
+  if (config.grupoBloqueado === true) return 'bloqueado';
+  if (config.grupoConfirmado === true) return 'confirmado';
+  if (Number(config.trialVersao || 0) === 2 && config.trialAtivo === true) {
+    const expires = Date.parse(String(config.trialFimEm || ''));
+    if (Number.isFinite(expires) && now >= expires) return 'teste-expirado';
+    return 'teste';
+  }
+  return 'liberado-legado';
 }
 
-function blockMessage() {
+function blockedState(state) {
+  return state === 'bloqueado' || state === 'teste-expirado';
+}
+
+function blockMessage(state) {
+  if (state === 'teste-expirado') return 'O período de teste de 15 dias desta família terminou. Aguarde a liberação do ADM Master.';
   return 'Este grupo familiar está temporariamente desativado. Entre em contato para regularizar o acesso.';
 }
 
@@ -45,7 +61,8 @@ function waitForMasterResolution(timeoutMs = 5000) {
   });
 }
 
-function showCommercialBlock() {
+function showCommercialBlock(state) {
+  blockedByCommercial = true;
   document.getElementById('sistemaPrincipal')?.style.setProperty('display', 'none');
   document.getElementById('telaAcesso')?.style.setProperty('display', 'block');
   if (!document.getElementById('commercialBlockNotice')) {
@@ -55,7 +72,40 @@ function showCommercialBlock() {
     document.getElementById('telaAcesso')?.prepend(box);
   }
   const box = document.getElementById('commercialBlockNotice');
-  if (box) box.textContent = blockMessage();
+  if (box) box.textContent = blockMessage(state);
+}
+
+function clearCommercialBlock() {
+  if (!blockedByCommercial) return;
+  blockedByCommercial = false;
+  document.getElementById('commercialBlockNotice')?.remove();
+  if (getApps().length && getAuth(getApp()).currentUser && window.rotinaMasterSession?.master !== true) {
+    document.getElementById('telaAcesso')?.style.setProperty('display', 'none');
+    document.getElementById('sistemaPrincipal')?.style.setProperty('display', 'block');
+  }
+}
+
+async function ensureTrial(groupId) {
+  const group = String(groupId || '').trim().toUpperCase();
+  if (!group || trialStartedFor === group || window.rotinaMasterSession?.master === true || !getApps().length) return;
+  const user = getAuth(getApp()).currentUser;
+  if (!user) return;
+  try {
+    const token = await user.getIdToken();
+    const response = await fetch(`${WORKER_ROOT}/commercial/trial`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ grupoId: group })
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+    trialStartedFor = group;
+    window.rotinaLog?.('comercial.teste_verificado', { grupoId: group, estado: body.estado || '' });
+  } catch (error) {
+    // Não derruba uma sessão válida por indisponibilidade de rede/Worker.
+    console.warn('Não foi possível inicializar/verificar o teste comercial agora.', error);
+  }
 }
 
 async function enforceGroup(groupId) {
@@ -63,10 +113,12 @@ async function enforceGroup(groupId) {
   if (!group || window.rotinaMasterSession?.master === true) return true;
   try {
     const snap = await getDoc(doc(db(), 'configGrupos', group));
-    if (isGroupBlocked(snap.exists() ? snap.data() : {})) {
-      showCommercialBlock();
+    const state = commercialState(snap.exists() ? snap.data() : {});
+    if (blockedState(state)) {
+      showCommercialBlock(state);
       return false;
     }
+    clearCommercialBlock();
   } catch (error) {
     // Em 429/rede, preserva a sessão válida. O comercial nunca derruba o Master.
     console.warn('Validação comercial do grupo indisponível; acesso preservado.', error);
@@ -82,7 +134,9 @@ function watchGroup(groupId) {
   stopGroupWatch = onSnapshot(
     doc(db(), 'configGrupos', group),
     snap => {
-      if (isGroupBlocked(snap.exists() ? snap.data() : {})) showCommercialBlock();
+      const state = commercialState(snap.exists() ? snap.data() : {});
+      if (blockedState(state)) showCommercialBlock(state);
+      else clearCommercialBlock();
     },
     error => console.warn('Listener comercial do grupo indisponível; sessão preservada.', error)
   );
@@ -95,7 +149,9 @@ async function enforceCurrentSession(event) {
   if (!groupId) return;
   const isMaster = await waitForMasterResolution();
   if (isMaster || window.rotinaMasterSession?.master === true) return;
+  await ensureTrial(groupId);
   if (await enforceGroup(groupId)) watchGroup(groupId);
+  else watchGroup(groupId);
 }
 
 window.addEventListener('rotina-admin-session-ready', enforceCurrentSession);
@@ -103,6 +159,8 @@ window.addEventListener('rotina-admin-master-ready', event => {
   if (event.detail?.master === true) {
     stopGroupWatch?.();
     stopGroupWatch = null;
+    trialStartedFor = '';
+    blockedByCommercial = false;
     document.getElementById('commercialBlockNotice')?.remove();
   }
 });
