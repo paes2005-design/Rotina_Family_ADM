@@ -151,19 +151,75 @@ function actionButtons(user) {
   return `<div class="master-actions"><button data-action="email" data-uid="${escapeHtml(user.uid)}">Editar e-mail</button><button data-action="reset" data-uid="${escapeHtml(user.uid)}">Redefinir senha</button><button class="warning" data-action="toggle" data-disabled="${user.desativado}" data-uid="${escapeHtml(user.uid)}">${user.desativado ? 'Ativar' : 'Desativar'}</button><button class="danger" data-action="delete" data-uid="${escapeHtml(user.uid)}">Retirar usuário</button></div>`;
 }
 
+const MASTER_TREE_RUNTIME_VERSION = 5;
+let masterTreeLoaderPromise = null;
+
+function masterFamilyButton(groupId = '') {
+  const id = String(groupId || '').trim().toUpperCase();
+  if (!id) return '—';
+  return `<button type="button" class="master-group-toggle master-group-native-toggle" data-master-group-toggle="1" data-group-id="${escapeHtml(id)}" aria-expanded="false" style="border:0;background:transparent;padding:0;color:#173a5e;font:inherit;font-weight:800;cursor:pointer;text-align:left">🌳 ${escapeHtml(id)} <span class="master-tree-arrow">▶</span></button>`;
+}
+
+function masterGroupDetail(groupId = '', desktop = false) {
+  const id = String(groupId || '').trim().toUpperCase();
+  if (!id) return '';
+  return `<div class="${desktop ? 'master-integrated-tree-desktop' : 'master-integrated-tree-mobile'}" data-master-group-detail="${escapeHtml(id)}" style="display:none"></div>`;
+}
+
+function ensureMasterTreeRuntime() {
+  if (Number(window.rotinaMasterTreeVersion || 0) >= MASTER_TREE_RUNTIME_VERSION) {
+    window.rotinaMasterStartTree?.();
+    window.rotinaMasterDecorateTree?.();
+    return Promise.resolve(true);
+  }
+  if (masterTreeLoaderPromise) return masterTreeLoaderPromise;
+  masterTreeLoaderPromise = new Promise(resolve => {
+    const existing = [...document.scripts].find(script => String(script.src || '').includes('master-family-tree.js?v=5'));
+    if (existing) {
+      const finish = () => {
+        window.rotinaMasterStartTree?.();
+        window.rotinaMasterDecorateTree?.();
+        resolve(Number(window.rotinaMasterTreeVersion || 0) >= MASTER_TREE_RUNTIME_VERSION);
+      };
+      if (Number(window.rotinaMasterTreeVersion || 0) >= MASTER_TREE_RUNTIME_VERSION) finish();
+      else {
+        existing.addEventListener('load', finish, { once: true });
+        existing.addEventListener('error', () => resolve(false), { once: true });
+        setTimeout(finish, 1500);
+      }
+      return;
+    }
+    const script = document.createElement('script');
+    script.id = 'masterFamilyTreeRuntimeScript';
+    script.src = './master-family-tree.js?v=5';
+    script.onload = () => {
+      window.rotinaMasterStartTree?.();
+      window.rotinaMasterDecorateTree?.();
+      resolve(true);
+    };
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  }).finally(() => { masterTreeLoaderPromise = null; });
+  return masterTreeLoaderPromise;
+}
+
 function renderUsers() {
   const target = document.getElementById('masterUsers');
   if (!target) return;
   if (!users.length) { target.innerHTML = '<p>Nenhum administrador cadastrado.</p>'; return; }
   const rows = users.map(user => {
     const isMaster = user.papel === 'master';
-    return `<tr><td><strong>${escapeHtml(user.email || 'Sem e-mail')}</strong></td><td>${escapeHtml(user.grupoId || '—')}<br><small>${escapeHtml(user.codigoAdmin || '')}</small></td><td>${isMaster ? '<span class="master-role">MASTER</span>' : 'Administrador'}</td><td class="${user.desativado ? 'master-status-off' : 'master-status-on'}">${user.desativado ? 'Desativado' : 'Ativo'}</td><td>${escapeHtml(formatDate(user.ultimoLoginEm))}</td><td>${isMaster ? 'Protegido' : actionButtons(user)}</td></tr>`;
+    const family = user.grupoId ? masterFamilyButton(user.grupoId) : '—';
+    const row = `<tr><td><strong>${escapeHtml(user.email || 'Sem e-mail')}</strong></td><td>${family}<br><small>${escapeHtml(user.codigoAdmin || '')}</small></td><td>${isMaster ? '<span class="master-role">MASTER</span>' : 'Administrador'}</td><td class="${user.desativado ? 'master-status-off' : 'master-status-on'}">${user.desativado ? 'Desativado' : 'Ativo'}</td><td>${escapeHtml(formatDate(user.ultimoLoginEm))}</td><td>${isMaster ? 'Protegido' : actionButtons(user)}</td></tr>`;
+    return user.grupoId ? `${row}<tr class="master-integrated-tree-row master-native-tree-row"><td colspan="6">${masterGroupDetail(user.grupoId, true)}</td></tr>` : row;
   }).join('');
   const cards = users.map(user => {
     const isMaster = user.papel === 'master';
-    return `<article class="master-user-card"><div class="master-user-top"><strong class="master-user-email">${escapeHtml(user.email || 'Sem e-mail')}</strong>${isMaster ? '<span class="master-role">MASTER</span>' : `<span class="${user.desativado ? 'master-status-off' : 'master-status-on'}">${user.desativado ? 'Desativado' : 'Ativo'}</span>`}</div><div class="master-user-meta"><div class="master-user-field"><small>Família</small><strong>${escapeHtml(user.grupoId || '—')}</strong><br><span>${escapeHtml(user.codigoAdmin || '')}</span></div><div class="master-user-field"><small>Último login</small><span>${escapeHtml(formatDate(user.ultimoLoginEm))}</span></div></div>${actionButtons(user)}</article>`;
+    const family = user.grupoId ? masterFamilyButton(user.grupoId) : '—';
+    return `<article class="master-user-card" data-master-tree-native="${user.grupoId ? '1' : '0'}"><div class="master-user-top"><strong class="master-user-email">${escapeHtml(user.email || 'Sem e-mail')}</strong>${isMaster ? '<span class="master-role">MASTER</span>' : `<span class="${user.desativado ? 'master-status-off' : 'master-status-on'}">${user.desativado ? 'Desativado' : 'Ativo'}</span>`}</div><div class="master-user-meta"><div class="master-user-field"><small>Família</small><strong>${family}</strong><br><span>${escapeHtml(user.codigoAdmin || '')}</span></div><div class="master-user-field"><small>Último login</small><span>${escapeHtml(formatDate(user.ultimoLoginEm))}</span></div></div>${masterGroupDetail(user.grupoId)}${actionButtons(user)}</article>`;
   }).join('');
   target.innerHTML = `<div class="master-table-wrap"><table class="master-table"><thead><tr><th>E-mail</th><th>Família</th><th>Perfil</th><th>Status</th><th>Último login</th><th>Ações</th></tr></thead><tbody>${rows}</tbody></table></div><div class="master-mobile-list">${cards}</div>`;
+  ensureMasterTreeRuntime().catch(() => {});
 }
 
 async function loadUsers({ force = false } = {}) {

@@ -2,6 +2,7 @@ const esc = (value = '') => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;'
 const COMMERCIAL_EXEMPT_GROUPS = new Set(['CLI-4071']);
 
 window.rotinaMasterIntegratedTree = true;
+window.rotinaMasterTreeVersion = 5;
 
 let allGroups = [];
 let groupsLoading = null;
@@ -200,10 +201,13 @@ function decorateDesktop() {
     if (emailStrong && ownerGroup) emailStrong.innerHTML = `${principalButton(email || ownerGroup.proprietarioEmail, id, 'owner')}<span class="master-principal-badge">PRINCIPAL</span>`;
     const small = cells[1].querySelector('small')?.outerHTML || '';
     cells[1].innerHTML = `${principalButton(ownerGroup?.proprietarioEmail || email, id, 'group')}<br>${small}`;
-    const detailRow = document.createElement('tr');
-    detailRow.className = 'master-integrated-tree-row';
-    detailRow.innerHTML = `<td colspan="6"><div data-master-group-detail="${esc(id)}" style="display:none"></div></td>`;
-    row.after(detailRow);
+    const next = row.nextElementSibling;
+    if (!next?.querySelector?.(`[data-master-group-detail="${id}"]`)) {
+      const detailRow = document.createElement('tr');
+      detailRow.className = 'master-integrated-tree-row';
+      detailRow.innerHTML = `<td colspan="6"><div data-master-group-detail="${esc(id)}" style="display:none"></div></td>`;
+      row.after(detailRow);
+    }
   }
 }
 
@@ -221,14 +225,17 @@ function decorateMobile() {
     const id = normalizeGroupId(ownerGroup?.grupoId || groupId);
     if (!id) continue;
     card.dataset.masterTreeDecorated = '1';
-    if (emailEl && ownerGroup) emailEl.innerHTML = `${principalButton(email || ownerGroup.proprietarioEmail, id, 'owner')}<span class="master-principal-badge">PRINCIPAL</span>`;
-    if (groupStrong) groupStrong.innerHTML = principalButton(ownerGroup?.proprietarioEmail || email, id, 'group');
+    if (emailEl && ownerGroup && !emailEl.querySelector('[data-master-group-toggle]')) emailEl.innerHTML = `${principalButton(email || ownerGroup.proprietarioEmail, id, 'owner')}<span class="master-principal-badge">PRINCIPAL</span>`;
+    if (groupStrong && !groupStrong.querySelector('[data-master-group-toggle]')) groupStrong.innerHTML = principalButton(ownerGroup?.proprietarioEmail || email, id, 'group');
     const actions = card.querySelector('.master-actions');
-    const detail = document.createElement('div');
-    detail.className = 'master-integrated-tree-mobile';
-    detail.dataset.masterGroupDetail = id;
-    detail.style.display = 'none';
-    if (actions) actions.before(detail); else card.appendChild(detail);
+    let detail = card.querySelector(`[data-master-group-detail="${id}"]`);
+    if (!detail) {
+      detail = document.createElement('div');
+      detail.className = 'master-integrated-tree-mobile';
+      detail.dataset.masterGroupDetail = id;
+      detail.style.display = 'none';
+      if (actions) actions.before(detail); else card.appendChild(detail);
+    }
   }
 }
 
@@ -388,6 +395,10 @@ window.addEventListener('rotina-admin-master-ready', event => {
 window.addEventListener('online', () => {
   if (window.rotinaMasterSession?.master === true) loadGroups({ force: true }).catch(() => {});
 });
+
+window.rotinaMasterStartTree = startIntegratedTree;
+window.rotinaMasterDecorateTree = decorateRecords;
+window.rotinaMasterToggleGroup = toggleGroup;
 
 if (window.rotinaMasterSession?.master === true) startIntegratedTree();
 else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => {
