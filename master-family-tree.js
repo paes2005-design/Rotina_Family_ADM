@@ -56,10 +56,12 @@ function ownerGroupFor(email = '', groupId = '', uid = '') {
   const wantedUid = String(uid || '').trim();
   return allGroups.find(group => {
     const sameGroup = !wantedGroup || normalizeGroupId(group.grupoId) === wantedGroup;
-    const sameOwner = wantedUid
-      ? String(group.proprietarioUid || '').trim() === wantedUid
-      : normalizeEmail(group.proprietarioEmail) === wantedEmail;
-    return sameGroup && sameOwner;
+    if (!sameGroup) return false;
+    const groupUid = String(group.proprietarioUid || '').trim();
+    const groupEmail = normalizeEmail(group.proprietarioEmail);
+    const sameUid = Boolean(wantedUid && groupUid && groupUid === wantedUid);
+    const sameEmail = Boolean(wantedEmail && groupEmail && groupEmail === wantedEmail);
+    return sameUid || sameEmail;
   }) || null;
 }
 
