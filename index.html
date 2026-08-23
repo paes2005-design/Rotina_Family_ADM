@@ -216,6 +216,7 @@
           '<script type="module" src="./commercial-access-admin.js?v=2"><\\/script>',
           '<script src="./master-family-tree.js?v=5"><\\/script>',
           '<script type="module" src="./app-monitoring-dashboard.js?v=2"><\\/script>',
+          '<script src="./app-monitoring-log-limit-v1.js?v=2"><\\/script>',
           '<script src="./admin-master-integrity-fix.js?v=1"><\\/script>'
         ];
         for(const addon of addons){const m=addon.match(/src="\.\/(.+?)\?/);const nome=m?.[1]||'';if(nome&&!html.includes(nome))html=html.replace('</body>',addon+'\n</body>');}
