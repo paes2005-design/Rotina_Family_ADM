@@ -1,9 +1,8 @@
 import {getApps,getApp} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import {getFirestore,doc,getDoc,setDoc} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-const VERSION=4;
+const VERSION=5;
 let fatorAtual=100;
-let instalando=false;
 
 const clamp=v=>Math.max(0,Math.min(100,Number.isFinite(Number(v))?Number(v):100));
 const fmt=v=>Number(Number(v).toFixed(2)).toLocaleString('pt-BR');
@@ -96,8 +95,6 @@ async function carregarFator(){
 }
 
 function instalarGlobais(){
-  if(instalando)return;
-  instalando=true;
   window.abrirConfiguracaoRegraAtraso=async()=>{
     await carregarFator();
     const modal=garantirModal();
