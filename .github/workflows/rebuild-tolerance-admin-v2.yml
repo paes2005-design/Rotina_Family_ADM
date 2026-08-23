@@ -1,0 +1,161 @@
+name: Rebuild ADM tolerance rule v2
+
+on:
+  push:
+    paths:
+      - '.github/triggers/rebuild-tolerance-admin-v2.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Rebuild ADM tolerance configuration
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          def read(path): return Path(path).read_text(encoding='utf-8')
+          def write(path,text): Path(path).write_text(text,encoding='utf-8')
+          def rep(path,old,new,count=None):
+              text=read(path); found=text.count(old)
+              if found==0: raise SystemExit(f'Expected text not found in {path}: {old[:120]!r}')
+              if count is not None and found!=count: raise SystemExit(f'{path}: expected {count}, got {found}')
+              write(path,text.replace(old,new)); print(path,found)
+
+          path='index-ADMIN-v8.html'
+          rep(path,'<h3 style="margin:0 0 5px">Regra de pontuação por atraso</h3>','<h3 style="margin:0 0 5px">Regra de tolerância por atraso</h3>',1)
+          rep(path,'<p style="margin:0;color:#666;font-size:13px">A regra padrão é 100% / 75% / 50% / 0%. Você pode personalizar os percentuais da família.</p>','<p style="margin:0;color:#666;font-size:13px">As faixas 100% / 75% / 50% / 0% representam tempo de tolerância. Você pode ajustar quanto da janela adicional padrão de 25% a família utilizará.</p>',1)
+          rep(path,'<p style="color:#666;font-size:13px">Defina a porcentagem dos pontos em cada faixa. A janela de recuperação após zerar a tolerância é fixa em 25% no total: 12,5% na primeira faixa e 12,5% na segunda.</p>','<p style="color:#666;font-size:13px">Defina quanto da janela adicional padrão de 25% da tolerância será disponibilizado. Esse percentual altera somente o tempo; nunca reduz os pontos da tarefa.</p>',1)
+          old_forms='''    <div class="form-group"><label>Dentro dos limites (%)</label><input id="regraPct100" type="number" min="0" max="100" value="100"></div>\n    <div class="form-group"><label>Primeiros +12,5% após zerar (%)</label><input id="regraPct75" type="number" min="0" max="100" value="75"></div>\n    <div class="form-group"><label>Próximos +12,5% (%)</label><input id="regraPct50" type="number" min="0" max="100" value="50"></div>\n    <div class="form-group"><label>Após +25% adicional</label><div style="padding:10px;border:1px solid #ddd;border-radius:6px;background:#f8fafc"><strong>0% fixo</strong> — ao completar 25% adicional além da tolerância, a pontuação automática zera.</div><input id="regraPct0" type="hidden" value="0"></div>'''
+          new_forms='''    <div class="form-group"><label>Uso da janela adicional de tolerância (%)</label><input id="regraPct100" type="number" min="0" max="100" value="100"><small style="display:block;color:#64748b;margin-top:6px">100% usa toda a janela adicional padrão de 25%. Ex.: 80% usa 80% dessa janela, equivalente a 20% da tolerância-base.</small></div>\n    <input id="regraPct75" type="hidden" value="75">\n    <input id="regraPct50" type="hidden" value="50">\n    <input id="regraPct0" type="hidden" value="0">'''
+          rep(path,old_forms,new_forms,1)
+          rep(path,'const REGRA_ATRASO_PADRAO = { dentroLimites:100, atrasoLeve:75, atrasoMaior:50, estourado:0 };','const REGRA_ATRASO_PADRAO = { dentroLimites:100, atrasoLeve:75, atrasoMaior:50, estourado:0, janelaAdicionalPct:100 };',1)
+
+          text=read(path)
+          pattern=r"    function normalizarRegraAtraso\(valor=\{\}\) \{.*?\n    \}\n    function textoRegraAtraso\(r=regraAtrasoAtual\)\{.*?\n    \}\n    function atualizarExplicacaoRegraAtrasoAdmin\(\)\{.*?\n    \}"
+          replacement="""    function normalizarRegraAtraso(valor={}) {
+        const r=valor.regraAtraso || valor || {};
+        const n=(v,p)=>Number.isFinite(Number(v))?Math.max(0,Math.min(100,Number(v))):p;
+        const fator=n(r.janelaAdicionalPct ?? r.percentualJanelaAdicional ?? r.dentroLimites,100);
+        return {dentroLimites:100,atrasoLeve:75,atrasoMaior:50,estourado:0,janelaAdicionalPct:fator};
+    }
+    function textoRegraAtraso(r=regraAtrasoAtual){
+        const fator=Math.max(0,Math.min(100,Number(r.janelaAdicionalPct)||0));
+        const extra=25*fator/100;
+        const metade=extra/2;
+        const fmt=v=>Number(v.toFixed(2)).toLocaleString('pt-BR');
+        return `<strong>Faixas de tempo: 100% / 75% / 50% / 0%.</strong><br>`+
+        `• O saldo consumido é a soma do atraso no início com o atraso no término.<br>`+
+        `• Faixa 100%: dentro da tolerância-base.<br>`+
+        `• Faixa 75%: primeira metade da janela adicional (${fmt(metade)}% da tolerância-base).<br>`+
+        `• Faixa 50%: segunda metade da janela adicional (${fmt(metade)}% da tolerância-base).<br>`+
+        `• Faixa 0%: toda a tolerância válida foi consumida.<br>`+
+        `• A família usa <strong>${fmt(fator)}%</strong> da janela adicional padrão de 25%, equivalente a até <strong>${fmt(extra)}%</strong> da tolerância-base além do saldo principal.<br><br>`+
+        `<strong>Pontuação:</strong> as faixas de tempo não reduzem pontos. Uma tarefa concluída nas faixas 100%, 75% ou 50% recebe todos os pontos cadastrados; somente a faixa 0% zera a pontuação automática.`;
+    }
+    function atualizarExplicacaoRegraAtrasoAdmin(){
+        const el=document.getElementById('explicacaoRegraAtrasoAdmin'); if(el) el.innerHTML=textoRegraAtraso();
+        const prev=document.getElementById('previewRegraAtrasoAdmin'); if(prev) prev.innerHTML=textoRegraAtraso({...regraAtrasoAtual,janelaAdicionalPct:Number(document.getElementById('regraPct100')?.value ?? regraAtrasoAtual.janelaAdicionalPct)});
+    }"""
+          text2,n=re.subn(pattern,replacement,text,flags=re.S)
+          if n!=1: raise SystemExit(f'Rule function block matches={n}')
+          write(path,text2)
+
+          text=read(path)
+          pattern=r"    window\.abrirConfiguracaoRegraAtraso=\(\)=>\{.*?\n    \};\n    window\.fecharConfiguracaoRegraAtraso"
+          replacement="""    window.abrirConfiguracaoRegraAtraso=()=>{
+        const el=document.getElementById('regraPct100'); if(el) el.value=regraAtrasoAtual.janelaAdicionalPct ?? 100;
+        atualizarExplicacaoRegraAtrasoAdmin(); document.getElementById('modalRegraAtrasoAdmin').style.display='flex';
+    };
+    window.fecharConfiguracaoRegraAtraso"""
+          text2,n=re.subn(pattern,replacement,text,flags=re.S)
+          if n!=1: raise SystemExit(f'Open config block matches={n}')
+          write(path,text2)
+
+          text=read(path)
+          pattern=r"    window\.salvarConfiguracaoRegraAtraso=async\(\)=>\{.*?\n    \};\n    document\.addEventListener\('input',e=>\{ if\(\['regraPct100','regraPct75','regraPct50'\]\.includes\(e\.target\?\.id\)\) atualizarExplicacaoRegraAtrasoAdmin\(\); \}\);"
+          replacement="""    window.salvarConfiguracaoRegraAtraso=async()=>{
+        const fator=Number(document.getElementById('regraPct100').value);
+        if(!Number.isFinite(fator)||fator<0||fator>100) return alert('Use um percentual entre 0 e 100 para a janela adicional.');
+        const nova={dentroLimites:100,atrasoLeve:75,atrasoMaior:50,estourado:0,janelaAdicionalPct:fator};
+        const gId=adminLogadoAtual?.codigoCliente || adminLogadoAtual?.grupoId; if(!gId)return;
+        await setDoc(doc(db,'configGrupos',gId),{grupoId:gId,regraAtraso:nova,regraAtrasoAtualizadaEm:new Date().toISOString(),regraAtrasoVersao:3},{merge:true});
+        regraAtrasoAtual=nova; atualizarExplicacaoRegraAtrasoAdmin(); fecharConfiguracaoRegraAtraso(); alert('Regra de tolerância atualizada. O percentual altera somente a janela de tempo; os pontos permanecem integrais.');
+    };
+    document.addEventListener('input',e=>{ if(e.target?.id==='regraPct100') atualizarExplicacaoRegraAtrasoAdmin(); });"""
+          text2,n=re.subn(pattern,replacement,text,flags=re.S)
+          if n!=1: raise SystemExit(f'Save config block matches={n}')
+          write(path,text2)
+
+          # Revisão de justificativa: sem percentuais de pontos; ou mantém o resultado,
+          # ou devolve integralmente os pontos da tarefa.
+          path='adm-justification-review.js'
+          text=read(path)
+          pattern=r"function originalDaOcorrencia\(h\)\{.*?\n\}"
+          replacement="""function originalDaOcorrencia(h){
+  const max=Number(h.pontosMaximos)||0;
+  const faixa=String(h.faixaAtraso||'');
+  const status=String(h.status||'');
+  const estourado=faixa==='estourado'||/Atrasado|\\(0%\\)/i.test(status);
+  const pontos=estourado?0:max;
+  const pct=Number.isFinite(Number(h.percentualOriginal))?Number(h.percentualOriginal):(Number.isFinite(Number(h.percentualAplicado))?Number(h.percentualAplicado):(estourado?0:100));
+  return {max,pontos,pct,pontosAtuais:Number(h.pontosGanhos)||0};
+}"""
+          text2,n=re.subn(pattern,replacement,text,count=1,flags=re.S)
+          if n!=1: raise SystemExit(f'originalDaOcorrencia matches={n}')
+          write(path,text2)
+
+          text=read(path)
+          pattern=r"function montarAcoes\(h\)\{.*?\n\}"
+          replacement="""function montarAcoes(h){
+  const o=originalDaOcorrencia(h);
+  if(decisaoTomada(h))return {html:'<button type=\"button\" data-review=\"reverter\" data-pct=\"\">↩️ Reverter decisão</button>',...o};
+  const devolver=`<button type=\"button\" data-review=\"devolver\" data-pct=\"100\" ${o.pontos>=o.max?'disabled':''}>Devolver pontos da tarefa<br><small>${o.max} pts</small></button>`;
+  return {html:`<button type=\"button\" data-review=\"manter\" data-pct=\"\">Manter resultado automático</button>${devolver}`,...o};
+}"""
+          text2,n=re.subn(pattern,replacement,text,count=1,flags=re.S)
+          if n!=1: raise SystemExit(f'montarAcoes matches={n}')
+          write(path,text2)
+
+          text=read(path)
+          old="""    const alvoPct=tipo==='manter'?o.pct:Math.max(o.pct,Number(pct)||0);\n    const novosPts=tipo==='manter'?o.pontos:Math.max(o.pontos,pontosPara(o.max,alvoPct));\n    const devolvidos=Math.max(0,novosPts-o.pontos);\n    const agora=new Date().toISOString();\n    const decisao=tipo==='manter'?'resultado-mantido':alvoPct>=100?'devolucao-total':`devolucao-${alvoPct}`;\n    const patch={pontosGanhos:novosPts,pontosOriginais:o.pontos,percentualOriginal:o.pct,percentualRevisado:alvoPct,pontosDevolvidos:devolvidos,revisaoStatus:'revisado',revisaoDecisao:decisao,revisadoEm:agora};"""
+          new="""    const novosPts=tipo==='manter'?o.pontos:o.max;\n    const devolvidos=Math.max(0,novosPts-o.pontos);\n    const agora=new Date().toISOString();\n    const decisao=tipo==='manter'?'resultado-mantido':'devolucao-total';\n    const patch={pontosGanhos:novosPts,pontosOriginais:o.pontos,percentualOriginal:o.pct,percentualRevisado:deleteField(),pontosDevolvidos:devolvidos,revisaoStatus:'revisado',revisaoDecisao:decisao,revisadoEm:agora};"""
+          rep(path,old,new,1)
+
+          # Cache/versões do ADM.
+          path='sw.js'
+          rep(path,"const CACHE_NAME='rotina-family-adm-v57';","const CACHE_NAME='rotina-family-adm-v58';",1)
+
+          path='index.html'
+          text=read(path)
+          if "./sw.js?v=57" in text:
+              text=text.replace("./sw.js?v=57","./sw.js?v=58")
+          # O addon de revisão pode existir no HTML base; o SW é network-first para JS.
+          write(path,text)
+
+          print('ADM tolerance rebuild completed.')
+
+      - name: Validate JavaScript modules
+        run: |
+          node --check adm-justification-review.js
+          node --check sw.js
+
+      - name: Commit rebuilt ADM
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index-ADMIN-v8.html adm-justification-review.js sw.js index.html
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Rebuild tolerance settings as time-only percentages"
+          git push
