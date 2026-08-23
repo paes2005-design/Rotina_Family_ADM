@@ -1,7 +1,7 @@
 import {getApps,getApp} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import {getFirestore,doc,getDoc,setDoc} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-const VERSION=3;
+const VERSION=4;
 let fatorAtual=100;
 let instalando=false;
 
@@ -31,11 +31,13 @@ function explicacao(fator=fatorAtual){
 function ajustarCard(){
   const titulo=[...document.querySelectorAll('#cadastro h3')].find(el=>/Regra de pontua[cç][aã]o por atraso/i.test(el.textContent||'')||/Regra de toler[aâ]ncia por atraso/i.test(el.textContent||''));
   if(!titulo)return;
-  titulo.textContent='Regra de tolerância por atraso';
+  const novoTitulo='Regra de tolerância por atraso';
+  if(titulo.textContent!==novoTitulo)titulo.textContent=novoTitulo;
+  const descricao='Os percentuais 100% / 75% / 50% / 0% identificam faixas de tempo. A configuração abaixo altera somente o tamanho da janela adicional de tolerância; os pontos da tarefa permanecem integrais.';
   const p=titulo.parentElement?.querySelector('p');
-  if(p)p.textContent='Os percentuais 100% / 75% / 50% / 0% identificam faixas de tempo. A configuração abaixo altera somente o tamanho da janela adicional de tolerância; os pontos da tarefa permanecem integrais.';
-  const botao=[...titulo.parentElement?.parentElement?.querySelectorAll('button')||[]].find(b=>/Mudar regra/i.test(b.textContent||''));
-  if(botao)botao.textContent='⚙️ Ajustar tolerância';
+  if(p&&p.textContent!==descricao)p.textContent=descricao;
+  const botao=[...titulo.parentElement?.parentElement?.querySelectorAll('button')||[]].find(b=>/Mudar regra|Ajustar tolerância/i.test(b.textContent||''));
+  if(botao&&botao.textContent!=='⚙️ Ajustar tolerância')botao.textContent='⚙️ Ajustar tolerância';
 }
 
 function garantirModal(){
@@ -71,12 +73,14 @@ function garantirModal(){
 function atualizarExplicacoes(){
   ajustarCard();
   const info=document.getElementById('explicacaoRegraAtrasoAdmin');
-  if(info)info.innerHTML=explicacao();
+  const texto=explicacao();
+  if(info&&info.innerHTML!==texto)info.innerHTML=texto;
   const modal=garantirModal();
   const input=modal?.querySelector('#regraPct100');
   const prev=modal?.querySelector('#previewRegraAtrasoAdmin');
-  if(input&&document.activeElement!==input)input.value=String(fatorAtual);
-  if(prev)prev.innerHTML=explicacao(input?.value??fatorAtual);
+  if(input&&document.activeElement!==input&&input.value!==String(fatorAtual))input.value=String(fatorAtual);
+  const preview=explicacao(input?.value??fatorAtual);
+  if(prev&&prev.innerHTML!==preview)prev.innerHTML=preview;
 }
 
 async function carregarFator(){
@@ -130,7 +134,7 @@ function instalarGlobais(){
 function iniciar(){
   instalarGlobais();atualizarExplicacoes();
   const alvo=document.getElementById('sistemaPrincipal')||document.body;
-  new MutationObserver(()=>{instalarGlobais();ajustarCard();}).observe(alvo,{childList:true,subtree:true});
+  new MutationObserver(ajustarCard).observe(alvo,{childList:true,subtree:true});
   setTimeout(carregarFator,250);
 }
 window.addEventListener('rotina-admin-session-ready',()=>setTimeout(()=>{instalarGlobais();carregarFator();},100));
