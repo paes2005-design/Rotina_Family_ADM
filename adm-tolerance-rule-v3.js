@@ -48,16 +48,13 @@ function garantirModal(){
   if(!card)return null;
   card.innerHTML=`
     <h2 style="margin-top:0">Configurar janela adicional de tolerância</h2>
-    <p style="color:#666;font-size:13px">A regra padrão permite uma janela adicional máxima de 25% da tolerância-base, dividida igualmente entre as faixas 75% e 50%. Escolha quanto dessa janela adicional a família utilizará. <strong>Este ajuste muda somente o tempo, nunca os percentuais fixos de pontuação 100% / 75% / 50% / 0%.</strong></p>
+    <p style="color:#666;font-size:13px">Escolha quanto da janela adicional padrão de 25% da tolerância-base a família utilizará. O sistema divide automaticamente essa janela entre as faixas 75% e 50%. <strong>A pontuação continua fixa em 100% / 75% / 50% / 0%.</strong></p>
     <div class="form-group">
       <label for="regraPct100">Uso da janela adicional padrão (%)</label>
       <input id="regraPct100" type="number" min="0" max="100" step="1" value="100">
       <small style="display:block;color:#64748b;margin-top:6px">Ex.: 100% usa os 25% adicionais completos. 80% usa 80% desses 25%, ou seja, 20% da tolerância-base.</small>
     </div>
-    <input id="regraPct75" type="hidden" value="75">
-    <input id="regraPct50" type="hidden" value="50">
-    <input id="regraPct0" type="hidden" value="0">
-    <div id="previewRegraAtrasoAdmin" style="padding:10px;background:#f8fafc;border-radius:8px;font-size:13px;margin:10px 0"></div>
+    <div id="previewRegraAtrasoAdmin" style="padding:8px;background:#f8fafc;border-radius:8px;font-size:12px;line-height:1.35;margin:8px 0"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
       <button class="btn-action" style="width:auto;background:#64748b" onclick="fecharConfiguracaoRegraAtraso()">Cancelar</button>
       <button class="btn-action" style="width:auto;background:#2563eb" onclick="salvarConfiguracaoRegraAtraso()">Salvar tolerância</button>
