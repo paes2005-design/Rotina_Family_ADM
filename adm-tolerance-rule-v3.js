@@ -16,11 +16,12 @@ function fatorDaConfig(config={}){
 }
 
 function explicacao(){
-  return `<strong>Faixas</strong><br>`+
-    `• <strong>100%:</strong> tolerância-base<br>`+
-    `• <strong>75%:</strong> 1ª metade da janela adicional<br>`+
-    `• <strong>50%:</strong> 2ª metade da janela adicional<br>`+
-    `• <strong>0%:</strong> tolerância consumida`;
+  return `<strong>Como funciona</strong><br>`+
+    `• <strong>100%:</strong> dentro da tolerância-base.<br>`+
+    `• <strong>75%:</strong> primeira metade da janela adicional.<br>`+
+    `• <strong>50%:</strong> segunda metade da janela adicional.<br>`+
+    `• <strong>0%:</strong> toda a tolerância foi consumida.<br><br>`+
+    `<strong>Pontuação:</strong> a faixa atingida define 100%, 75%, 50% ou 0% dos pontos da tarefa.`;
 }
 
 function ajustarCard(){
@@ -28,7 +29,7 @@ function ajustarCard(){
   if(!titulo)return;
   const novoTitulo='Regra de tolerância por atraso';
   if(titulo.textContent!==novoTitulo)titulo.textContent=novoTitulo;
-  const descricao='Ajuste quanto da janela adicional padrão de 25% será usada. A pontuação permanece fixa em 100% / 75% / 50% / 0%.';
+  const descricao='Ajuste quanto da janela adicional padrão de 25% será usada.';
   const p=titulo.parentElement?.querySelector('p');
   if(p&&p.textContent!==descricao)p.textContent=descricao;
   const escopo=titulo.parentElement?.parentElement;
@@ -37,7 +38,7 @@ function ajustarCard(){
   if(botaoAjuste&&botaoAjuste.textContent!=='⚙️ Ajustar tolerância')botaoAjuste.textContent='⚙️ Ajustar tolerância';
   botoes.filter(b=>/Entender a regra/i.test(b.textContent||'')).forEach(b=>b.remove());
   const info=document.getElementById('explicacaoRegraAtrasoAdmin');
-  if(info)info.style.display='block';
+  if(info)info.style.display='none';
 }
 
 function garantirModal(){
@@ -48,13 +49,14 @@ function garantirModal(){
   if(!card)return null;
   card.innerHTML=`
     <h2 style="margin-top:0">Configurar janela adicional de tolerância</h2>
-    <p style="color:#666;font-size:13px">Defina quanto da janela adicional padrão (25% da tolerância-base) será usada. <strong>Esse ajuste altera apenas o tempo.</strong></p>
+    <p style="color:#666;font-size:13px">Defina quanto da janela adicional padrão de <strong>25% da tolerância-base</strong> será utilizada. Esse ajuste altera apenas o tempo. A pontuação continua fixa conforme a faixa atingida.</p>
     <div class="form-group">
       <label for="regraPct100">Uso da janela adicional padrão (%)</label>
       <input id="regraPct100" type="number" min="0" max="100" step="1" value="100">
-      <small style="display:block;color:#64748b;margin-top:6px">100% = 25% adicionais completos<br>80% = 20% da tolerância-base</small>
+      <small style="display:block;color:#64748b;margin-top:6px"><strong>Exemplo:</strong><br>100% usa os 25% adicionais completos.<br>80% usa 20% da tolerância-base.</small>
     </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px">
+    <div id="previewRegraAtrasoAdmin" style="padding:8px;background:#f8fafc;border-radius:8px;font-size:12px;line-height:1.35;margin:8px 0">${explicacao()}</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
       <button class="btn-action" style="width:auto;background:#64748b" onclick="fecharConfiguracaoRegraAtraso()">Cancelar</button>
       <button class="btn-action" style="width:auto;background:#2563eb" onclick="salvarConfiguracaoRegraAtraso()">Salvar tolerância</button>
     </div>`;
@@ -65,12 +67,12 @@ function garantirModal(){
 function atualizarExplicacoes(){
   ajustarCard();
   const info=document.getElementById('explicacaoRegraAtrasoAdmin');
-  const texto=explicacao();
-  if(info&&info.innerHTML!==texto)info.innerHTML=texto;
-  if(info)info.style.display='block';
+  if(info)info.style.display='none';
   const modal=garantirModal();
   const input=modal?.querySelector('#regraPct100');
+  const prev=modal?.querySelector('#previewRegraAtrasoAdmin');
   if(input&&document.activeElement!==input&&input.value!==String(fatorAtual))input.value=String(fatorAtual);
+  if(prev&&prev.innerHTML!==explicacao())prev.innerHTML=explicacao();
 }
 
 async function carregarFator(){
@@ -91,6 +93,8 @@ function instalarGlobais(){
     const modal=garantirModal();
     const input=modal?.querySelector('#regraPct100');
     if(input)input.value=String(fatorAtual);
+    const prev=modal?.querySelector('#previewRegraAtrasoAdmin');
+    if(prev)prev.innerHTML=explicacao();
     if(modal)modal.style.display='flex';
   };
   window.fecharConfiguracaoRegraAtraso=()=>{const modal=document.getElementById('modalRegraAtrasoAdmin');if(modal)modal.style.display='none';};
