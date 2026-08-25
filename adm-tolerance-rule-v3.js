@@ -5,7 +5,6 @@ const VERSION=6;
 let fatorAtual=100;
 
 const clamp=v=>Math.max(0,Math.min(100,Number.isFinite(Number(v))?Number(v):100));
-const fmt=v=>Number(Number(v).toFixed(2)).toLocaleString('pt-BR');
 const grupoAtual=()=>String(document.getElementById('displayCodigoCliente')?.textContent||'').trim().toUpperCase();
 const log=(evento,detalhes={},nivel='info')=>{try{window.rotinaLog?.(evento,detalhes,nivel);}catch{}};
 
@@ -16,16 +15,12 @@ function fatorDaConfig(config={}){
   return clamp(nova.usoJanelaAdicionalPct ?? legado.janelaAdicionalPct ?? legado.percentualJanelaAdicional ?? 100);
 }
 
-function explicacao(fator=fatorAtual){
-  const f=clamp(fator),extra=25*f/100,metade=extra/2;
-  return `<strong>Faixas de tempo: 100% / 75% / 50% / 0%.</strong><br>`+
-    `• A tolerância-base é o número de minutos cadastrado na tarefa.<br>`+
-    `• Faixa 100%: consumo dentro da tolerância-base.<br>`+
-    `• Faixa 75%: primeira metade da janela adicional (${fmt(metade)}% da tolerância-base).<br>`+
-    `• Faixa 50%: segunda metade da janela adicional (${fmt(metade)}% da tolerância-base).<br>`+
-    `• Faixa 0%: toda a tolerância válida foi consumida.<br>`+
-    `• Esta família usa <strong>${fmt(f)}%</strong> da janela adicional padrão de 25%, equivalente a até <strong>${fmt(extra)}%</strong> da tolerância-base além do saldo principal.<br><br>`+
-    `<strong>Pontuação:</strong> o ajuste acima altera somente o <strong>tempo</strong>. A pontuação é fixa pela faixa atingida: <strong>100%</strong>, <strong>75%</strong>, <strong>50%</strong> ou <strong>0%</strong> dos pontos cadastrados.`;
+function explicacao(){
+  return `<strong>Faixas</strong><br>`+
+    `• <strong>100%:</strong> tolerância-base<br>`+
+    `• <strong>75%:</strong> 1ª metade da janela adicional<br>`+
+    `• <strong>50%:</strong> 2ª metade da janela adicional<br>`+
+    `• <strong>0%:</strong> tolerância consumida`;
 }
 
 function ajustarCard(){
@@ -33,7 +28,7 @@ function ajustarCard(){
   if(!titulo)return;
   const novoTitulo='Regra de tolerância por atraso';
   if(titulo.textContent!==novoTitulo)titulo.textContent=novoTitulo;
-  const descricao='As faixas 100% / 75% / 50% / 0% valem para tempo e para pontuação. A configuração abaixo altera somente o tamanho da janela adicional de tempo; a pontuação de cada faixa permanece fixa em 100% / 75% / 50% / 0%.';
+  const descricao='Ajuste quanto da janela adicional padrão de 25% será usada. A pontuação permanece fixa em 100% / 75% / 50% / 0%.';
   const p=titulo.parentElement?.querySelector('p');
   if(p&&p.textContent!==descricao)p.textContent=descricao;
   const botao=[...titulo.parentElement?.parentElement?.querySelectorAll('button')||[]].find(b=>/Mudar regra|Ajustar tolerância/i.test(b.textContent||''));
@@ -48,11 +43,11 @@ function garantirModal(){
   if(!card)return null;
   card.innerHTML=`
     <h2 style="margin-top:0">Configurar janela adicional de tolerância</h2>
-    <p style="color:#666;font-size:13px">Escolha quanto da janela adicional padrão de 25% da tolerância-base a família utilizará. O sistema divide automaticamente essa janela entre as faixas 75% e 50%. <strong>A pontuação continua fixa em 100% / 75% / 50% / 0%.</strong></p>
+    <p style="color:#666;font-size:13px">Defina quanto da janela adicional padrão (25% da tolerância-base) será usada. <strong>Esse ajuste altera apenas o tempo. A pontuação permanece 100% / 75% / 50% / 0%.</strong></p>
     <div class="form-group">
       <label for="regraPct100">Uso da janela adicional padrão (%)</label>
       <input id="regraPct100" type="number" min="0" max="100" step="1" value="100">
-      <small style="display:block;color:#64748b;margin-top:6px">Ex.: 100% usa os 25% adicionais completos. 80% usa 80% desses 25%, ou seja, 20% da tolerância-base.</small>
+      <small style="display:block;color:#64748b;margin-top:6px">100% = 25% adicionais completos<br>80% = 20% da tolerância-base</small>
     </div>
     <div id="previewRegraAtrasoAdmin" style="padding:8px;background:#f8fafc;border-radius:8px;font-size:12px;line-height:1.35;margin:8px 0"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
@@ -60,9 +55,9 @@ function garantirModal(){
       <button class="btn-action" style="width:auto;background:#2563eb" onclick="salvarConfiguracaoRegraAtraso()">Salvar tolerância</button>
     </div>`;
   modal.dataset.toleranceV3='1';
-  card.querySelector('#regraPct100')?.addEventListener('input',e=>{
+  card.querySelector('#regraPct100')?.addEventListener('input',()=>{
     const prev=card.querySelector('#previewRegraAtrasoAdmin');
-    if(prev)prev.innerHTML=explicacao(clamp(e.target.value));
+    if(prev)prev.innerHTML=explicacao();
   });
   return modal;
 }
@@ -76,8 +71,7 @@ function atualizarExplicacoes(){
   const input=modal?.querySelector('#regraPct100');
   const prev=modal?.querySelector('#previewRegraAtrasoAdmin');
   if(input&&document.activeElement!==input&&input.value!==String(fatorAtual))input.value=String(fatorAtual);
-  const preview=explicacao(input?.value??fatorAtual);
-  if(prev&&prev.innerHTML!==preview)prev.innerHTML=preview;
+  if(prev&&prev.innerHTML!==texto)prev.innerHTML=texto;
 }
 
 async function carregarFator(){
@@ -99,7 +93,7 @@ function instalarGlobais(){
     const input=modal?.querySelector('#regraPct100');
     if(input)input.value=String(fatorAtual);
     const prev=modal?.querySelector('#previewRegraAtrasoAdmin');
-    if(prev)prev.innerHTML=explicacao(fatorAtual);
+    if(prev)prev.innerHTML=explicacao();
     if(modal)modal.style.display='flex';
   };
   window.fecharConfiguracaoRegraAtraso=()=>{const modal=document.getElementById('modalRegraAtrasoAdmin');if(modal)modal.style.display='none';};
