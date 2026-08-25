@@ -1,0 +1,51 @@
+name: Fix ADM loader escaping
+
+on:
+  push:
+    paths:
+      - '.github/triggers/fix-index-loader-escaping.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Repair escaped closing script tags
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = '<\\\\/script>'
+          new = '<\\/script>'
+          count = s.count(old)
+          if count == 0:
+              raise SystemExit('Expected malformed escaped script tags were not found')
+          s = s.replace(old, new)
+          p.write_text(s, encoding='utf-8')
+          print(f'Repaired {count} closing script tags')
+      - name: Validate loader structure
+        shell: python
+        run: |
+          from pathlib import Path
+          s = Path('index.html').read_text(encoding='utf-8')
+          assert '<\\\\/script>' not in s
+          assert "document.open();document.write(html);document.close();" in s
+          assert "const masterBridge" in s
+          print('Loader structure OK')
+      - name: Commit repair
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Fix ADM loader script escaping"
+          git push
