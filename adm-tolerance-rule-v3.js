@@ -31,8 +31,13 @@ function ajustarCard(){
   const descricao='Ajuste quanto da janela adicional padrão de 25% será usada. A pontuação permanece fixa em 100% / 75% / 50% / 0%.';
   const p=titulo.parentElement?.querySelector('p');
   if(p&&p.textContent!==descricao)p.textContent=descricao;
-  const botao=[...titulo.parentElement?.parentElement?.querySelectorAll('button')||[]].find(b=>/Mudar regra|Ajustar tolerância/i.test(b.textContent||''));
-  if(botao&&botao.textContent!=='⚙️ Ajustar tolerância')botao.textContent='⚙️ Ajustar tolerância';
+  const escopo=titulo.parentElement?.parentElement;
+  const botoes=[...escopo?.querySelectorAll('button')||[]];
+  const botaoAjuste=botoes.find(b=>/Mudar regra|Ajustar tolerância/i.test(b.textContent||''));
+  if(botaoAjuste&&botaoAjuste.textContent!=='⚙️ Ajustar tolerância')botaoAjuste.textContent='⚙️ Ajustar tolerância';
+  botoes.filter(b=>/Entender a regra/i.test(b.textContent||'')).forEach(b=>b.remove());
+  const info=document.getElementById('explicacaoRegraAtrasoAdmin');
+  if(info)info.style.display='block';
 }
 
 function garantirModal(){
@@ -67,6 +72,7 @@ function atualizarExplicacoes(){
   const info=document.getElementById('explicacaoRegraAtrasoAdmin');
   const texto=explicacao();
   if(info&&info.innerHTML!==texto)info.innerHTML=texto;
+  if(info)info.style.display='block';
   const modal=garantirModal();
   const input=modal?.querySelector('#regraPct100');
   const prev=modal?.querySelector('#previewRegraAtrasoAdmin');
@@ -97,10 +103,6 @@ function instalarGlobais(){
     if(modal)modal.style.display='flex';
   };
   window.fecharConfiguracaoRegraAtraso=()=>{const modal=document.getElementById('modalRegraAtrasoAdmin');if(modal)modal.style.display='none';};
-  window.alternarExplicacaoRegraAtrasoAdmin=()=>{
-    const el=document.getElementById('explicacaoRegraAtrasoAdmin');if(!el)return;
-    el.innerHTML=explicacao();el.style.display=el.style.display==='none'?'block':'none';
-  };
   window.salvarConfiguracaoRegraAtraso=async()=>{
     const g=grupoAtual(),db=banco();if(!g||g==='--'||g==='CLI-GEN'||!db)return alert('Grupo ainda não identificado.');
     const input=document.getElementById('regraPct100');
