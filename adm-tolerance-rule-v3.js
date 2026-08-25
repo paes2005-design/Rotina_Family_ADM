@@ -1,7 +1,7 @@
 import {getApps,getApp} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import {getFirestore,doc,getDoc,setDoc} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import {getFirestore,doc,getDoc,setDoc,deleteField} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-const VERSION=5;
+const VERSION=6;
 let fatorAtual=100;
 
 const clamp=v=>Math.max(0,Math.min(100,Number.isFinite(Number(v))?Number(v):100));
@@ -11,8 +11,9 @@ const log=(evento,detalhes={},nivel='info')=>{try{window.rotinaLog?.(evento,deta
 
 function banco(){return getApps().length?getFirestore(getApp()):null;}
 function fatorDaConfig(config={}){
-  const r=config.regraAtraso||config||{};
-  return clamp(r.janelaAdicionalPct ?? r.percentualJanelaAdicional ?? r.dentroLimites ?? 100);
+  const nova=config.regraTolerancia||{};
+  const legado=config.regraAtraso||{};
+  return clamp(nova.usoJanelaAdicionalPct ?? legado.janelaAdicionalPct ?? legado.percentualJanelaAdicional ?? 100);
 }
 
 function explicacao(fator=fatorAtual){
@@ -24,7 +25,7 @@ function explicacao(fator=fatorAtual){
     `• Faixa 50%: segunda metade da janela adicional (${fmt(metade)}% da tolerância-base).<br>`+
     `• Faixa 0%: toda a tolerância válida foi consumida.<br>`+
     `• Esta família usa <strong>${fmt(f)}%</strong> da janela adicional padrão de 25%, equivalente a até <strong>${fmt(extra)}%</strong> da tolerância-base além do saldo principal.<br><br>`+
-    `<strong>Pontuação:</strong> esses percentuais representam somente <strong>tempo de tolerância</strong>. Uma tarefa concluída nas faixas 100%, 75% ou 50% recebe <strong>todos os pontos cadastrados</strong>. Somente a faixa 0% zera a pontuação automática.`;
+    `<strong>Pontuação:</strong> o ajuste acima altera somente o <strong>tempo</strong>. A pontuação é fixa pela faixa atingida: <strong>100%</strong>, <strong>75%</strong>, <strong>50%</strong> ou <strong>0%</strong> dos pontos cadastrados.`;
 }
 
 function ajustarCard(){
@@ -32,7 +33,7 @@ function ajustarCard(){
   if(!titulo)return;
   const novoTitulo='Regra de tolerância por atraso';
   if(titulo.textContent!==novoTitulo)titulo.textContent=novoTitulo;
-  const descricao='Os percentuais 100% / 75% / 50% / 0% identificam faixas de tempo. A configuração abaixo altera somente o tamanho da janela adicional de tolerância; os pontos da tarefa permanecem integrais.';
+  const descricao='As faixas 100% / 75% / 50% / 0% valem para tempo e para pontuação. A configuração abaixo altera somente o tamanho da janela adicional de tempo; a pontuação de cada faixa permanece fixa em 100% / 75% / 50% / 0%.';
   const p=titulo.parentElement?.querySelector('p');
   if(p&&p.textContent!==descricao)p.textContent=descricao;
   const botao=[...titulo.parentElement?.parentElement?.querySelectorAll('button')||[]].find(b=>/Mudar regra|Ajustar tolerância/i.test(b.textContent||''));
@@ -47,7 +48,7 @@ function garantirModal(){
   if(!card)return null;
   card.innerHTML=`
     <h2 style="margin-top:0">Configurar janela adicional de tolerância</h2>
-    <p style="color:#666;font-size:13px">A regra padrão permite uma janela adicional máxima de 25% da tolerância-base, dividida igualmente entre as faixas 75% e 50%. Escolha quanto dessa janela adicional a família utilizará. <strong>Este percentual nunca reduz os pontos.</strong></p>
+    <p style="color:#666;font-size:13px">A regra padrão permite uma janela adicional máxima de 25% da tolerância-base, dividida igualmente entre as faixas 75% e 50%. Escolha quanto dessa janela adicional a família utilizará. <strong>Este ajuste muda somente o tempo, nunca os percentuais fixos de pontuação 100% / 75% / 50% / 0%.</strong></p>
     <div class="form-group">
       <label for="regraPct100">Uso da janela adicional padrão (%)</label>
       <input id="regraPct100" type="number" min="0" max="100" step="1" value="100">
@@ -115,14 +116,22 @@ function instalarGlobais(){
     const bruto=Number(input?.value);
     if(!Number.isFinite(bruto)||bruto<0||bruto>100)return alert('Use um percentual entre 0 e 100.');
     const fator=clamp(bruto);
-    // `dentroLimites` recebe o mesmo fator apenas como ponte de compatibilidade com
-    // clientes que ainda leem o campo legado. No modelo v3 ele representa TEMPO.
-    const regraAtraso={dentroLimites:fator,atrasoLeve:75,atrasoMaior:50,estourado:0,janelaAdicionalPct:fator};
+    const regraTolerancia={versao:4,janelaAdicionalMaximaPct:25,usoJanelaAdicionalPct:fator};
+    const regraPontuacao={dentroLimites:100,atrasoLeve:75,atrasoMaior:50,estourado:0};
     try{
-      await setDoc(doc(db,'configGrupos',g),{grupoId:g,regraAtraso,regraAtrasoVersao:3,regraAtrasoAtualizadaEm:new Date().toISOString()},{merge:true});
+      await setDoc(doc(db,'configGrupos',g),{
+        grupoId:g,
+        regraTolerancia,
+        regraPontuacao,
+        regraOperacionalVersao:4,
+        regraOperacionalAtualizadaEm:new Date().toISOString(),
+        regraAtraso:deleteField(),
+        regraAtrasoVersao:deleteField(),
+        regraAtrasoAtualizadaEm:deleteField()
+      },{merge:true});
       fatorAtual=fator;atualizarExplicacoes();window.fecharConfiguracaoRegraAtraso();
       log('tolerancia.adm_salva',{grupoId:g,janelaAdicionalPct:fator,extraEfetivoPct:Number((25*fator/100).toFixed(2)),versao:VERSION});
-      alert('Regra de tolerância atualizada. O percentual altera somente o tempo; os pontos da tarefa permanecem integrais.');
+      alert('Regra atualizada. O ajuste altera somente a janela adicional de tempo; a pontuação permanece fixa em 100% / 75% / 50% / 0% conforme a faixa atingida.');
     }catch(e){console.error(e);alert('Não foi possível salvar a regra agora. Tente novamente.');}
   };
   atualizarExplicacoes();
