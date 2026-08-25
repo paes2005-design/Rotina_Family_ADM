@@ -1,0 +1,92 @@
+name: Apply Family rule v4 ADM
+
+on:
+  push:
+    paths:
+      - '.github/triggers/apply-family-rule-v4-admin.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply unified Family rule in ADM
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('adm-tolerance-rule-v3.js')
+          s=p.read_text(encoding='utf-8')
+
+          s=s.replace(
+            "import {getFirestore,doc,getDoc,setDoc} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';",
+            "import {getFirestore,doc,getDoc,setDoc,deleteField} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';"
+          )
+          s=s.replace('const VERSION=5;','const VERSION=6;')
+
+          old="""function fatorDaConfig(config={}){\n  const r=config.regraAtraso||config||{};\n  return clamp(r.janelaAdicionalPct ?? r.percentualJanelaAdicional ?? r.dentroLimites ?? 100);\n}"""
+          new="""function fatorDaConfig(config={}){\n  const nova=config.regraTolerancia||{};\n  const legado=config.regraAtraso||{};\n  return clamp(nova.usoJanelaAdicionalPct ?? legado.janelaAdicionalPct ?? legado.percentualJanelaAdicional ?? 100);\n}"""
+          if old not in s: raise SystemExit('fatorDaConfig antigo não encontrado')
+          s=s.replace(old,new)
+
+          oldtxt="""    `<strong>Pontuação:</strong> esses percentuais representam somente <strong>tempo de tolerância</strong>. Uma tarefa concluída nas faixas 100%, 75% ou 50% recebe <strong>todos os pontos cadastrados</strong>. Somente a faixa 0% zera a pontuação automática.`;"""
+          newtxt="""    `<strong>Pontuação:</strong> o ajuste acima altera somente o <strong>tempo</strong>. A pontuação é fixa pela faixa atingida: <strong>100%</strong>, <strong>75%</strong>, <strong>50%</strong> ou <strong>0%</strong> dos pontos cadastrados.`;"""
+          if oldtxt not in s: raise SystemExit('texto de pontuação antigo não encontrado')
+          s=s.replace(oldtxt,newtxt)
+
+          s=s.replace(
+            "const descricao='Os percentuais 100% / 75% / 50% / 0% identificam faixas de tempo. A configuração abaixo altera somente o tamanho da janela adicional de tolerância; os pontos da tarefa permanecem integrais.';",
+            "const descricao='As faixas 100% / 75% / 50% / 0% valem para tempo e para pontuação. A configuração abaixo altera somente o tamanho da janela adicional de tempo; a pontuação de cada faixa permanece fixa em 100% / 75% / 50% / 0%.';"
+          )
+
+          s=s.replace(
+            "<p style=\"color:#666;font-size:13px\">A regra padrão permite uma janela adicional máxima de 25% da tolerância-base, dividida igualmente entre as faixas 75% e 50%. Escolha quanto dessa janela adicional a família utilizará. <strong>Este percentual nunca reduz os pontos.</strong></p>",
+            "<p style=\"color:#666;font-size:13px\">A regra padrão permite uma janela adicional máxima de 25% da tolerância-base, dividida igualmente entre as faixas 75% e 50%. Escolha quanto dessa janela adicional a família utilizará. <strong>Este ajuste muda somente o tempo, nunca os percentuais fixos de pontuação 100% / 75% / 50% / 0%.</strong></p>"
+          )
+
+          oldsave="""    // `dentroLimites` recebe o mesmo fator apenas como ponte de compatibilidade com\n    // clientes que ainda leem o campo legado. No modelo v3 ele representa TEMPO.\n    const regraAtraso={dentroLimites:fator,atrasoLeve:75,atrasoMaior:50,estourado:0,janelaAdicionalPct:fator};\n    try{\n      await setDoc(doc(db,'configGrupos',g),{grupoId:g,regraAtraso,regraAtrasoVersao:3,regraAtrasoAtualizadaEm:new Date().toISOString()},{merge:true});"""
+          newsave="""    const regraTolerancia={versao:4,janelaAdicionalMaximaPct:25,usoJanelaAdicionalPct:fator};\n    const regraPontuacao={dentroLimites:100,atrasoLeve:75,atrasoMaior:50,estourado:0};\n    try{\n      await setDoc(doc(db,'configGrupos',g),{\n        grupoId:g,\n        regraTolerancia,\n        regraPontuacao,\n        regraOperacionalVersao:4,\n        regraOperacionalAtualizadaEm:new Date().toISOString(),\n        regraAtraso:deleteField(),\n        regraAtrasoVersao:deleteField(),\n        regraAtrasoAtualizadaEm:deleteField()\n      },{merge:true});"""
+          if oldsave not in s: raise SystemExit('bloco legado de gravação não encontrado')
+          s=s.replace(oldsave,newsave)
+
+          s=s.replace(
+            "alert('Regra de tolerância atualizada. O percentual altera somente o tempo; os pontos da tarefa permanecem integrais.');",
+            "alert('Regra atualizada. O ajuste altera somente a janela adicional de tempo; a pontuação permanece fixa em 100% / 75% / 50% / 0% conforme a faixa atingida.');"
+          )
+
+          p.write_text(s,encoding='utf-8')
+
+          # Bump de referência para evitar cache do módulo antigo.
+          for fn in ('index.html','index-ADMIN-v8.html'):
+              p=Path(fn)
+              if not p.exists(): continue
+              x=p.read_text(encoding='utf-8')
+              x=re.sub(r"adm-tolerance-rule-v3\.js\?v=\d+","adm-tolerance-rule-v3.js?v=6",x)
+              p.write_text(x,encoding='utf-8')
+
+          print('ADM Family rule v4 patch completed')
+          PY
+
+      - name: Validate JavaScript syntax
+        run: |
+          node --check adm-tolerance-rule-v3.js
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add adm-tolerance-rule-v3.js index.html index-ADMIN-v8.html
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Apply unified Family rule v4 in ADM"
+          git push
