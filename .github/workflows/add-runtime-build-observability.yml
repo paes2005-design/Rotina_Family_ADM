@@ -1,0 +1,114 @@
+name: Add runtime build observability
+
+on:
+  push:
+    paths:
+      - '.github/triggers/runtime-build-observability.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install runtime build identification
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          BUILD='20260825.1'
+          APP_VERSION='1.0.0'
+          RULE_MODULE='6'
+          SW_VERSION='58'
+
+          build_js=f'''(()=>{{
+            'use strict';
+            const INFO=Object.freeze({{
+              app:'ADM',
+              appVersion:'{APP_VERSION}',
+              build:'{BUILD}',
+              htmlVersion:'index-ADMIN-v8',
+              rulesModuleVersion:'{RULE_MODULE}',
+              expectedServiceWorkerVersion:'{SW_VERSION}'
+            }});
+            window.ROTINA_BUILD_INFO=INFO;
+            const emit=(event,details={{}})=>{{try{{window.rotinaLog?.(event,{{...INFO,...details}});}}catch{{}}}};
+            const badge=()=>{{
+              if(document.getElementById('rotinaBuildBadge'))return;
+              const el=document.createElement('button');
+              el.id='rotinaBuildBadge';el.type='button';
+              el.textContent=`ADM v${{INFO.appVersion}} • ${{INFO.build}}`;
+              el.style.cssText='position:fixed;right:8px;bottom:82px;z-index:9998;border:1px solid rgba(100,116,139,.35);background:rgba(255,255,255,.92);color:#64748b;border-radius:999px;padding:4px 8px;font:600 10px/1.2 system-ui;box-shadow:0 2px 8px rgba(0,0,0,.08);opacity:.82';
+              el.title='Toque para ver a versão em execução';
+              el.onclick=()=>alert(`Rotina Family ADM\nVersão: ${{INFO.appVersion}}\nBuild: ${{INFO.build}}\nHTML: ${{INFO.htmlVersion}}\nRegras: v${{INFO.rulesModuleVersion}}\nService Worker esperado: v${{INFO.expectedServiceWorkerVersion}}\nService Worker ativo: ${{window.ROTINA_SW_VERSION||'verificando...'}}`);
+              document.body.appendChild(el);
+            }};
+            const checkSw=async()=>{{
+              try{{
+                if(!('serviceWorker' in navigator))return emit('build.sw_indisponivel');
+                const reg=await navigator.serviceWorker.ready;
+                const worker=navigator.serviceWorker.controller||reg.active;
+                if(!worker)return emit('build.sw_sem_controlador');
+                const token=Math.random().toString(36).slice(2);
+                const listener=e=>{{
+                  if(e.data?.type!=='ROTINA_BUILD_INFO'||e.data?.token!==token)return;
+                  navigator.serviceWorker.removeEventListener('message',listener);
+                  window.ROTINA_SW_VERSION=String(e.data.swVersion||'');
+                  emit('build.runtime',{{serviceWorkerVersion:window.ROTINA_SW_VERSION,serviceWorkerCache:e.data.cacheName||'',swMatchesExpected:String(e.data.swVersion)===INFO.expectedServiceWorkerVersion}});
+                }};
+                navigator.serviceWorker.addEventListener('message',listener);
+                worker.postMessage({{type:'ROTINA_GET_BUILD_INFO',token}});
+                setTimeout(()=>{{navigator.serviceWorker.removeEventListener('message',listener);if(!window.ROTINA_SW_VERSION)emit('build.sw_sem_resposta');}},1800);
+              }}catch(e){{emit('build.sw_erro',{{mensagem:String(e?.message||e)}});}}
+            }};
+            const boot=()=>{{badge();emit('build.html_carregado',{{href:location.href,userAgent:navigator.userAgent}});setTimeout(checkSw,150);setTimeout(()=>emit('build.regra_modulo_esperado',{{rulesModuleVersion:INFO.rulesModuleVersion}}),400);}};
+            if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{{once:true}});else boot();
+          }})();
+          '''
+          Path('runtime-build-info.js').write_text(build_js,encoding='utf-8')
+
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          marker="'<script src=\"./runtime-build-info.js?v=20260825.1\"><\\/script>'"
+          if 'runtime-build-info.js' not in s:
+            old="          '<script src=\"./admin-master-integrity-fix.js?v=1\"><\\/script>'\n"
+            new=old+"          '<script src=\"./runtime-build-info.js?v=20260825.1\"><\\/script>'\n"
+            if old not in s: raise SystemExit('index addon anchor not found')
+            s=s.replace(old,new)
+          s=s.replace("./sw.js?v=57","./sw.js?v=58")
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('sw.js')
+          s=p.read_text(encoding='utf-8')
+          s=re.sub(r"const CACHE_NAME='rotina-family-adm-v\\d+';", "const CACHE_NAME='rotina-family-adm-v58';\nconst ROTINA_SW_VERSION='58';\nconst ROTINA_BUILD_ID='20260825.1';", s, count=1)
+          if "'./runtime-build-info.js'" not in s:
+            s=s.replace("'./reset-cache.html']","'./reset-cache.html','./runtime-build-info.js']")
+          handler="""
+self.addEventListener('message',event=>{
+  if(event.data?.type!=='ROTINA_GET_BUILD_INFO')return;
+  event.source?.postMessage({type:'ROTINA_BUILD_INFO',token:event.data?.token||'',swVersion:ROTINA_SW_VERSION,build:ROTINA_BUILD_ID,cacheName:CACHE_NAME});
+});
+"""
+          if 'ROTINA_GET_BUILD_INFO' not in s:
+            s += '\n'+handler
+          p.write_text(s,encoding='utf-8')
+
+      - name: Validate JavaScript
+        run: |
+          node --check runtime-build-info.js
+          node --check sw.js
+
+      - name: Commit runtime build identification
+        run: |
+          if git diff --quiet; then echo 'No changes'; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add runtime-build-info.js index.html sw.js
+          git commit -m "Add runtime build identification to ADM"
+          git push
