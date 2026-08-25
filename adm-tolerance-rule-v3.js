@@ -48,22 +48,17 @@ function garantirModal(){
   if(!card)return null;
   card.innerHTML=`
     <h2 style="margin-top:0">Configurar janela adicional de tolerância</h2>
-    <p style="color:#666;font-size:13px">Defina quanto da janela adicional padrão (25% da tolerância-base) será usada. <strong>Esse ajuste altera apenas o tempo. A pontuação permanece 100% / 75% / 50% / 0%.</strong></p>
+    <p style="color:#666;font-size:13px">Defina quanto da janela adicional padrão (25% da tolerância-base) será usada. <strong>Esse ajuste altera apenas o tempo.</strong></p>
     <div class="form-group">
       <label for="regraPct100">Uso da janela adicional padrão (%)</label>
       <input id="regraPct100" type="number" min="0" max="100" step="1" value="100">
       <small style="display:block;color:#64748b;margin-top:6px">100% = 25% adicionais completos<br>80% = 20% da tolerância-base</small>
     </div>
-    <div id="previewRegraAtrasoAdmin" style="padding:8px;background:#f8fafc;border-radius:8px;font-size:12px;line-height:1.35;margin:8px 0"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px">
       <button class="btn-action" style="width:auto;background:#64748b" onclick="fecharConfiguracaoRegraAtraso()">Cancelar</button>
       <button class="btn-action" style="width:auto;background:#2563eb" onclick="salvarConfiguracaoRegraAtraso()">Salvar tolerância</button>
     </div>`;
   modal.dataset.toleranceV3='1';
-  card.querySelector('#regraPct100')?.addEventListener('input',()=>{
-    const prev=card.querySelector('#previewRegraAtrasoAdmin');
-    if(prev)prev.innerHTML=explicacao();
-  });
   return modal;
 }
 
@@ -75,9 +70,7 @@ function atualizarExplicacoes(){
   if(info)info.style.display='block';
   const modal=garantirModal();
   const input=modal?.querySelector('#regraPct100');
-  const prev=modal?.querySelector('#previewRegraAtrasoAdmin');
   if(input&&document.activeElement!==input&&input.value!==String(fatorAtual))input.value=String(fatorAtual);
-  if(prev&&prev.innerHTML!==texto)prev.innerHTML=texto;
 }
 
 async function carregarFator(){
@@ -98,8 +91,6 @@ function instalarGlobais(){
     const modal=garantirModal();
     const input=modal?.querySelector('#regraPct100');
     if(input)input.value=String(fatorAtual);
-    const prev=modal?.querySelector('#previewRegraAtrasoAdmin');
-    if(prev)prev.innerHTML=explicacao();
     if(modal)modal.style.display='flex';
   };
   window.fecharConfiguracaoRegraAtraso=()=>{const modal=document.getElementById('modalRegraAtrasoAdmin');if(modal)modal.style.display='none';};
