@@ -1,0 +1,74 @@
+name: Remove legacy tolerance controls
+
+on:
+  push:
+    paths:
+      - '.github/triggers/remove-legacy-tolerance-controls.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Simplify tolerance modal and remove legacy inline rule
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index-ADMIN-v8.html')
+          s=p.read_text(encoding='utf-8')
+          old='''<div id="modalRegraAtrasoAdmin" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;align-items:center;justify-content:center;padding:16px">
+  <div style="background:white;max-width:520px;width:100%;border-radius:16px;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,.25)">
+    <h2 style="margin-top:0">Configurar regra de atraso</h2>
+    <p style="color:#666;font-size:13px">Defina a porcentagem dos pontos em cada faixa. A janela de recuperação após zerar a tolerância é fixa em 25% no total: 12,5% na primeira faixa e 12,5% na segunda.</p>
+    <div class="form-group"><label>Dentro dos limites (%)</label><input id="regraPct100" type="number" min="0" max="100" value="100"></div>
+    <div class="form-group"><label>Primeiros +12,5% após zerar (%)</label><input id="regraPct75" type="number" min="0" max="100" value="75"></div>
+    <div class="form-group"><label>Próximos +12,5% (%)</label><input id="regraPct50" type="number" min="0" max="100" value="50"></div>
+    <div class="form-group"><label>Após +25% adicional</label><div style="padding:10px;border:1px solid #ddd;border-radius:6px;background:#f8fafc"><strong>0% fixo</strong> — ao completar 25% adicional além da tolerância, a pontuação automática zera.</div><input id="regraPct0" type="hidden" value="0"></div>
+    <div id="previewRegraAtrasoAdmin" style="padding:10px;background:#f8fafc;border-radius:8px;font-size:13px;margin:10px 0"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn-action" style="width:auto;background:#64748b" onclick="fecharConfiguracaoRegraAtraso()">Cancelar</button>
+      <button class="btn-action" style="width:auto;background:#2563eb" onclick="salvarConfiguracaoRegraAtraso()">Salvar regra</button>
+    </div>
+  </div>
+</div>'''
+          new='''<div id="modalRegraAtrasoAdmin" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;align-items:center;justify-content:center;padding:16px">
+  <div style="background:white;max-width:520px;width:100%;border-radius:16px;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,.25)">
+    <h2 style="margin-top:0">Configurar janela adicional de tolerância</h2>
+    <p style="color:#666;font-size:13px">Defina somente quanto da janela adicional padrão de 25% será utilizada. As faixas de 75% e 50% são calculadas automaticamente e não são configuráveis.</p>
+    <div class="form-group"><label>Uso da janela adicional padrão (%)</label><input id="regraPct100" type="number" min="0" max="100" value="100"></div>
+    <div id="previewRegraAtrasoAdmin" style="padding:10px;background:#f8fafc;border-radius:8px;font-size:13px;margin:10px 0"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn-action" style="width:auto;background:#64748b" onclick="fecharConfiguracaoRegraAtraso()">Cancelar</button>
+      <button class="btn-action" style="width:auto;background:#2563eb" onclick="salvarConfiguracaoRegraAtraso()">Salvar tolerância</button>
+    </div>
+  </div>
+</div>'''
+          if old not in s:
+              raise SystemExit('legacy modal block not found')
+          s=s.replace(old,new,1)
+          start=s.find('    const REGRA_ATRASO_PADRAO = { dentroLimites:100, atrasoLeve:75, atrasoMaior:50, estourado:0 };')
+          end=s.find('    async function hashPin(pin) {', start)
+          if start<0 or end<0:
+              raise SystemExit('legacy inline rule block not found')
+          replacement='''    // Regra de tolerância v4 é controlada exclusivamente por adm-tolerance-rule-v3.js.\n    // Mantemos estas chamadas como no-op até o módulo externo assumir, evitando lógica duplicada.\n    async function carregarRegraAtraso(){}\n\n'''
+          s=s[:start]+replacement+s[end:]
+          s=s.replace('./adm-tolerance-rule-v3.js?v=6','./adm-tolerance-rule-v3.js?v=7')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Validate no legacy controls remain
+        run: |
+          ! grep -q 'Primeiros +12,5% após zerar' index-ADMIN-v8.html
+          ! grep -q 'Próximos +12,5%' index-ADMIN-v8.html
+          ! grep -q 'regraPct75' index-ADMIN-v8.html
+          ! grep -q 'regraPct50' index-ADMIN-v8.html
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index-ADMIN-v8.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Remove legacy tolerance controls from ADM"
+          git push
