@@ -35,7 +35,17 @@ function ajustarCard(){
   const escopo=titulo.parentElement?.parentElement;
   const botoes=[...escopo?.querySelectorAll('button')||[]];
   const botaoAjuste=botoes.find(b=>/Mudar regra|Ajustar tolerância/i.test(b.textContent||''));
-  if(botaoAjuste&&botaoAjuste.textContent!=='⚙️ Ajustar tolerância')botaoAjuste.textContent='⚙️ Ajustar tolerância';
+  if(botaoAjuste){
+    if(botaoAjuste.textContent!=='⚙️ Ajustar tolerância')botaoAjuste.textContent='⚙️ Ajustar tolerância';
+    botaoAjuste.style.marginLeft='0';
+    botaoAjuste.style.marginRight='auto';
+    botaoAjuste.style.alignSelf='flex-start';
+    const linha=botaoAjuste.parentElement;
+    if(linha){
+      linha.style.justifyContent='flex-start';
+      linha.style.textAlign='left';
+    }
+  }
   botoes.filter(b=>/Entender a regra/i.test(b.textContent||'')).forEach(b=>b.remove());
   const info=document.getElementById('explicacaoRegraAtrasoAdmin');
   if(info)info.style.display='none';
