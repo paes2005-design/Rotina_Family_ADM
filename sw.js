@@ -1,5 +1,7 @@
-const CACHE_NAME='rotina-family-adm-v57';
-const APP_SHELL=['./','./index.html','./index-ADMIN-v8.html','./manifest.json?v=34','./icon-administrador-192.png','./icon-administrador-512.png','./admin-push-onesignal.js','./admin-master.js','./admin-master-integrity-fix.js','./app-monitoring.js','./app-monitoring-dashboard.js','./commercial-access-admin.js','./master-family-tree.js','./dashboard-ranking-pro.css','./dashboard-ranking-pro.js','./monitor-pro.css','./monitor-pro.js','./rewards-admin-ui-v2.js','./reward-redemption-notifications.js','./manage-pro.css','./manage-pro.js','./mobile-app-ui.css','./mobile-app-ui.js','./adm-justification-review.js','./adm-early-start-ui.js','./adm-score-history-cards.js','./adm-monitor-history-fix.js','./family-alarm-admin.js','./alarm-date-core.js','./reset-cache.html'];
+const CACHE_NAME='rotina-family-adm-v58';
+const ROTINA_SW_VERSION='58';
+const ROTINA_BUILD_ID='20260825.1';
+const APP_SHELL=['./','./index.html','./index-ADMIN-v8.html','./manifest.json?v=34','./icon-administrador-192.png','./icon-administrador-512.png','./admin-push-onesignal.js','./admin-master.js','./admin-master-integrity-fix.js','./app-monitoring.js','./app-monitoring-dashboard.js','./commercial-access-admin.js','./master-family-tree.js','./dashboard-ranking-pro.css','./dashboard-ranking-pro.js','./monitor-pro.css','./monitor-pro.js','./rewards-admin-ui-v2.js','./reward-redemption-notifications.js','./manage-pro.css','./manage-pro.js','./mobile-app-ui.css','./mobile-app-ui.js','./adm-justification-review.js','./adm-early-start-ui.js','./adm-score-history-cards.js','./adm-monitor-history-fix.js','./family-alarm-admin.js','./alarm-date-core.js','./runtime-build-info.js','./reset-cache.html'];
 const MODULE_ROOTS=['https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js'];
 const APP_MAIN_URL=new URL('./index-ADMIN-v8.html',self.location.href).href;
 const ENTRY_URL=new URL('./index.html',self.location.href).href;
@@ -18,6 +20,7 @@ async function respostaComAddons(response){
   if(!html.includes('master-family-tree.js'))faltantes.push('<script src="./master-family-tree.js?v=5"><\/script>');
   if(!html.includes('app-monitoring-dashboard.js'))faltantes.push('<script type="module" src="./app-monitoring-dashboard.js?v=2"><\/script>');
   if(!html.includes('admin-master-integrity-fix.js'))faltantes.push('<script src="./admin-master-integrity-fix.js?v=1"><\/script>');
+  if(!html.includes('runtime-build-info.js'))faltantes.push('<script src="./runtime-build-info.js?v=20260825.1"><\/script>');
   if(faltantes.length)html=html.replace('</body>',faltantes.join('\n')+'\n</body>');
   const headers=new Headers(response.headers);headers.delete('content-length');
   return new Response(html,{status:response.status,statusText:response.statusText,headers});
@@ -32,9 +35,10 @@ self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;con
       try{
         const response=await fetch(alvo,{cache:'no-store'});
         if(response&&response.ok){const cache=await caches.open(CACHE_NAME);await cache.put(alvo,response.clone());}
-        return response;
+        return respostaComAddons(response);
       }catch(e){
-        return (await caches.match(alvo))||(await caches.match(ENTRY_URL))||(await caches.match(APP_MAIN_URL));
+        const fallback=(await caches.match(alvo))||(await caches.match(ENTRY_URL))||(await caches.match(APP_MAIN_URL));
+        return respostaComAddons(fallback);
       }
     })());
     return;
@@ -42,6 +46,11 @@ self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;con
   const isAppAsset=sameOrigin&&(/\.(?:js|css|html|json)$/.test(url.pathname));
   if(isAppAsset){event.respondWith((async()=>{try{const response=await fetch(event.request,{cache:'no-store'});if(response&&response.ok){const cache=await caches.open(CACHE_NAME);await cache.put(event.request,response.clone());}return response;}catch(e){return caches.match(event.request);}})());return;}
   event.respondWith((async()=>{const cached=await caches.match(event.request);if(cached)return cached;try{const response=await fetch(event.request);if(response&&(response.ok||response.type==='opaque')){const cache=await caches.open(CACHE_NAME);await cache.put(event.request,response.clone());}return response;}catch(e){throw e;}})());
+});
+
+self.addEventListener('message',event=>{
+  if(event.data?.type!=='ROTINA_GET_BUILD_INFO')return;
+  event.source?.postMessage({type:'ROTINA_BUILD_INFO',token:event.data?.token||'',swVersion:ROTINA_SW_VERSION,build:ROTINA_BUILD_ID,cacheName:CACHE_NAME});
 });
 
 self.addEventListener('notificationclick',event=>{
