@@ -1,0 +1,56 @@
+name: Security auth ADM v1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/security-auth-adm-v1-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  activate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Activate secure ADM sessions
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p = Path('index-ADMIN-v8.html')
+          s = p.read_text(encoding='utf-8')
+          tag = '<script type="module" src="./adm-auth-session-v1.js?v=1"></script>'
+          if 'adm-auth-session-v1.js' not in s:
+              if '</body>' not in s: raise SystemExit('ADM body marker not found')
+              s = s.replace('</body>', tag + '\n</body>', 1)
+          p.write_text(s, encoding='utf-8')
+
+          p = Path('runtime-build-info.js')
+          s = p.read_text(encoding='utf-8').replace("build:'20260825.2'", "build:'20260825.3'")
+          p.write_text(s, encoding='utf-8')
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8').replace('entry=20260825.2', 'entry=20260825.3')
+          p.write_text(s, encoding='utf-8')
+
+      - name: Verify ADM security bridge
+        run: |
+          node --check adm-auth-session-v1.js
+          grep -F 'adm-auth-session-v1.js' index-ADMIN-v8.html
+          grep -F "build:'20260825.3'" runtime-build-info.js
+          grep -F 'entry=20260825.3' index.html
+
+      - name: Commit secure ADM activation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index-ADMIN-v8.html runtime-build-info.js index.html
+          git diff --cached --quiet || git commit -m "Activate secure ADM role sessions"
+          git push origin main
