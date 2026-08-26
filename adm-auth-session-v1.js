@@ -72,19 +72,25 @@ async function secureRegister() {
   if (!email || senha.length < 6) return alert('Informe e-mail e uma senha com pelo menos 6 caracteres.');
   const temp = await temporaryAuth('register');
   let credential = null;
+  let serverCommitted = false;
   try {
     credential = await createUserWithEmailAndPassword(temp.auth, email, senha);
     const idToken = await credential.user.getIdToken(true);
     const session = await workerSession('/family-session/admin-register', idToken, { codigoConvite });
+    serverCommitted = true;
     promotedUid = credential.user.uid;
     await signInWithCustomToken(mainAuth(), session.token);
     window.__rotinaAdminRole = session.papel;
     alert(`Administrador cadastrado!\nCódigo Admin: ${session.codigoAdmin}\nCódigo Cliente: ${session.codigoCliente}`);
     window.rotinaLog?.('auth.adm_cadastrado_seguro', { papel: session.papel, grupoId: session.grupoId || '' });
   } catch (error) {
-    if (credential?.user) await deleteUser(credential.user).catch(() => {});
+    // Só desfaz o usuário do Authentication quando o backend ainda não gravou o cadastro.
+    // Depois do commit no servidor, preservar as duas pontas evita deixar um documento administrativo órfão.
+    if (credential?.user && !serverCommitted) await deleteUser(credential.user).catch(() => {});
     console.warn('Cadastro administrativo seguro:', error);
-    alert(error.message || 'Não foi possível cadastrar o administrador.');
+    alert(serverCommitted
+      ? 'O cadastro foi concluído, mas não foi possível abrir a sessão agora. Entre novamente com o e-mail e a senha cadastrados.'
+      : (error.message || 'Não foi possível cadastrar o administrador.'));
   } finally {
     await closeTemporary(temp);
   }
@@ -124,7 +130,7 @@ function install() {
   window.realizarLogin = secureLogin;
   window.cadastrarNovoAdministrador = secureRegister;
   onAuthStateChanged(mainAuth(), user => promoteExisting(user));
-  window.__rotinaAdminAuthVersion = 1;
+  window.__rotinaAdminAuthVersion = 2;
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, { once: true });
