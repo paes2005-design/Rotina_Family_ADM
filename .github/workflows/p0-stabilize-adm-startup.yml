@@ -19,40 +19,37 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Patch ADM startup guard
+      - name: Patch ADM startup recovery versions
         shell: python
         run: |
           from pathlib import Path
+          import re
+
           p=Path('index-ADMIN-v8.html')
           s=p.read_text(encoding='utf-8')
-          style='''<style id="admStartupStabilityStyle">
-          #admStartupShield{position:fixed;inset:0;z-index:50000;display:grid;place-items:center;background:#f4f7f6;color:#334155;font-family:Segoe UI,Tahoma,sans-serif}
-          #admStartupShield .adm-startup-card{background:#fff;border:1px solid #dbe3ea;border-radius:16px;padding:22px 26px;box-shadow:0 10px 30px rgba(15,23,42,.10);display:grid;justify-items:center;gap:8px;min-width:220px;text-align:center}
-          #admStartupShield .adm-startup-card small{color:#64748b}
-          #admStartupShield .adm-startup-spinner{width:28px;height:28px;border:3px solid #dbeafe;border-top-color:#4a90e2;border-radius:50%;animation:admStartupSpin .8s linear infinite}
-          @keyframes admStartupSpin{to{transform:rotate(360deg)}}
-          </style>'''
-          shield='''<div id="admStartupShield" role="status" aria-live="polite"><div class="adm-startup-card"><div class="adm-startup-spinner"></div><strong id="admStartupText">Carregando painel...</strong><small>Rotina Family ADM</small></div></div>'''
-          script='<script type="module" src="./adm-startup-stability-v1.js?v=1"></script>'
-          if 'admStartupStabilityStyle' not in s:
-              s=s.replace('</head>',style+'\n</head>',1)
-          if 'id="admStartupShield"' not in s:
-              s=s.replace('<body>','<body>\n'+shield,1)
-          if 'adm-startup-stability-v1.js' not in s:
-              s=s.replace('</body>',script+'\n</body>',1)
+          s=re.sub(r'adm-auth-session-v1\.js\?v=\d+', 'adm-auth-session-v1.js?v=6', s)
+          s=re.sub(r'adm-startup-stability-v1\.js\?v=\d+', 'adm-startup-stability-v1.js?v=4', s)
           p.write_text(s,encoding='utf-8')
 
-      - name: Validate patch
-        run: |
-          node --check adm-startup-stability-v1.js
-          grep -q 'admStartupShield' index-ADMIN-v8.html
-          grep -q 'adm-startup-stability-v1.js?v=1' index-ADMIN-v8.html
-          grep -q 'rotina-admin-session-ready' adm-startup-stability-v1.js
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s=re.sub(r'index-ADMIN-v8\.html\?entry=[0-9.]+', 'index-ADMIN-v8.html?entry=20260826.2', s)
+          p.write_text(s,encoding='utf-8')
 
-      - name: Commit patch
+      - name: Validate recovery
+        run: |
+          node --check adm-auth-session-v1.js
+          node --check adm-startup-stability-v1.js
+          grep -q 'adm-auth-session-v1.js?v=6' index-ADMIN-v8.html
+          grep -q 'adm-startup-stability-v1.js?v=4' index-ADMIN-v8.html
+          grep -q 'rotina-adm-auth-retry-requested' adm-auth-session-v1.js
+          grep -q 'MAX_RETRIES = 3' adm-startup-stability-v1.js
+          grep -q 'index-ADMIN-v8.html?entry=20260826.2' index.html
+
+      - name: Commit recovery
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index-ADMIN-v8.html
-          git diff --cached --quiet || git commit -m "Stabilize ADM startup visibility"
+          git add index.html index-ADMIN-v8.html
+          git diff --cached --quiet || git commit -m "Activate ADM startup retry recovery"
           git push origin main
