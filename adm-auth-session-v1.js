@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp, deleteApp } from 'https://www.gstatic.c
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken, signOut, deleteUser, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
 const API_ROOT = 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
+const VERSION = 3;
 let installed = false;
 let promotingUid = '';
 let promotedUid = '';
@@ -44,11 +45,20 @@ async function workerSession(path, idToken, body = {}) {
   return result;
 }
 
+function reloadAfterPromotion(reason = 'promocao') {
+  try {
+    window.rotinaLog?.('auth.adm_recarregando_apos_promocao', { motivo: reason, authVersion: VERSION });
+    sessionStorage.setItem('rotina.adm.role-promoted', String(Date.now()));
+  } catch (_) {}
+  setTimeout(() => location.reload(), 60);
+}
+
 async function secureLogin() {
   const email = clean(document.getElementById('loginEmail')?.value).toLowerCase();
   const senha = clean(document.getElementById('loginSenha')?.value);
   if (!email || !senha) return alert('Informe e-mail e senha.');
   const temp = await temporaryAuth('login');
+  let reload = false;
   try {
     const credential = await signInWithEmailAndPassword(temp.auth, email, senha);
     const idToken = await credential.user.getIdToken(true);
@@ -56,13 +66,15 @@ async function secureLogin() {
     promotedUid = credential.user.uid;
     await signInWithCustomToken(mainAuth(), session.token);
     window.__rotinaAdminRole = session.papel;
-    window.rotinaLog?.('auth.adm_sessao_criada', { papel: session.papel, grupoId: session.grupoId || '' });
+    window.rotinaLog?.('auth.adm_sessao_criada', { papel: session.papel, grupoId: session.grupoId || '', authVersion: VERSION });
+    reload = true;
   } catch (error) {
     console.warn('Login administrativo seguro:', error);
     alert(error.message || 'Acesso negado.');
   } finally {
     await closeTemporary(temp);
   }
+  if (reload) reloadAfterPromotion('login-seguro');
 }
 
 async function secureRegister() {
@@ -73,6 +85,7 @@ async function secureRegister() {
   const temp = await temporaryAuth('register');
   let credential = null;
   let serverCommitted = false;
+  let reload = false;
   try {
     credential = await createUserWithEmailAndPassword(temp.auth, email, senha);
     const idToken = await credential.user.getIdToken(true);
@@ -82,10 +95,9 @@ async function secureRegister() {
     await signInWithCustomToken(mainAuth(), session.token);
     window.__rotinaAdminRole = session.papel;
     alert(`Administrador cadastrado!\nCódigo Admin: ${session.codigoAdmin}\nCódigo Cliente: ${session.codigoCliente}`);
-    window.rotinaLog?.('auth.adm_cadastrado_seguro', { papel: session.papel, grupoId: session.grupoId || '' });
+    window.rotinaLog?.('auth.adm_cadastrado_seguro', { papel: session.papel, grupoId: session.grupoId || '', authVersion: VERSION });
+    reload = true;
   } catch (error) {
-    // Só desfaz o usuário do Authentication quando o backend ainda não gravou o cadastro.
-    // Depois do commit no servidor, preservar as duas pontas evita deixar um documento administrativo órfão.
     if (credential?.user && !serverCommitted) await deleteUser(credential.user).catch(() => {});
     console.warn('Cadastro administrativo seguro:', error);
     alert(serverCommitted
@@ -94,6 +106,7 @@ async function secureRegister() {
   } finally {
     await closeTemporary(temp);
   }
+  if (reload) reloadAfterPromotion('cadastro-seguro');
 }
 
 async function promoteExisting(user) {
@@ -105,14 +118,17 @@ async function promoteExisting(user) {
     if (['adm_familia', 'adm_convidado', 'master'].includes(knownRole)) {
       promotedUid = user.uid;
       window.__rotinaAdminRole = knownRole;
+      try { sessionStorage.removeItem('rotina.adm.role-promoted'); } catch (_) {}
       return;
     }
     const session = await workerSession('/family-session/admin', await user.getIdToken(true));
     promotedUid = user.uid;
     window.__rotinaAdminRole = session.papel;
     await signInWithCustomToken(mainAuth(), session.token);
+    reloadAfterPromotion('restauracao-promovida');
   } catch (error) {
     console.warn('Não foi possível promover a sessão administrativa atual:', error);
+    window.rotinaLog?.('auth.adm_promocao_erro', { mensagem: clean(error?.message || error), authVersion: VERSION }, 'error');
   } finally {
     promotingUid = '';
   }
@@ -130,7 +146,7 @@ function install() {
   window.realizarLogin = secureLogin;
   window.cadastrarNovoAdministrador = secureRegister;
   onAuthStateChanged(mainAuth(), user => promoteExisting(user));
-  window.__rotinaAdminAuthVersion = 2;
+  window.__rotinaAdminAuthVersion = VERSION;
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, { once: true });
