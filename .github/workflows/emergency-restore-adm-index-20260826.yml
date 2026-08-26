@@ -1,0 +1,37 @@
+name: Emergency restore ADM index
+
+on:
+  push:
+    paths:
+      - '.github/workflows/emergency-restore-adm-index-20260826.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore last intact ADM page and load startup guard v2
+        run: |
+          git checkout 9a38ff5f586feb1e0c7893dbef5a56d80b5e4520 -- index-ADMIN-v8.html
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index-ADMIN-v8.html')
+          s=p.read_text()
+          s=s.replace('./adm-startup-stability-v1.js?v=1','./adm-startup-stability-v1.js?v=2')
+          p.write_text(s)
+          PY
+          grep -q 'adm-startup-stability-v1.js?v=2' index-ADMIN-v8.html
+          grep -q 'window.realizarLogin = async' index-ADMIN-v8.html
+      - name: Commit recovery
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index-ADMIN-v8.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'Restore ADM page and break stale session loop'
+          git push
