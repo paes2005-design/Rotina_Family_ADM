@@ -3,7 +3,7 @@
   const INFO=Object.freeze({
     app:'ADM',
     appVersion:'1.0.0',
-    build:'20260825.4',
+    build:'20260826.1',
     htmlVersion:'index-ADMIN-v8',
     rulesModuleVersion:'6',
     expectedServiceWorkerVersion:'59'
