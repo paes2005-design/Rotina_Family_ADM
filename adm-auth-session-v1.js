@@ -2,10 +2,13 @@ import { initializeApp, getApps, getApp, deleteApp } from 'https://www.gstatic.c
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken, signOut, deleteUser, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
 const API_ROOT = 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
-const VERSION = 5;
+const VERSION = 6;
+const MAX_RESTORE_RETRIES = 3;
 let installed = false;
 let promotingUid = '';
 let promotedUid = '';
+let retryRunning = false;
+let retryAttempts = 0;
 
 const clean = value => String(value || '').trim();
 
@@ -45,26 +48,31 @@ async function workerSession(path, idToken, body = {}) {
   return result;
 }
 
+function publishRole(session = {}, reason = '') {
+  window.__rotinaAdminRole = clean(session.papel);
+  window.__rotinaAdminGroupId = clean(session.grupoId).toUpperCase();
+  window.__rotinaAdminAuthBridgeDisabled = false;
+  window.dispatchEvent(new CustomEvent('rotina-adm-role-ready', {
+    detail: { papel: window.__rotinaAdminRole, grupoId: window.__rotinaAdminGroupId, version: VERSION, reason }
+  }));
+}
+
 async function installPromotedSession(session, reason) {
   const auth = mainAuth();
   promotedUid = auth.currentUser?.uid || promotedUid;
   try {
-    // Força uma transição real de estado sem recarregar a página. Isso faz o
-    // listener principal do ADM reconstruir a interface já com authRoles salvo.
+    // Força uma transição real de autenticação para que o listener principal do
+    // ADM reconstrua adminLogadoAtual e inicie novamente as escutas do Firestore.
     if (auth.currentUser) await signOut(auth);
     const credential = await signInWithCustomToken(auth, session.token);
     promotedUid = credential.user.uid;
-    window.__rotinaAdminRole = session.papel;
-    window.__rotinaAdminAuthBridgeDisabled = false;
+    publishRole(session, reason);
     window.rotinaLog?.('auth.adm_sessao_promovida', {
       papel: session.papel,
       grupoId: session.grupoId || '',
       motivo: reason,
       authVersion: VERSION
     });
-    window.dispatchEvent(new CustomEvent('rotina-adm-role-ready', {
-      detail: { papel: session.papel, grupoId: session.grupoId || '', version: VERSION }
-    }));
     return credential.user;
   } catch (error) {
     promotedUid = '';
@@ -83,6 +91,7 @@ async function secureLogin() {
     const idToken = await credential.user.getIdToken(true);
     const session = await workerSession('/family-session/admin', idToken);
     promotedUid = credential.user.uid;
+    retryAttempts = 0;
     await installPromotedSession(session, 'login-seguro');
   } catch (error) {
     console.warn('Login administrativo seguro:', error);
@@ -107,6 +116,7 @@ async function secureRegister() {
     const session = await workerSession('/family-session/admin-register', idToken, { codigoConvite });
     serverCommitted = true;
     promotedUid = credential.user.uid;
+    retryAttempts = 0;
     await installPromotedSession(session, 'cadastro-seguro');
     document.getElementById('novoAdminEmail').value = '';
     document.getElementById('novoAdminSenha').value = '';
@@ -123,16 +133,48 @@ async function secureRegister() {
   }
 }
 
+async function retryCurrentSession(reason = 'startup-retry') {
+  if (retryRunning) return false;
+  const auth = mainAuth();
+  const user = auth.currentUser;
+  if (!user) return false;
+  if (retryAttempts >= MAX_RESTORE_RETRIES) {
+    window.rotinaLog?.('auth.adm_retry_limite', { tentativas: retryAttempts, authVersion: VERSION }, 'warning');
+    return false;
+  }
+
+  retryRunning = true;
+  retryAttempts += 1;
+  try {
+    window.rotinaLog?.('auth.adm_retry_inicio', { tentativa: retryAttempts, motivo: reason, authVersion: VERSION });
+    const session = await workerSession('/family-session/admin', await user.getIdToken(true));
+    promotedUid = '';
+    await installPromotedSession(session, `${reason}-${retryAttempts}`);
+    window.rotinaLog?.('auth.adm_retry_sessao_reinstalada', { tentativa: retryAttempts, authVersion: VERSION });
+    return true;
+  } catch (error) {
+    console.warn('Retry da sessão administrativa falhou:', error);
+    window.rotinaLog?.('auth.adm_retry_erro', {
+      tentativa: retryAttempts,
+      mensagem: clean(error?.message || error),
+      authVersion: VERSION
+    }, 'error');
+    return false;
+  } finally {
+    retryRunning = false;
+  }
+}
+
 async function promoteExisting(user) {
   if (!user || promotingUid === user.uid || promotedUid === user.uid) return;
   promotingUid = user.uid;
   try {
     const idTokenResult = await user.getIdTokenResult();
     const knownRole = String(idTokenResult.claims?.papel || '');
+    const knownGroup = clean(idTokenResult.claims?.grupoId).toUpperCase();
     if (['adm_familia', 'adm_convidado', 'master'].includes(knownRole)) {
       promotedUid = user.uid;
-      window.__rotinaAdminRole = knownRole;
-      window.__rotinaAdminAuthBridgeDisabled = false;
+      publishRole({ papel: knownRole, grupoId: knownGroup }, 'claims-existentes');
       return;
     }
     const session = await workerSession('/family-session/admin', await user.getIdToken(true));
@@ -160,8 +202,18 @@ function install() {
   window.__rotinaCadastroAdminLegado = window.cadastrarNovoAdministrador;
   window.realizarLogin = secureLogin;
   window.cadastrarNovoAdministrador = secureRegister;
+  window.rotinaForcarRestauracaoAdm = () => retryCurrentSession('manual');
   window.__rotinaAdminAuthVersion = VERSION;
   window.__rotinaAdminAuthBridgeDisabled = false;
+
+  window.addEventListener('rotina-adm-auth-retry-requested', event => {
+    retryCurrentSession(event?.detail?.reason || 'startup-retry').catch(() => {});
+  });
+  window.addEventListener('rotina-admin-session-ready', () => {
+    retryAttempts = 0;
+    window.__rotinaAdmSessionReady = true;
+  });
+
   onAuthStateChanged(mainAuth(), user => promoteExisting(user));
 }
 
