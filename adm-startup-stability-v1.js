@@ -1,12 +1,14 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
-const VERSION = 3;
+const VERSION = 4;
+const MAX_RETRIES = 3;
 const startedAt = performance.now();
 let authenticated = false;
 let sessionReady = false;
 let blankSince = 0;
-let slowSessionReported = false;
+let retryCount = 0;
+let authGeneration = 0;
 
 const log = (event, details = {}, level = 'info') => {
   try { window.rotinaLog?.(event, { ...details, startupStabilityVersion: VERSION }, level); } catch {}
@@ -73,7 +75,7 @@ function ensureSomethingVisible(reason = 'check') {
 function markSessionReady(event) {
   sessionReady = true;
   authenticated = true;
-  slowSessionReported = false;
+  retryCount = 0;
   const elapsed = Math.round(performance.now() - startedAt);
   log('startup.adm_sessao_pronta', { ms: elapsed, grupoId: String(event?.detail?.grupoId || '').slice(0, 32) });
   requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -85,18 +87,35 @@ function markSessionReady(event) {
   }));
 }
 
-function reportSlowSession(auth) {
-  if (sessionReady || !auth.currentUser) return;
-  if (!slowSessionReported) {
-    slowSessionReported = true;
-    log('startup.adm_sessao_lenta_preservada', {
-      ms: Math.round(performance.now() - startedAt),
-      uid: String(auth.currentUser.uid || '').slice(0, 24)
-    }, 'warning');
-    window.dispatchEvent(new CustomEvent('rotina-adm-auth-retry-requested', { detail: { version: VERSION } }));
-  }
-  show('Restaurando seu painel...');
-  ensureSomethingVisible('sessao-lenta-preservada');
+function requestRetry(auth, generation) {
+  if (generation !== authGeneration || sessionReady || !auth.currentUser) return;
+  if (retryCount >= MAX_RETRIES) return;
+  retryCount += 1;
+  show(`Restaurando seu painel... (${retryCount}/${MAX_RETRIES})`);
+  log('startup.adm_retry_solicitado', {
+    tentativa: retryCount,
+    ms: Math.round(performance.now() - startedAt),
+    uid: String(auth.currentUser.uid || '').slice(0, 24)
+  }, 'warning');
+  window.dispatchEvent(new CustomEvent('rotina-adm-auth-retry-requested', {
+    detail: { version: VERSION, tentativa: retryCount, reason: 'startup-guard' }
+  }));
+}
+
+function scheduleRecovery(auth, generation) {
+  [2200, 5200, 9000].forEach(delay => {
+    setTimeout(() => requestRetry(auth, generation), delay);
+  });
+  setTimeout(async () => {
+    if (generation !== authGeneration || sessionReady || !auth.currentUser) return;
+    log('startup.adm_restauracao_esgotada', {
+      tentativas: retryCount,
+      ms: Math.round(performance.now() - startedAt)
+    }, 'error');
+    show('Não foi possível restaurar sua sessão. Voltando ao login...');
+    try { await signOut(auth); } catch {}
+    showLogin();
+  }, 13000);
 }
 
 function installAuthWatch(attempt = 0) {
@@ -107,18 +126,16 @@ function installAuthWatch(attempt = 0) {
   }
   const auth = getAuth(getApp());
   onAuthStateChanged(auth, user => {
+    authGeneration += 1;
+    const generation = authGeneration;
     authenticated = !!user;
     log('startup.adm_auth_resolvido', { autenticado: authenticated, ms: Math.round(performance.now() - startedAt) });
     if (user) {
       if (!sessionReady) show('Restaurando seu painel...');
-      setTimeout(() => {
-        if (!sessionReady && !visible(document.getElementById('sistemaPrincipal'))) reportSlowSession(auth);
-        else ensureSomethingVisible('auth-com-usuario');
-      }, 2500);
-      setTimeout(() => {
-        if (!sessionReady && auth.currentUser) reportSlowSession(auth);
-      }, 8000);
+      scheduleRecovery(auth, generation);
+      setTimeout(() => ensureSomethingVisible('auth-com-usuario'), 400);
     } else {
+      retryCount = 0;
       showLogin();
     }
   });
