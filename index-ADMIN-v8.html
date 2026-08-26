@@ -1,1 +1,1661 @@
-__PLACEHOLDER__
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Rotina Family ADM</title>
+
+    <link rel="manifest" href="manifest.json?v=34">
+    <meta name="theme-color" content="#4a90e2">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Rotina Family ADM">
+    <link rel="apple-touch-icon" href="icon-administrador-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-administrador-192.png">
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script src="./admin-push-onesignal.js?v=1" defer></script>
+
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --primary-dark: #357abd;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --card-bg: #fff;
+            --border-color: #ddd;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        #telaAcesso {
+            max-width: 440px;
+            margin: 50px auto;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .auth-nav {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .auth-tab-btn {
+            background: #e2e8f0;
+            border: none;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 6px;
+            color: #4a5568;
+            transition: background 0.2s;
+        }
+
+        .auth-tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .auth-form-panel {
+            display: none;
+            text-align: left;
+        }
+
+        .auth-form-panel.active {
+            display: block;
+        }
+
+        #sistemaPrincipal {
+            display: none;
+        }
+
+        .codigo-familia-box {
+            background: #eef2f7;
+            border: 2px dashed var(--primary);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            text-align: center;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .codigo-familia-box div {
+            flex: 1;
+            min-width: 140px;
+        }
+        .codigo-familia-box span {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .codigo-familia-box h1 {
+            margin: 5px 0 0 0;
+            font-size: 26px;
+            letter-spacing: 1px;
+        }
+
+        .tab-nav {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .tab-btn {
+            background-color: #e0e0e0;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .tab-btn.active {
+            background-color: var(--primary);
+            color: #fff;
+        }
+
+        .tab-content {
+            display: none;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .task-icon-name-field {
+            display: grid;
+            grid-template-columns: 150px minmax(0, 1fr);
+            gap: 10px;
+            align-items: center;
+        }
+        .task-icon-select {
+            font-size: 16px;
+            font-weight: 700;
+        }
+        .task-icon-cell {
+            display: inline-block;
+            min-width: 1.5em;
+            margin-right: 4px;
+            font-size: 1.15em;
+            line-height: 1;
+            vertical-align: -0.08em;
+        }
+        @media (max-width: 520px) {
+            .task-icon-name-field { grid-template-columns: 116px minmax(0, 1fr); }
+            .task-icon-select { padding-left: 8px; padding-right: 6px; }
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        input[type="text"], input[type="password"], input[type="time"], input[type="date"], select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .weekdays-container {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+
+        .weekday-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #fff;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        button.btn-action {
+            background-color: #4a5568;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+        }
+
+        button.btn-action:hover {
+            background-color: #2d3748;
+        }
+
+        .link-recuperar {
+            display: block;
+            margin-top: 15px;
+            color: #4a5568;
+            font-size: 13px;
+            text-decoration: none;
+            cursor: pointer;
+            text-align: center;
+        }
+        .link-recuperar:hover {
+            text-decoration: underline;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8f9fa;
+        }
+
+        .badge {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+        .badge-ok { background-color: var(--success); }
+        .badge-75 { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+        .badge-50 { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
+        .badge-atraso { background-color: var(--warning); color: #333; }
+        .badge-falta { background-color: var(--danger); }
+        .badge-andamento { background-color: var(--primary); }
+        .badge-pendente { background-color: #6c757d; }
+
+        /* Observação fantasma da justificativa de atraso, na coluna de horas */
+        .tooltip-justificativa {
+            position: relative;
+            cursor: help;
+            margin-left: 6px;
+            color: var(--danger);
+            font-size: 11px;
+            border-bottom: 1px dashed var(--danger);
+        }
+        .tooltip-justificativa .tooltip-texto {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            bottom: 130%;
+            left: 0;
+            background: #333;
+            color: #fff;
+            text-align: left;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: normal;
+            white-space: normal;
+            width: 200px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            z-index: 20;
+            transition: opacity 0.15s ease;
+        }
+        .tooltip-justificativa:hover .tooltip-texto {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .tabela-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .tabela-scroll table { min-width: 640px; }
+
+        .secao-pontuacao { margin: 5px 0 25px; }
+        .secao-pontuacao h3 { font-size: 15px; color: #555; margin-bottom: 10px; }
+        .dash-cards-admin { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+        .card-pontuacao { background: var(--bg-color); padding: 15px; border-radius: 16px; text-align: center; border: 1px solid #d7e3f0; }
+        .card-pontuacao span { font-size: 0.8rem; color: var(--primary); display: block; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+        .card-pontuacao strong { font-size: 1.4rem; color: var(--text-color); }
+        .card-pontuacao strong small { font-size: 0.85rem; color: #999; font-weight: 500; }
+        .ranking-item, .recompensa-item, .resgate-item { background:#fff; border:1px solid var(--border-color); border-radius:10px; padding:12px; margin:8px 0; }
+        .progress-track { height:10px; background:#e9ecef; border-radius:10px; overflow:hidden; margin-top:8px; }
+        .progress-fill { height:100%; background:var(--primary); }
+        audio { max-width:240px; width:100%; vertical-align:middle; }
+        @media (max-width: 480px) {
+            .dash-cards-admin { grid-template-columns: 1fr; }
+        }
+    </style>
+    <link rel="stylesheet" href="./dashboard-ranking-pro.css">
+<style id="admStartupStabilityStyle">
+#admStartupShield{position:fixed;inset:0;z-index:50000;display:grid;place-items:center;background:#f4f7f6;color:#334155;font-family:Segoe UI,Tahoma,sans-serif}
+#admStartupShield .adm-startup-card{background:#fff;border:1px solid #dbe3ea;border-radius:16px;padding:22px 26px;box-shadow:0 10px 30px rgba(15,23,42,.10);display:grid;justify-items:center;gap:8px;min-width:220px;text-align:center}
+#admStartupShield .adm-startup-card small{color:#64748b}
+#admStartupShield .adm-startup-spinner{width:28px;height:28px;border:3px solid #dbeafe;border-top-color:#4a90e2;border-radius:50%;animation:admStartupSpin .8s linear infinite}
+@keyframes admStartupSpin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="admStartupShield" role="status" aria-live="polite"><div class="adm-startup-card"><div class="adm-startup-spinner"></div><strong id="admStartupText">Carregando painel...</strong><small>Rotina Family ADM</small></div></div>
+
+    <div id="telaAcesso">
+        <h2>Painel do Administrador</h2>
+
+        <div class="auth-nav">
+            <button class="auth-tab-btn active" onclick="mudarAuthTab('entrar', event)">Entrar</button>
+            <button class="auth-tab-btn" onclick="mudarAuthTab('cadastrar', event)">Novo Administrador</button>
+        </div>
+
+        <div id="authEntrar" class="auth-form-panel active">
+            <div class="form-group">
+                <label>E-mail Administrativo:</label>
+                <input type="text" id="loginEmail">
+            </div>
+            <div class="form-group">
+                <label>Senha:</label>
+                <input type="password" id="loginSenha">
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="verSenhaLogin" onclick="toggleSenha('loginSenha')">
+                <label for="verSenhaLogin" style="margin:0; cursor:pointer;">Visualizar senha</label>
+            </div>
+            <button class="btn-action" onclick="realizarLogin()">Entrar no Sistema</button>
+            <a class="link-recuperar" onclick="esqueciSenha()">🔑 Esqueci minha senha</a>
+        </div>
+
+        <div id="authCadastrar" class="auth-form-panel">
+            <div class="form-group">
+                <label>Novo E-mail Administrativo:</label>
+                <input type="text" id="novoAdminEmail">
+            </div>
+            <div class="form-group">
+                <label>Definir Senha de Acesso:</label>
+                <input type="password" id="novoAdminSenha">
+            </div>
+            <div class="form-group">
+                <label>Código de Convite (Opcional):</label>
+                <input type="text" id="novoAdminConvite" placeholder="Ex: ADM-1234 (Deixe vazio para nova conta)">
+            </div>
+            <button class="btn-action" onclick="cadastrarNovoAdministrador()" style="background-color: var(--primary);">Registrar Administrador</button>
+        </div>
+    </div>
+
+    <div id="sistemaPrincipal">
+        <header>
+            <h1>Espaço de Metas</h1>
+            <p>Controle automatizado de prazos, pontuações e regras</p>
+            <button onclick="realizarLogout()" style="background:none; border:none; color:var(--primary); cursor:pointer; font-weight:bold; margin-top:5px;">🚪 Sair / Trocar Usuário</button>
+        </header>
+
+        <div class="tab-nav" style="flex-wrap:wrap;">
+            <button class="tab-btn active" onclick="mudarAba('cadastro', event)">Cadastro</button>
+            <button class="tab-btn" onclick="mudarAba('monitor', event)">Monitor</button>
+            <button class="tab-btn" onclick="mudarAba('dashboard', event)">Dashboard</button>
+            <button class="tab-btn" onclick="mudarAba('recompensas', event)">Recompensas</button>
+        </div>
+
+        <div id="cadastro" class="tab-content active">
+
+            <div class="codigo-familia-box">
+                <div>
+                    <span>Cód. Convite Admin</span>
+                    <h1 id="displayCodigoAdmin" style="color: #e53e3e;">--</h1>
+                </div>
+                <div style="border-left: 1px dashed var(--primary); padding-left: 10px;">
+                    <span>Cód. Acesso Cliente</span>
+                    <h1 id="displayCodigoCliente" style="color: #3182ce;">--</h1>
+                </div>
+            </div>
+
+            <h2>Gerenciamento de Cadastros</h2>
+
+            <div style="background: #fafafa; padding: 15px; border-radius: 6px; margin-bottom: 25px; border-left: 4px solid var(--primary);">
+                <h3>Gerenciar Clientes Autorizados</h3>
+                <div class="form-group">
+                    <label for="nomeCliente">Nome do Integrante:</label>
+                    <input type="text" id="nomeCliente">
+                </div>
+                <div class="form-group">
+                    <label for="sexoCliente">Sexo / Tema:</label>
+                    <select id="sexoCliente">
+                        <option value="Masculino">Masculino (Azul)</option>
+                        <option value="Feminino">Feminino (Rosa)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="pinCliente">PIN do Integrante (4 a 6 dígitos):</label>
+                    <input type="password" inputmode="numeric" maxlength="6" id="pinCliente" placeholder="Ex: 2486">
+                    <small style="color:#777">O PIN impede que outro integrante entre neste perfil.</small>
+                </div>
+                <button class="btn-action" onclick="salvarCliente()" style="width: auto;">Cadastrar Cliente no Grupo</button>
+            </div>
+
+            <div style="background: #fafafa; padding: 15px; border-radius: 6px; margin-bottom: 25px; border-left: 4px solid #805ad5;">
+                <h3>PIN dos Integrantes</h3>
+                <p style="font-size:13px;color:#666;margin-top:-4px;">Use esta área para definir um PIN nos integrantes antigos ou trocar o PIN quando necessário.</p>
+                <div id="listaPinsIntegrantes"></div>
+            </div>
+
+            <div style="background: #fafafa; padding: 15px; border-radius: 6px; margin-bottom: 25px; border-left: 4px solid var(--primary);">
+                <h3 id="tituloFormTarefa">Cadastrar Meta / Tarefa</h3>
+                <input type="hidden" id="editTarefaId" value="">
+                <div class="form-group">
+                    <label for="tarefaResponsavel">Integrante:</label>
+                    <select id="tarefaResponsavel">
+                        <option value="">Selecione um cliente autorizado</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="nomeTarefa">Ícone e Nome da Meta / Tarefa:</label>
+                    <div class="task-icon-name-field">
+                        <select id="iconeTarefa" class="task-icon-select" aria-label="Escolher ícone da tarefa">
+                            <option value="✅">✅ Geral</option>
+                            <option value="🎮">🎮 Videogame</option>
+                            <option value="📺">📺 TV</option>
+                            <option value="🧸">🧸 Brincar</option>
+                            <option value="📱">📱 Celular</option>
+                            <option value="💻">💻 Computador</option>
+                            <option value="🛏️">🛏️ Cama / Dormir</option>
+                            <option value="🪥">🪥 Dentes</option>
+                            <option value="🚿">🚿 Banho</option>
+                            <option value="📖">📖 Leitura</option>
+                            <option value="🎒">🎒 Mochila</option>
+                            <option value="📚">📚 Estudo</option>
+                            <option value="🧹">🧹 Limpeza</option>
+                            <option value="🍽️">🍽️ Louça</option>
+                            <option value="👕">👕 Roupas</option>
+                            <option value="🗑️">🗑️ Lixo</option>
+                            <option value="🐾">🐾 Pet</option>
+                            <option value="💊">💊 Remédio</option>
+                            <option value="🏃">🏃 Exercício</option>
+                            <option value="🍴">🍴 Alimentação</option>
+                            <option value="🙏">🙏 Oração</option>
+                            <option value="🎵">🎵 Música</option>
+                            <option value="🚗">🚗 Transporte</option>
+                            <option value="🛒">🛒 Compras</option>
+                        </select>
+                        <input type="text" id="nomeTarefa" placeholder="Digite o nome que quiser">
+                    </div>
+                    <small style="color:#777">O nome é livre. O ícone é escolhido separadamente e não depende do texto.</small>
+                </div>
+                <div class="form-group" id="blocoDiasSemana">
+                    <label>Dias da Semana (a tarefa se repete nesses dias):</label>
+                    <div class="weekdays-container">
+                        <label class="weekday-checkbox"><input type="checkbox" class="dia-semana-check" value="Domingo"> Dom</label>
+                        <label class="weekday-checkbox"><input type="checkbox" class="dia-semana-check" value="Segunda"> Seg</label>
+                        <label class="weekday-checkbox"><input type="checkbox" class="dia-semana-check" value="Terça"> Ter</label>
+                        <label class="weekday-checkbox"><input type="checkbox" class="dia-semana-check" value="Quarta"> Qua</label>
+                        <label class="weekday-checkbox"><input type="checkbox" class="dia-semana-check" value="Quinta"> Qui</label>
+                        <label class="weekday-checkbox"><input type="checkbox" class="dia-semana-check" value="Sexta"> Sex</label>
+                        <label class="weekday-checkbox"><input type="checkbox" class="dia-semana-check" value="Sábado"> Sáb</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="horarioInicioSugerido">Hora Sugerida Início:</label>
+                    <input type="time" id="horarioInicioSugerido" value="08:00">
+                </div>
+                <div class="form-group">
+                    <label for="horarioFimSugerido">Hora Sugerida Fim:</label>
+                    <input type="time" id="horarioFimSugerido" value="08:30">
+                </div>
+                <div class="form-group">
+                    <label for="toleranciaTarefa">Tolerância (minutos):</label>
+                    <input type="text" id="toleranciaTarefa" value="10">
+                </div>
+                <div class="form-group">
+                    <label for="pontosMeta">Pontos Máximos:</label>
+                    <input type="text" id="pontosMeta" value="20">
+                </div>
+                <div class="form-group">
+                    <label for="justificativaObrigatoria">Justificativa em caso de atraso:</label>
+                    <select id="justificativaObrigatoria">
+                        <option value="sim" selected>Obrigatória</option>
+                        <option value="nao">Opcional</option>
+                    </select>
+                    <small style="color:#777">Se for opcional, o integrante poderá escolher se deseja justificar o atraso.</small>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-action" id="btnSalvarTarefa" onclick="salvarTarefa()" style="width: auto;">Salvar Tarefa</button>
+                    <button class="btn-action" id="btnCancelarEdicao" onclick="cancelarEdicaoTarefa()" style="width: auto; background-color: #6c757d; display: none;">Cancelar Edição</button>
+                </div>
+            </div>
+
+            <div style="background:#f7fbff;padding:15px;border-radius:8px;margin-bottom:25px;border-left:4px solid #2563eb;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+                    <div>
+                        <h3 style="margin:0 0 5px">Regra de pontuação por atraso</h3>
+                        <p style="margin:0;color:#666;font-size:13px">A regra padrão é 100% / 75% / 50% / 0%. Você pode personalizar os percentuais da família.</p>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <button class="btn-action" style="width:auto;background:#2563eb" onclick="abrirConfiguracaoRegraAtraso()">⚙️ Mudar regra</button>
+                        <button class="btn-action" style="width:auto;background:#64748b" onclick="alternarExplicacaoRegraAtrasoAdmin()">ℹ️ Entender a regra</button>
+                    </div>
+                </div>
+                <div id="explicacaoRegraAtrasoAdmin" style="display:none;margin-top:12px;padding:12px;background:white;border:1px solid #dbeafe;border-radius:8px;color:#334155;font-size:13px"></div>
+            </div>
+
+            <div style="background: #fafafa; padding: 15px; border-radius: 6px; border-left: 4px solid var(--danger);">
+                <h3>Gerenciar / Excluir Tarefas Cadastradas</h3>
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label for="filtroExclusaoIntegrante">Integrante:</label>
+                        <select id="filtroExclusaoIntegrante" onchange="renderizarTabelaExclusao()">
+                            <option value="">Todos os Integrantes</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="filtroExclusaoDia">Dia da Semana:</label>
+                        <select id="filtroExclusaoDia" onchange="renderizarTabelaExclusao()">
+                            <option value="">Todos os dias</option>
+                            <option value="Domingo">Domingo</option>
+                            <option value="Segunda">Segunda-feira</option>
+                            <option value="Terça">Terça-feira</option>
+                            <option value="Quarta">Quarta-feira</option>
+                            <option value="Quinta">Quinta-feira</option>
+                            <option value="Sexta">Sexta-feira</option>
+                            <option value="Sábado">Sábado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="tabela-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Horário sugerido / Tolerância</th>
+                            <th>Tarefa</th>
+                            <th>Integrante</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyExclusao">
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #777;">Nenhuma tarefa encontrada.</td>
+                        </tr>
+                    </tbody>
+                </table>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="monitor" class="tab-content">
+            <h2>Monitor de Tarefas Ativas</h2>
+
+            <div style="display: flex; gap: 15px; margin-bottom: 5px;">
+                <div style="flex: 1;">
+                    <label for="filtroIntegrante">Filtrar por Integrante:</label>
+                    <select id="filtroIntegrante" onchange="atualizarMonitor()">
+                        <option value="">Todos os Integrantes</option>
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label for="filtroData">Ver tarefas do dia da semana de:</label>
+                    <input type="date" id="filtroData" onchange="atualizarMonitor()">
+                </div>
+            </div>
+            <p style="font-size: 12px; color: #777; margin-bottom: 20px;">As metas se repetem toda semana no mesmo dia da semana.</p>
+
+            <div class="secao-pontuacao" id="secaoPontuacaoMonitor" style="display:none;">
+                <h3>Pontuação de <span id="nomeIntegrantePontuacao"></span></h3>
+                <div class="dash-cards-admin">
+                    <div class="card-pontuacao"><span id="labelDiaPontuacao">Hoje</span><strong><span id="admPtsHoje">0</span><small id="admPossivelHoje"> / 0 pts</small></strong></div>
+                    <div class="card-pontuacao"><span>Semana</span><strong><span id="admPtsSemana">0</span><small id="admPossivelSemana"> / 0 pts</small></strong></div>
+                    <div class="card-pontuacao"><span>Mês</span><strong><span id="admPtsMes">0</span><small id="admPossivelMes"> / 0 pts</small></strong></div>
+                </div>
+            </div>
+
+            <div class="tabela-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Início / Fim (Sugerido vs Real)</th>
+                        <th>Tarefa</th>
+                        <th>Integrante</th>
+                        <th>Dia da Semana</th>
+                        <th>Status</th>
+                        <th>Pontos</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyMonitor">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #777;">Nenhum registro encontrado.</td>
+                    </tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+
+        <div id="dashboard" class="tab-content">
+            <h2>Dashboard Familiar</h2>
+            <p style="color:#666">Visão consolidada da família por dia, semana e mês.</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:15px 0">
+                <div><label for="dashboardDataRef">Data de referência</label><input type="date" id="dashboardDataRef" onchange="renderizarDashboard()"></div>
+                <div><label for="dashboardPerfil">Filtrar integrante</label><select id="dashboardPerfil" onchange="renderizarDashboard()"><option value="">Todos</option></select></div>
+            </div>
+            <div id="dashboardFamilia" class="dash-cards-admin"></div>
+            <div style="margin-top:25px"><h3>Ranking Diário</h3><div id="rankingDiario"></div></div>
+            <div style="margin-top:25px"><h3>Ranking Semanal</h3><div id="rankingFamilia"></div></div>
+            <div style="margin-top:25px"><h3>Ranking Mensal</h3><div id="rankingMensal"></div></div>
+        </div>
+
+        <div id="recompensas" class="tab-content">
+            <h2>Recompensas</h2>
+            <div style="background:#fafafa;padding:15px;border-radius:8px;border-left:4px solid var(--success);margin-bottom:20px">
+                <div class="form-group"><label for="recompensaNome">Recompensa:</label><input type="text" id="recompensaNome" placeholder="Ex: Escolher o filme"></div>
+                <div class="form-group"><label for="recompensaPontos">Custo em pontos:</label><input type="text" id="recompensaPontos" placeholder="Ex: 500"></div>
+                <button class="btn-action" style="width:auto;background:var(--success)" onclick="salvarRecompensa()">Adicionar recompensa</button>
+            </div>
+            <h3>Catálogo</h3><div id="listaRecompensasAdmin"></div>
+            <h3 style="margin-top:25px">Pedidos de Resgate</h3><div id="listaResgatesAdmin"></div>
+        </div>
+    </div>
+
+<div id="modalRegraAtrasoAdmin" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;align-items:center;justify-content:center;padding:16px">
+  <div style="background:white;max-width:520px;width:100%;border-radius:16px;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,.25)">
+    <h2 style="margin-top:0">Configurar regra de atraso</h2>
+    <p style="color:#666;font-size:13px">Defina a porcentagem dos pontos em cada faixa. A janela de recuperação após zerar a tolerância é fixa em 25% no total: 12,5% na primeira faixa e 12,5% na segunda.</p>
+    <div class="form-group"><label>Dentro dos limites (%)</label><input id="regraPct100" type="number" min="0" max="100" value="100"></div>
+    <div class="form-group"><label>Primeiros +12,5% após zerar (%)</label><input id="regraPct75" type="number" min="0" max="100" value="75"></div>
+    <div class="form-group"><label>Próximos +12,5% (%)</label><input id="regraPct50" type="number" min="0" max="100" value="50"></div>
+    <div class="form-group"><label>Após +25% adicional</label><div style="padding:10px;border:1px solid #ddd;border-radius:6px;background:#f8fafc"><strong>0% fixo</strong> — ao completar 25% adicional além da tolerância, a pontuação automática zera.</div><input id="regraPct0" type="hidden" value="0"></div>
+    <div id="previewRegraAtrasoAdmin" style="padding:10px;background:#f8fafc;border-radius:8px;font-size:13px;margin:10px 0"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn-action" style="width:auto;background:#64748b" onclick="fecharConfiguracaoRegraAtraso()">Cancelar</button>
+      <button class="btn-action" style="width:auto;background:#2563eb" onclick="salvarConfiguracaoRegraAtraso()">Salvar regra</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, where, onSnapshot, addDoc, getDocs, writeBatch, doc, deleteDoc, updateDoc, getDoc, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCP9odEV8TJGOM4lflHk64BbPyXXVjGcYg",
+        authDomain: "sistema-de-metas-diarias.firebaseapp.com",
+        projectId: "sistema-de-metas-diarias",
+        storageBucket: "sistema-de-metas-diarias.firebasestorage.app",
+        messagingSenderId: "576624564310",
+        appId: "1:576624564310:web:fb2115a0c21659fefb83f7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+    const auth = getAuth(app);
+
+    const REGRA_ATRASO_PADRAO = { dentroLimites:100, atrasoLeve:75, atrasoMaior:50, estourado:0 };
+    let regraAtrasoAtual = { ...REGRA_ATRASO_PADRAO };
+
+    function normalizarRegraAtraso(valor={}) {
+        const r = valor.regraAtraso || valor || {};
+        const n = (v,p)=>Number.isFinite(Number(v)) ? Math.max(0,Math.min(100,Number(v))) : p;
+        return {
+            dentroLimites:n(r.dentroLimites,100),
+            atrasoLeve:n(r.atrasoLeve,75),
+            atrasoMaior:n(r.atrasoMaior,50),
+            estourado:0
+        };
+    }
+    function textoRegraAtraso(r=regraAtrasoAtual){
+        return `<strong>Regra atual: ${r.dentroLimites}% / ${r.atrasoLeve}% / ${r.atrasoMaior}% / ${r.estourado}%.</strong><br>`+
+        `• O saldo consumido é a soma do atraso no início com o atraso no término.<br>`+
+        `• Enquanto o saldo estiver acima de 00:00: <strong>${r.dentroLimites}%</strong> dos pontos.<br>`+
+        `• Ao chegar a 00:00 e durante os primeiros +12,5%: <strong>${r.atrasoLeve}%</strong>.<br>`+
+        `• Nos próximos +12,5% (até +25% adicional no total): <strong>${r.atrasoMaior}%</strong>.<br>`+
+        `• Ao completar +25% adicional: <strong>${r.estourado}%</strong>.<br><small>Exemplo com tolerância de 10 min: 100% até 09:59; 75% de 10:00 a 11:14; 50% de 11:15 a 12:29; em 12:30 = 0%. As transições usam segundos exatos.</small>`;
+    }
+    function atualizarExplicacaoRegraAtrasoAdmin(){
+        const el=document.getElementById('explicacaoRegraAtrasoAdmin'); if(el) el.innerHTML=textoRegraAtraso();
+        const prev=document.getElementById('previewRegraAtrasoAdmin'); if(prev) prev.innerHTML=textoRegraAtraso({
+            dentroLimites:Number(document.getElementById('regraPct100')?.value ?? regraAtrasoAtual.dentroLimites),
+            atrasoLeve:Number(document.getElementById('regraPct75')?.value ?? regraAtrasoAtual.atrasoLeve),
+            atrasoMaior:Number(document.getElementById('regraPct50')?.value ?? regraAtrasoAtual.atrasoMaior),
+            estourado:0
+        });
+    }
+    async function carregarRegraAtraso(){
+        const gId=adminLogadoAtual?.codigoCliente || adminLogadoAtual?.grupoId; if(!gId) return;
+        try { const snap=await getDoc(doc(db,'configGrupos',gId)); regraAtrasoAtual=normalizarRegraAtraso(snap.exists()?snap.data():{}); }
+        catch(e){ console.error('Falha ao carregar regra de atraso',e); regraAtrasoAtual={...REGRA_ATRASO_PADRAO}; }
+        atualizarExplicacaoRegraAtrasoAdmin();
+    }
+    window.alternarExplicacaoRegraAtrasoAdmin=()=>{ const el=document.getElementById('explicacaoRegraAtrasoAdmin'); if(!el)return; el.style.display=el.style.display==='none'?'block':'none'; atualizarExplicacaoRegraAtrasoAdmin(); };
+    window.abrirConfiguracaoRegraAtraso=()=>{
+        ['100','75','50','0'].forEach((suf,i)=>{ const vals=[regraAtrasoAtual.dentroLimites,regraAtrasoAtual.atrasoLeve,regraAtrasoAtual.atrasoMaior,regraAtrasoAtual.estourado]; const el=document.getElementById('regraPct'+suf); if(el) el.value=vals[i]; });
+        atualizarExplicacaoRegraAtrasoAdmin(); document.getElementById('modalRegraAtrasoAdmin').style.display='flex';
+    };
+    window.fecharConfiguracaoRegraAtraso=()=>{ document.getElementById('modalRegraAtrasoAdmin').style.display='none'; };
+    window.salvarConfiguracaoRegraAtraso=async()=>{
+        const nova={dentroLimites:Number(document.getElementById('regraPct100').value),atrasoLeve:Number(document.getElementById('regraPct75').value),atrasoMaior:Number(document.getElementById('regraPct50').value),estourado:0};
+        if(Object.values(nova).some(v=>!Number.isFinite(v)||v<0||v>100)) return alert('Use percentuais entre 0 e 100.');
+        if(!(nova.dentroLimites>=nova.atrasoLeve && nova.atrasoLeve>=nova.atrasoMaior && nova.atrasoMaior>=nova.estourado)) return alert('Os percentuais precisam ficar em ordem decrescente: primeira faixa ≥ segunda ≥ terceira ≥ estourado.');
+        const gId=adminLogadoAtual?.codigoCliente || adminLogadoAtual?.grupoId; if(!gId)return;
+        await setDoc(doc(db,'configGrupos',gId),{grupoId:gId,regraAtraso:nova,regraAtrasoAtualizadaEm:new Date().toISOString()},{merge:true});
+        regraAtrasoAtual=nova; atualizarExplicacaoRegraAtrasoAdmin(); fecharConfiguracaoRegraAtraso(); alert('Regra de atraso atualizada. O aplicativo Cliente receberá a nova regra automaticamente.');
+    };
+    document.addEventListener('input',e=>{ if(['regraPct100','regraPct75','regraPct50'].includes(e.target?.id)) atualizarExplicacaoRegraAtrasoAdmin(); });
+
+    async function hashPin(pin) {
+        const data = new TextEncoder().encode(pin);
+        const digest = await crypto.subtle.digest('SHA-256', data);
+        return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    let adminLogadoAtual = null;
+    let perfisCache = [];
+    let tarefasCache = [];
+    let unsubscribePerfis = null;
+    let unsubscribeTarefasAdmin = null;
+    let unsubscribeHistoricoAdmin = null;
+    let integranteHistoricoAtual = null;
+    let historicoAdminCache = [];
+    let historicoGrupoCache = [];
+    let recompensasCache = [];
+    let resgatesCache = [];
+    let unsubscribeHistoricoGrupo = null;
+    let unsubscribeRecompensas = null;
+    let unsubscribeResgates = null;
+
+    const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+    document.getElementById('filtroData').valueAsDate = new Date();
+    const dashData=document.getElementById('dashboardDataRef'); if(dashData) dashData.value=formatarDataISO(new Date());
+
+
+    function formatarDataISO(d) {
+        const ano = d.getFullYear();
+        const mes = String(d.getMonth() + 1).padStart(2, '0');
+        const dia = String(d.getDate()).padStart(2, '0');
+        return `${ano}-${mes}-${dia}`;
+    }
+
+    function escaparHtml(texto) {
+        return String(texto ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function novoId(prefixo='id') {
+        return `${prefixo}_${(crypto.randomUUID ? crypto.randomUUID() : Date.now()+Math.random().toString(16).slice(2))}`;
+    }
+
+    function obterInicioSemana(dataRef = new Date()) {
+        const d = new Date(dataRef);
+        d.setHours(0, 0, 0, 0);
+        d.setDate(d.getDate() - d.getDay()); 
+        return d;
+    }
+
+    function contarOcorrenciasNoMes(diaSemanaTexto, ano, mes) {
+        const indiceDia = diasSemana.indexOf(diaSemanaTexto);
+        const totalDiasNoMes = new Date(ano, mes + 1, 0).getDate();
+        let contagem = 0;
+        for (let dia = 1; dia <= totalDiasNoMes; dia++) {
+            if (new Date(ano, mes, dia).getDay() === indiceDia) contagem++;
+        }
+        return contagem;
+    }
+
+    async function verificarEExecutarResetSemanal(grupoId) {
+        try {
+            const refConfig = doc(db, "configGrupos", grupoId);
+            const snapConfig = await getDoc(refConfig);
+            const dadosConfig = snapConfig.exists() ? snapConfig.data() : {};
+
+            const inicioSemanaAtual = obterInicioSemana();
+            const ultimoReset = dadosConfig.ultimoReset ? new Date(dadosConfig.ultimoReset) : new Date(0);
+
+            if (ultimoReset < inicioSemanaAtual) {
+                const qTarefas = query(collection(db, "tarefas"), where("grupoId", "==", grupoId));
+                const snapTarefas = await getDocs(qTarefas);
+
+                const batch = writeBatch(db);
+                snapTarefas.forEach((docSnap) => {
+                    const t = docSnap.data();
+                    if (t.status && t.status !== "Pendente") {
+                        batch.update(docSnap.ref, {
+                            status: "Pendente",
+                            horarioInicio: "",
+                            horarioTermino: "",
+                            pontosGanhos: 0,
+                            iniciouComAtraso: false,
+                            iniciouAposLimiteFinal: false,
+                            percentualAplicado: null,
+                            faixaAtraso: "",
+                            minutosAlemTolerancia: null,
+                            faixaLeveMinutos: null,
+                            justificativaAtraso: "",
+                            tipoJustificativa: "",
+                            justificativaRecusada: false
+                        });
+                    }
+                });
+                batch.set(refConfig, { grupoId, ultimoReset: inicioSemanaAtual.toISOString() }, { merge: true });
+                await batch.commit();
+            }
+        } catch (erro) {
+            console.error("Erro ao verificar reset semanal:", erro);
+        }
+    }
+
+    window.mudarAuthTab = (painel, evento) => {
+        document.querySelectorAll('.auth-form-panel').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.auth-tab-btn').forEach(el => el.classList.remove('active'));
+
+        if(painel === 'entrar') {
+            document.getElementById('authEntrar').classList.add('active');
+        } else {
+            document.getElementById('authCadastrar').classList.add('active');
+        }
+        evento.currentTarget.classList.add('active');
+    };
+
+    window.toggleSenha = (idInput) => {
+        const input = document.getElementById(idInput);
+        input.type = input.type === 'password' ? 'text' : 'password';
+    };
+
+    window.cadastrarNovoAdministrador = async () => {
+        const email = document.getElementById('novoAdminEmail').value.trim().toLowerCase();
+        const senha = document.getElementById('novoAdminSenha').value.trim();
+        const codigoConvite = document.getElementById('novoAdminConvite').value.trim().toUpperCase();
+        if(!email || senha.length < 6) return alert('Informe e-mail e uma senha com pelo menos 6 caracteres.');
+
+        const qExistente = query(collection(db, "administradores"), where("email", "==", email));
+        const snapExistente = await getDocs(qExistente);
+        if(!snapExistente.empty) return alert('Este e-mail já está cadastrado.');
+
+        let codigoAdmin, codigoCliente, grupoId;
+        if(codigoConvite) {
+            const snapConvite = await getDocs(query(collection(db, "administradores"), where("codigoAdmin", "==", codigoConvite)));
+            if(snapConvite.empty) return alert('Código de convite não encontrado.');
+            const master = snapConvite.docs[0].data();
+            ({codigoAdmin, codigoCliente, grupoId} = master);
+        } else {
+            codigoAdmin = 'ADM-' + Math.floor(1000 + Math.random()*9000);
+            codigoCliente = 'CLI-' + Math.floor(1000 + Math.random()*9000);
+            grupoId = codigoCliente;
+        }
+
+        try {
+            const cred = await createUserWithEmailAndPassword(auth, email, senha);
+            await addDoc(collection(db, "administradores"), { email, uid: cred.user.uid, codigoAdmin, codigoCliente, grupoId, authVersion: 2, tipoAcesso: codigoConvite ? 'admin' : 'proprietario', criadoEm: new Date().toISOString() });
+            alert(`Administrador cadastrado!\nCódigo Admin: ${codigoAdmin}\nCódigo Cliente: ${codigoCliente}`);
+        } catch (e) {
+            console.error(e);
+            alert('Não foi possível criar o login seguro. Verifique se Email/Senha está habilitado no Firebase Authentication.');
+            return;
+        }
+        document.getElementById('novoAdminEmail').value=''; document.getElementById('novoAdminSenha').value=''; document.getElementById('novoAdminConvite').value='';
+    };
+
+    window.realizarLogin = async () => {
+        const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+        const senha = document.getElementById('loginSenha').value.trim();
+        let adminDoc, adminData;
+        try {
+            const cred = await signInWithEmailAndPassword(auth, email, senha);
+            const snap = await getDocs(query(collection(db, "administradores"), where("email", "==", email)));
+            if(snap.empty) throw new Error('Cadastro administrativo não encontrado.');
+            adminDoc=snap.docs[0]; adminData=adminDoc.data();
+            if(!adminData.uid) await updateDoc(adminDoc.ref,{uid:cred.user.uid,authVersion:2});
+        } catch (erroAuth) {
+            // Migração transparente de contas antigas que ainda tinham senha no Firestore.
+            const snap = await getDocs(query(collection(db, "administradores"), where("email", "==", email)));
+            if(snap.empty) return alert('Acesso negado.');
+            adminDoc=snap.docs[0]; adminData=adminDoc.data();
+            if(!adminData.senha || adminData.senha !== senha) return alert('Acesso negado! Senha incorreta.');
+            try {
+                const cred = await createUserWithEmailAndPassword(auth,email,senha);
+                await updateDoc(adminDoc.ref,{uid:cred.user.uid,authVersion:2,senha:null});
+                adminData={...adminData,uid:cred.user.uid,senha:null,authVersion:2};
+            } catch(e) {
+                console.error('Falha ao migrar conta legada para Firebase Authentication.',e);
+                alert('Não foi possível validar esta conta no Firebase Authentication. Redefina a senha ou atualize o cadastro administrativo.');
+                return;
+            }
+        }
+        adminLogadoAtual={id:adminDoc.id,...adminData};
+        document.getElementById('telaAcesso').style.display='none'; document.getElementById('sistemaPrincipal').style.display='block';
+        document.getElementById('displayCodigoAdmin').innerText=adminLogadoAtual.codigoAdmin || 'ADM-Gen';
+        document.getElementById('displayCodigoCliente').innerText=adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId || 'CLI-Gen';
+        window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));
+        iniciarEscutasFirebase();
+        Promise.allSettled([verificarEExecutarResetSemanal(adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId),carregarRegraAtraso()]);
+    };
+
+    window.esqueciSenha = async () => {
+        const email = prompt('Digite seu e-mail administrativo:');
+        if(!email) return;
+        try { await sendPasswordResetEmail(auth,email.trim().toLowerCase()); alert('Enviamos um link para redefinir sua senha.'); }
+        catch(e) { alert('Não foi possível enviar a recuperação. Confirme o e-mail e se o Firebase Authentication está habilitado.'); }
+    };
+
+    function iniciarEscutasFirebase() {
+        const gId = adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId;
+        [unsubscribePerfis,unsubscribeTarefasAdmin,unsubscribeHistoricoGrupo,unsubscribeRecompensas,unsubscribeResgates].forEach(u=>u&&u());
+        const qPerfis = query(collection(db, "perfis"), where("grupoId", "==", gId));
+        unsubscribePerfis = onSnapshot(qPerfis,{includeMetadataChanges:true}, async (snapshot) => {
+            perfisCache = snapshot.docs.map(d => ({ id: d.id, perfilId: d.data().perfilId || d.id, ...d.data() }));
+            for (const perfil of perfisCache) {
+                if (perfil.pin && !perfil.pinHash) {
+                    const pinHash = await hashPin(String(perfil.pin));
+                    updateDoc(doc(db,'perfis',perfil.id),{pinHash,pinVersion:2,pin:deleteField(),pinMigradoEm:new Date().toISOString()}).catch(console.error);
+                }
+            }
+            atualizarSelects();
+            migrarTarefasLegadas().catch(console.error);
+        });
+        const qTarefas = query(collection(db, "tarefas"), where("grupoId", "==", gId));
+        unsubscribeTarefasAdmin = onSnapshot(qTarefas,{includeMetadataChanges:true}, async (snapshot) => {
+            tarefasCache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            await migrarTarefasLegadas();
+            atualizarMonitor(); renderizarTabelaExclusao(); renderizarDashboard();
+            window.dispatchEvent(new CustomEvent('rotina-family-tasks-rendered',{detail:{origem:snapshot.metadata.fromCache?'cache':'servidor'}}));
+        });
+        unsubscribeHistoricoGrupo = onSnapshot(query(collection(db,"historico"),where("grupoId","==",gId)), s => { historicoGrupoCache=s.docs.map(d=>({id:d.id,...d.data()})); renderizarDashboard(); });
+        unsubscribeRecompensas = onSnapshot(query(collection(db,"recompensas"),where("grupoId","==",gId)), s => { recompensasCache=s.docs.map(d=>({id:d.id,...d.data()})); renderizarRecompensasAdmin(); });
+        unsubscribeResgates = onSnapshot(query(collection(db,"resgates"),where("grupoId","==",gId)), s => { resgatesCache=s.docs.map(d=>({id:d.id,...d.data()})); renderizarResgatesAdmin(); });
+    }
+
+    async function migrarTarefasLegadas(){
+        if(!perfisCache.length || !tarefasCache.length) return;
+        const gruposLegados = new Map();
+        for(const t of tarefasCache){
+            const perfil = perfisCache.find(p => p.id===t.perfilId || p.nome===t.perfilNome);
+            const atualizacoes={};
+            if(perfil && !t.perfilId) atualizacoes.perfilId=perfil.id;
+            if(!t.tarefaGrupoId){
+                const chave=`${perfil?.id||t.perfilNome}|${t.nome}`;
+                if(!gruposLegados.has(chave)) gruposLegados.set(chave,novoId('tg'));
+                atualizacoes.tarefaGrupoId=gruposLegados.get(chave);
+            }
+            if(Object.keys(atualizacoes).length) updateDoc(doc(db,'tarefas',t.id),atualizacoes).catch(console.error);
+        }
+    }
+
+    window.realizarLogout = () => {
+        window.desvincularAdmDoPush?.();
+        signOut(auth).catch(()=>{});
+        if(unsubscribePerfis) unsubscribePerfis();
+        if(unsubscribeTarefasAdmin) unsubscribeTarefasAdmin();
+        if(unsubscribeHistoricoAdmin) unsubscribeHistoricoAdmin();
+        if(unsubscribeHistoricoGrupo) unsubscribeHistoricoGrupo();
+        if(unsubscribeRecompensas) unsubscribeRecompensas();
+        if(unsubscribeResgates) unsubscribeResgates();
+        integranteHistoricoAtual = null;
+        historicoAdminCache = [];
+        adminLogadoAtual = null;
+        perfisCache = [];
+        tarefasCache = [];
+        document.getElementById('sistemaPrincipal').style.display = 'none';
+        document.getElementById('telaAcesso').style.display = 'block';
+        document.getElementById('loginEmail').value = '';
+        document.getElementById('loginSenha').value = '';
+    };
+
+    window.mudarAba = (idAba, evento) => {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+        document.getElementById(idAba).classList.add('active');
+        evento.currentTarget.classList.add('active');
+        if(idAba === 'monitor') atualizarMonitor();
+        if(idAba === 'cadastro') renderizarTabelaExclusao();
+        if(idAba === 'dashboard') renderizarDashboard();
+        if(idAba === 'recompensas') { renderizarRecompensasAdmin(); renderizarResgatesAdmin(); }
+    };
+
+    window.salvarCliente = async () => {
+        const nome=document.getElementById('nomeCliente').value.trim();
+        const sexo=document.getElementById('sexoCliente').value;
+        const pin=document.getElementById('pinCliente').value.trim();
+        if(!nome) return alert('Informe o nome do integrante.');
+        if(!/^\d{4,6}$/.test(pin)) return alert('O PIN deve ter de 4 a 6 dígitos.');
+        const nomeFormatado=nome.charAt(0).toUpperCase()+nome.slice(1);
+        if(perfisCache.some(p=>p.nome.toLowerCase()===nomeFormatado.toLowerCase())) return alert('Este integrante já está cadastrado.');
+        const gId=adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId;
+        const pinHash=await hashPin(pin);
+        const ref=await addDoc(collection(db,'perfis'),{nome:nomeFormatado,sexo,grupoId:gId,pinHash,pinVersion:2,criadoEm:new Date().toISOString()});
+        await updateDoc(ref,{perfilId:ref.id});
+        document.getElementById('nomeCliente').value=''; document.getElementById('pinCliente').value='';
+        alert('Integrante cadastrado com PIN e ID permanente.');
+    };
+
+    function horarioAgendaValido(valor) {
+        return /^\d{2}:\d{2}$/.test(String(valor || ''));
+    }
+
+    function encontrarConflitoHorario({ perfilId, responsavel, dia, horaInicio, horaFim, ignorarIds = new Set() }) {
+        return tarefasCache.find(t => {
+            if(!t || ignorarIds.has(t.id)) return false;
+            const mesmoIntegrante = t.perfilId ? t.perfilId === perfilId : t.perfilNome === responsavel;
+            if(!mesmoIntegrante || t.diaSemana !== dia) return false;
+            if(!horarioAgendaValido(t.horaSugeridaInicio) || !horarioAgendaValido(t.horaSugeridaFim)) return false;
+            if(t.horaSugeridaInicio >= t.horaSugeridaFim) return false;
+            return horaInicio < t.horaSugeridaFim && horaFim > t.horaSugeridaInicio;
+        });
+    }
+
+    const ICONES_TAREFA_PERMITIDOS = new Set(['✅','🎮','📺','🧸','📱','💻','🛏️','🪥','🚿','📖','🎒','📚','🧹','🍽️','👕','🗑️','🐾','💊','🏃','🍴','🙏','🎵','🚗','🛒']);
+    function iconeTarefaLegado(nome='') {
+        const n=String(nome).toLowerCase();
+        const regras=[
+            [/videogame|video game|jogar game|jogar jogo|game/,'🎮'],[/televis[aã]o|assistir tv|ver tv|tv/,'📺'],[/brincar|brincadeira|brinquedo/,'🧸'],[/celular|smartphone|telefone/,'📱'],[/computador|notebook|pc/,'💻'],[/cama|dormir|quarto/,'🛏️'],[/dente|escovar|higiene bucal/,'🪥'],[/banho|chuveiro/,'🚿'],[/leitura|ler|livro/,'📖'],[/mochila|material escolar/,'🎒'],[/estud|dever|lição|licao|prova|escola/,'📚'],[/limp|varrer|arrumar|organizar|faxina/,'🧹'],[/louça|louca|prato|cozinha/,'🍽️'],[/roupa|uniforme|lavar roupa/,'👕'],[/lixo/,'🗑️'],[/pet|cachorro|gato|ração|racao/,'🐾'],[/rem[eé]dio|medica/,'💊'],[/exerc|treino|correr|caminhar|academia/,'🏃'],[/comer|almo|jantar|caf[eé]|lanche|aliment/,'🍴'],[/oração|oracao|rezar/,'🙏']
+        ];
+        return regras.find(([r])=>r.test(n))?.[1]||'✅';
+    }
+    function normalizarIconeTarefa(icone,nome='') {
+        const valor=String(icone||'').trim();
+        return ICONES_TAREFA_PERMITIDOS.has(valor) ? valor : iconeTarefaLegado(nome);
+    }
+
+    window.salvarTarefa = async () => {
+        const editId = document.getElementById('editTarefaId').value;
+        const perfilIdSelecionado = document.getElementById('tarefaResponsavel').value;
+        const perfilSelecionado = perfisCache.find(p => p.id === perfilIdSelecionado);
+        const responsavel = perfilSelecionado?.nome || '';
+        const nomeTarefa = document.getElementById('nomeTarefa').value.trim();
+        const iconeTarefaSelecionado = normalizarIconeTarefa(document.getElementById('iconeTarefa').value, nomeTarefa);
+        const horaInicio = document.getElementById('horarioInicioSugerido').value;
+        const horaFim = document.getElementById('horarioFimSugerido').value;
+        const tolerancia = parseInt(document.getElementById('toleranciaTarefa').value) || 0;
+        const pontosMax = parseFloat(document.getElementById('pontosMeta').value) || 0;
+        const justificativaObrigatoria = document.getElementById('justificativaObrigatoria').value !== 'nao';
+
+        let clienteExiste = !!perfilSelecionado;
+        if(!perfilIdSelecionado || !clienteExiste) {
+            alert('Erro: Selecione um integrante cadastrado!');
+            return;
+        }
+
+        if(!nomeTarefa || !horaInicio || !horaFim) {
+            alert('Preencha todos os campos obrigatórios da tarefa.');
+            return;
+        }
+
+        if(horaInicio >= horaFim) {
+            alert('Erro: O horário de início não pode ser posterior ou igual ao horário de término.');
+            return;
+        }
+
+        const gId = adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId;
+        const diasSelecionados = Array.from(document.querySelectorAll('.dia-semana-check:checked')).map(cb => cb.value);
+
+        if(diasSelecionados.length === 0) {
+            alert('Escolha ao menos um dia da semana.');
+            return;
+        }
+
+        if(editId) {
+            let tAntiga = tarefasCache.find(t => t.id === editId);
+            if(!tAntiga) return;
+
+            // Grupo de tarefas existentes sendo editadas
+            const grupoEdicao = tAntiga.tarefaGrupoId;
+            const grupoDestino = grupoEdicao || novoId('tg');
+            const tarefasRelacionadas = tarefasCache.filter(t => grupoEdicao ? t.tarefaGrupoId === grupoEdicao : (t.nome === tAntiga.nome && t.perfilNome === tAntiga.perfilNome));
+            const idsRelacionados = new Set(tarefasRelacionadas.map(t => t.id));
+
+            // Validação de Conflito de Horário para cada dia selecionado
+            for(let dia of diasSelecionados) {
+                const conflito = encontrarConflitoHorario({
+                    perfilId: perfilIdSelecionado, responsavel, dia, horaInicio, horaFim, ignorarIds: idsRelacionados
+                });
+
+                if(conflito) {
+                    alert(`Erro de Conflito! O integrante "${responsavel}" já possui a tarefa "${conflito.nome}" (${conflito.horaSugeridaInicio} às ${conflito.horaSugeridaFim}) agendada para ${dia}.`);
+                    return;
+                }
+            }
+
+            const batch = writeBatch(db);
+
+            // Atualiza, limpa duplicatas existentes ou remove tarefas para cada dia da semana
+            diasSemana.forEach(dia => {
+                const tarefasDoDia = tarefasRelacionadas.filter(t => t.diaSemana === dia);
+
+                if (diasSelecionados.includes(dia)) {
+                    if (tarefasDoDia.length > 0) {
+                        // Atualiza a primeira tarefa para esse dia
+                        const tRef = doc(db, "tarefas", tarefasDoDia[0].id);
+                        batch.update(tRef, {
+                            nome: nomeTarefa,
+                            icone: iconeTarefaSelecionado,
+                            perfilNome: responsavel,
+                            perfilId: perfilIdSelecionado,
+                            tarefaGrupoId: grupoDestino,
+                            horaSugeridaInicio: horaInicio,
+                            horaSugeridaFim: horaFim,
+                            tempoLimite: tolerancia,
+                            pontosMaximos: pontosMax,
+                            justificativaObrigatoria
+                        });
+                        // Remove duplicatas extras caso já existissem anteriormente no mesmo dia
+                        for (let i = 1; i < tarefasDoDia.length; i++) {
+                            batch.delete(doc(db, "tarefas", tarefasDoDia[i].id));
+                        }
+                    } else {
+                        // Cria tarefa para o novo dia selecionado
+                        const novaRef = doc(collection(db, "tarefas"));
+                        batch.set(novaRef, {
+                            grupoId: gId,
+                            nome: nomeTarefa,
+                            icone: iconeTarefaSelecionado,
+                            perfilNome: responsavel,
+                            perfilId: perfilIdSelecionado,
+                            tarefaGrupoId: grupoDestino,
+                            horaSugeridaInicio: horaInicio,
+                            horaSugeridaFim: horaFim,
+                            diaSemana: dia,
+                            tempoLimite: tolerancia,
+                            pontosMaximos: pontosMax,
+                            justificativaObrigatoria,
+                            status: "Pendente",
+                            pontosGanhos: 0,
+                            horarioInicio: "",
+                            horarioTermino: "",
+                            iniciouComAtraso: false,
+                            justificativaAtraso: "",
+                            tipoJustificativa: ""
+                        });
+                    }
+                } else {
+                    // Se o dia foi desmarcado, deleta as tarefas desse grupo naquele dia
+                    tarefasDoDia.forEach(t => {
+                        batch.delete(doc(db, "tarefas", t.id));
+                    });
+                }
+            });
+
+            await batch.commit();
+            alert('Tarefa atualizada para os dias selecionados com sucesso!');
+            cancelarEdicaoTarefa();
+
+        } else {
+            // Criação de nova tarefa
+            for(let dia of diasSelecionados) {
+                const conflito = encontrarConflitoHorario({
+                    perfilId: perfilIdSelecionado, responsavel, dia, horaInicio, horaFim
+                });
+
+                if(conflito) {
+                    alert(`Erro de Conflito! O integrante "${responsavel}" já possui a tarefa "${conflito.nome}" (${conflito.horaSugeridaInicio} às ${conflito.horaSugeridaFim}) para ${dia}.`);
+                    return;
+                }
+            }
+
+            const tarefaGrupoId = novoId('tg');
+            const batch = writeBatch(db);
+            diasSelecionados.forEach(dia => {
+                const novaRef = doc(collection(db, "tarefas"));
+                batch.set(novaRef, {
+                    grupoId: gId,
+                    nome: nomeTarefa,
+                    icone: iconeTarefaSelecionado,
+                    perfilNome: responsavel,
+                    perfilId: perfilIdSelecionado,
+                    tarefaGrupoId,
+                    horaSugeridaInicio: horaInicio,
+                    horaSugeridaFim: horaFim,
+                    diaSemana: dia,
+                    tempoLimite: tolerancia,
+                    pontosMaximos: pontosMax,
+                    justificativaObrigatoria,
+                    status: "Pendente",
+                    pontosGanhos: 0,
+                    horarioInicio: "",
+                    horarioTermino: "",
+                    iniciouComAtraso: false
+                });
+            });
+            await batch.commit();
+
+            alert('Meta cadastrada com sucesso!');
+            document.getElementById('nomeTarefa').value = '';
+            document.getElementById('iconeTarefa').value = '✅';
+            document.querySelectorAll('.dia-semana-check').forEach(cb => cb.checked = false);
+        }
+    };
+
+    window.preencherEdicaoTarefa = (idTarefa) => {
+        let t = tarefasCache.find(item => item.id === idTarefa);
+        if(!t) return;
+
+        document.getElementById('editTarefaId').value = t.id;
+        document.getElementById('tarefaResponsavel').value = t.perfilId || (perfisCache.find(p=>p.nome===t.perfilNome)?.id || '');
+        document.getElementById('nomeTarefa').value = t.nome;
+        document.getElementById('iconeTarefa').value = normalizarIconeTarefa(t.icone, t.nome);
+        document.getElementById('horarioInicioSugerido').value = t.horaSugeridaInicio;
+        document.getElementById('horarioFimSugerido').value = t.horaSugeridaFim;
+        document.getElementById('toleranciaTarefa').value = t.tempoLimite || 0;
+        document.getElementById('pontosMeta').value = t.pontosMaximos || 0;
+        document.getElementById('justificativaObrigatoria').value = t.justificativaObrigatoria === false ? 'nao' : 'sim';
+
+        // Marca automaticamente os dias que essa tarefa já possui no banco
+        const tarefasRelacionadas = tarefasCache.filter(item => t.tarefaGrupoId ? item.tarefaGrupoId === t.tarefaGrupoId : (item.nome === t.nome && item.perfilNome === t.perfilNome));
+        const diasAtivos = tarefasRelacionadas.map(item => item.diaSemana);
+        
+        document.querySelectorAll('.dia-semana-check').forEach(cb => {
+            cb.checked = diasAtivos.includes(cb.value);
+        });
+
+        document.getElementById('tituloFormTarefa').innerText = `Editar Tarefa (Múltiplos Dias)`;
+        document.getElementById('btnSalvarTarefa').innerText = "Atualizar Tarefa";
+        document.getElementById('btnCancelarEdicao').style.display = "inline-block";
+        document.getElementById('blocoDiasSemana').style.display = "block";
+
+        window.scrollTo({ top: 300, behavior: 'smooth' });
+    };
+
+    window.cancelarEdicaoTarefa = () => {
+        document.getElementById('editTarefaId').value = '';
+        document.getElementById('nomeTarefa').value = '';
+        document.getElementById('iconeTarefa').value = '✅';
+        document.getElementById('horarioInicioSugerido').value = '08:00';
+        document.getElementById('horarioFimSugerido').value = '08:30';
+        document.getElementById('toleranciaTarefa').value = '10';
+        document.getElementById('pontosMeta').value = '20';
+        document.getElementById('justificativaObrigatoria').value = 'sim';
+        document.querySelectorAll('.dia-semana-check').forEach(cb => cb.checked = false);
+
+        document.getElementById('tituloFormTarefa').innerText = "Cadastrar Meta / Tarefa";
+        document.getElementById('btnSalvarTarefa').innerText = "Salvar Tarefa";
+        document.getElementById('btnCancelarEdicao').style.display = "none";
+        document.getElementById('blocoDiasSemana').style.display = "block";
+    };
+
+    window.excluirTarefa = async (idTarefa) => {
+        const alvo = tarefasCache.find(t => t.id === idTarefa);
+        if(!alvo) return alert('Tarefa não encontrada. Atualize a tela e tente novamente.');
+        const relacionadas = alvo.tarefaGrupoId
+            ? tarefasCache.filter(t => t.tarefaGrupoId === alvo.tarefaGrupoId)
+            : [alvo];
+        const dias = relacionadas.map(t => t.diaSemana).filter(Boolean).join(', ');
+        if(!confirm(`Excluir permanentemente a tarefa "${alvo.nome}" em todos os dias cadastrados${dias ? ` (${dias})` : ''}?\n\nPara remover apenas um dia, use Editar e desmarque esse dia.`)) return;
+        try {
+            const batch = writeBatch(db);
+            relacionadas.forEach(t => batch.delete(doc(db, 'tarefas', t.id)));
+            await batch.commit();
+            alert('Tarefa recorrente excluída com sucesso.');
+        } catch (error) {
+            alert('Erro ao excluir tarefa: ' + error.message);
+        }
+    };
+
+    window.renderizarTabelaExclusao = () => {
+        const tbody = document.getElementById('tbodyExclusao');
+        const perfilIdSelecionado = document.getElementById('filtroExclusaoIntegrante').value;
+        const integranteSelecionado = perfisCache.find(p=>p.id===perfilIdSelecionado)?.nome || '';
+        const diaSelecionado = document.getElementById('filtroExclusaoDia').value;
+        if(!tbody) return;
+
+        tbody.innerHTML = '';
+
+        let tarefasFiltradas = tarefasCache.filter(t => {
+            let matchIntegrante = !perfilIdSelecionado || (t.perfilId ? t.perfilId === perfilIdSelecionado : t.perfilNome === integranteSelecionado);
+            let matchDia = !diaSelecionado || t.diaSemana === diaSelecionado;
+            return matchIntegrante && matchDia;
+        });
+
+        tarefasFiltradas.sort((a, b) => (a.horaSugeridaInicio || "").localeCompare(b.horaSugeridaInicio || ""));
+
+        if(tarefasFiltradas.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #777;">Nenhuma tarefa encontrada.</td></tr>`;
+            return;
+        }
+
+        tarefasFiltradas.forEach(t => {
+            tbody.innerHTML += `
+                <tr data-family-task-id="${escaparHtml(t.id)}" data-family-task-group="${escaparHtml(t.tarefaGrupoId||'')}" data-family-task-name="${escaparHtml(t.nome)}" data-family-task-day="${escaparHtml(t.diaSemana||'')}" data-family-task-time="${escaparHtml(t.horaSugeridaInicio||'')}" data-family-task-end="${escaparHtml(t.horaSugeridaFim||'')}" data-family-profile-id="${escaparHtml(t.perfilId||'')}" data-family-profile-name="${escaparHtml(t.perfilNome||'')}">
+                    <td><strong>${t.horaSugeridaInicio} às ${t.horaSugeridaFim}</strong><br><small style="color:#64748b">Tolerância: ${Number(t.tempoLimite)||0} min</small></td>
+                    <td><span class="task-icon-cell" aria-hidden="true">${escaparHtml(normalizarIconeTarefa(t.icone,t.nome))}</span><strong>${escaparHtml(t.nome)}</strong></td>
+                    <td>${escaparHtml(t.perfilNome)}</td>
+                    <td>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="btn-action" style="background-color: var(--primary); padding: 6px 10px; font-size: 12px; width: auto;" onclick="preencherEdicaoTarefa('${t.id}')">Editar</button>
+                            <button class="btn-action" style="background-color: var(--danger); padding: 6px 10px; font-size: 12px; width: auto;" onclick="excluirTarefa('${t.id}')">Excluir</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+    };
+
+    function atualizarSelects() {
+        const selects=[document.getElementById('tarefaResponsavel'),document.getElementById('filtroIntegrante'),document.getElementById('filtroExclusaoIntegrante')];
+        const valores=selects.map(s=>s?.value||'');
+        selects[0].innerHTML='<option value="">Selecione um cliente autorizado</option>';
+        selects[1].innerHTML='<option value="">Todos os Integrantes</option>';
+        selects[2].innerHTML='<option value="">Todos os Integrantes</option>';
+        perfisCache.sort((a,b)=>a.nome.localeCompare(b.nome)).forEach(p=>{
+            const opt=`<option value="${escaparHtml(p.id)}">${escaparHtml(p.nome)} (${escaparHtml(p.sexo||'')})${(p.pinHash||p.pin)?' 🔐':' ⚠️ sem PIN'}</option>`;
+            selects[0].insertAdjacentHTML('beforeend',opt);
+            selects[1].insertAdjacentHTML('beforeend',`<option value="${escaparHtml(p.id)}">${escaparHtml(p.nome)}</option>`);
+            selects[2].insertAdjacentHTML('beforeend',`<option value="${escaparHtml(p.id)}">${escaparHtml(p.nome)}</option>`);
+        });
+        selects.forEach((s,i)=>{ if(s && [...s.options].some(o=>o.value===valores[i])) s.value=valores[i]; });
+        renderizarGerenciamentoPins();
+    }
+
+    function renderizarGerenciamentoPins() {
+        const el = document.getElementById('listaPinsIntegrantes');
+        if(!el) return;
+        if(perfisCache.length === 0) {
+            el.innerHTML = '<p style="color:#777">Nenhum integrante cadastrado.</p>';
+            return;
+        }
+        el.innerHTML = perfisCache
+            .slice()
+            .sort((a,b)=>(a.nome||'').localeCompare(b.nome||''))
+            .map(p => `
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #e5e7eb;flex-wrap:wrap">
+                    <div>
+                        <strong>${escaparHtml(p.nome || 'Integrante')}</strong>
+                        <span style="font-size:12px;margin-left:7px;color:${(p.pinHash||p.pin) ? '#198754' : '#dc3545'}">${(p.pinHash||p.pin) ? '🔐 PIN definido' : '⚠️ sem PIN'}</span>
+                    </div>
+                    <button class="btn-action" style="width:auto;padding:7px 12px;background:#805ad5" onclick="definirPinIntegrante('${p.id}')">${(p.pinHash||p.pin) ? 'Trocar PIN' : 'Definir PIN'}</button>
+                </div>
+            `).join('');
+    }
+
+    window.definirPinIntegrante = async (perfilId) => {
+        const perfil = perfisCache.find(p => p.id === perfilId);
+        if(!perfil) return;
+        const novoPin = prompt(`Digite o novo PIN de ${perfil.nome} (4 a 6 dígitos):`);
+        if(novoPin === null) return;
+        const pin = novoPin.trim();
+        if(!/^\d{4,6}$/.test(pin)) {
+            alert('O PIN deve conter somente números e ter de 4 a 6 dígitos.');
+            return;
+        }
+        const pinHash = await hashPin(pin);
+        await updateDoc(doc(db, 'perfis', perfilId), {
+            pinHash,
+            pinVersion: 2,
+            pin: deleteField(),
+            perfilId: perfil.perfilId || perfilId,
+            pinAtualizadoEm: new Date().toISOString()
+        });
+        alert(`PIN de ${perfil.nome} atualizado com sucesso.`);
+    };
+
+    function obterDataReferenciaMonitor() {
+        const filtroDataValor = document.getElementById('filtroData').value;
+        if(filtroDataValor) {
+            const [ano, mes, dia] = filtroDataValor.split('-').map(Number);
+            return new Date(ano, mes - 1, dia);
+        }
+        return new Date();
+    }
+
+    function renderizarPainelPontuacaoAdmin(historicoLista) {
+        const filtroPerfilId = document.getElementById('filtroIntegrante').value;
+        const filtroUsuario = perfisCache.find(p=>p.id===filtroPerfilId)?.nome || '';
+
+        const dataReferencia = obterDataReferenciaMonitor();
+        const dataReferenciaISO = formatarDataISO(dataReferencia);
+        const inicioSemanaISO = formatarDataISO(obterInicioSemana(dataReferencia));
+        const anoRef = dataReferencia.getFullYear();
+        const mesRef = dataReferencia.getMonth();
+
+        let ganhoDia = 0, ganhoSemana = 0, ganhoMes = 0;
+        historicoLista.forEach((h) => {
+            const pts = Number(h.pontosGanhos) || 0;
+            if(h.data === dataReferenciaISO) ganhoDia += pts;
+            if(h.data >= inicioSemanaISO && h.data <= dataReferenciaISO) ganhoSemana += pts;
+            const [anoH, mesH] = (h.data || "0-0-0").split('-').map(Number);
+            if(anoH === anoRef && (mesH - 1) === mesRef) ganhoMes += pts;
+        });
+
+        const tarefasDoIntegrante = tarefasCache.filter(t => t.perfilId ? t.perfilId === filtroPerfilId : t.perfilNome === filtroUsuario);
+        const diaTextoRef = diasSemana[dataReferencia.getDay()];
+
+        let possivelDia = 0, possivelSemana = 0, possivelMes = 0;
+        tarefasDoIntegrante.forEach((t) => {
+            if(t.diaSemana === diaTextoRef) possivelDia += t.pontosMaximos || 0;
+            possivelSemana += t.pontosMaximos || 0;
+            possivelMes += (t.pontosMaximos || 0) * contarOcorrenciasNoMes(t.diaSemana, anoRef, mesRef);
+        });
+
+        // Rótulo do primeiro card: "Hoje" quando a data escolhida é a data real de hoje, senão mostra a data escolhida
+        const ehHojeReal = formatarDataISO(new Date()) === dataReferenciaISO;
+        const labelDia = document.getElementById('labelDiaPontuacao');
+        if(labelDia) labelDia.innerText = ehHojeReal ? 'Hoje' : dataReferencia.toLocaleDateString('pt-BR');
+
+        document.getElementById('nomeIntegrantePontuacao').innerText = filtroUsuario;
+        document.getElementById('admPtsHoje').innerText = ganhoDia;
+        document.getElementById('admPossivelHoje').innerText = ` / ${possivelDia} pts`;
+        document.getElementById('admPtsSemana').innerText = ganhoSemana;
+        document.getElementById('admPossivelSemana').innerText = ` / ${possivelSemana} pts`;
+        document.getElementById('admPtsMes').innerText = ganhoMes;
+        document.getElementById('admPossivelMes').innerText = ` / ${possivelMes} pts`;
+    }
+
+    function atualizarPainelPontuacaoAdmin() {
+        const filtroPerfilId = document.getElementById('filtroIntegrante').value;
+        const filtroUsuario = perfisCache.find(p=>p.id===filtroPerfilId)?.nome || '';
+        const secao = document.getElementById('secaoPontuacaoMonitor');
+
+        if(!filtroUsuario) {
+            secao.style.display = 'none';
+            if(unsubscribeHistoricoAdmin) { unsubscribeHistoricoAdmin(); unsubscribeHistoricoAdmin = null; }
+            integranteHistoricoAtual = null;
+            return;
+        }
+
+        secao.style.display = 'block';
+
+        if(integranteHistoricoAtual === filtroUsuario) {
+            renderizarPainelPontuacaoAdmin(historicoAdminCache);
+            return;
+        }
+
+        if(unsubscribeHistoricoAdmin) unsubscribeHistoricoAdmin();
+        integranteHistoricoAtual = filtroUsuario;
+
+        const gId = adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId;
+        const qHistorico = query(collection(db, "historico"), where("grupoId", "==", gId), where("perfilNome", "==", filtroUsuario));
+        unsubscribeHistoricoAdmin = onSnapshot(qHistorico, (snapshot) => {
+            historicoAdminCache = snapshot.docs.map(d => d.data());
+            renderizarPainelPontuacaoAdmin(historicoAdminCache);
+        });
+    }
+
+    window.atualizarMonitor = () => {
+        atualizarPainelPontuacaoAdmin();
+
+        const tbody = document.getElementById('tbodyMonitor');
+        const filtroPerfilId = document.getElementById('filtroIntegrante').value;
+        const filtroUsuario = perfisCache.find(p=>p.id===filtroPerfilId)?.nome || '';
+        const filtroDataValor = document.getElementById('filtroData').value;
+
+        tbody.innerHTML = '';
+
+        let diaSemanaFiltro = null;
+        if(filtroDataValor) {
+            const [ano, mes, dia] = filtroDataValor.split('-').map(Number);
+            const dataObj = new Date(ano, mes - 1, dia);
+            diaSemanaFiltro = diasSemana[dataObj.getDay()];
+        }
+
+        let filtrados = tarefasCache.filter(t => {
+            let matchUser = !filtroPerfilId || (t.perfilId ? t.perfilId === filtroPerfilId : t.perfilNome === filtroUsuario);
+            let matchDia = !diaSemanaFiltro || t.diaSemana === diaSemanaFiltro;
+            return matchUser && matchDia;
+        });
+
+        filtrados.sort((a, b) => (a.horaSugeridaInicio || "").localeCompare(b.horaSugeridaInicio || ""));
+
+        if(filtrados.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#777;">Nenhum registro encontrado.</td></tr>`;
+            return;
+        }
+
+        filtrados.forEach(t => {
+            let statusTexto = t.status || "Pendente";
+            let badgeClass = "badge-pendente";
+            if(statusTexto.includes("Atrasado")) badgeClass = "badge-falta";
+            else if(t.faixaAtraso==='atraso-maior'||statusTexto.includes('50%')) badgeClass = "badge-50";
+            else if(t.faixaAtraso==='atraso-leve'||statusTexto.includes('75%')) badgeClass = "badge-75";
+            else if(statusTexto.includes("Prazo")) badgeClass = "badge-ok";
+            else if(statusTexto.includes("andamento")) badgeClass = "badge-andamento";
+
+            let horariosHtml = `<strong>${t.horaSugeridaInicio} - ${t.horaSugeridaFim}</strong>`;
+            if(t.horarioInicio) {
+                horariosHtml += `<div style="font-size: 11px; color: #555; margin-top: 3px;">Real: ${t.horarioInicio} até ${t.horarioTermino || '--:--'} | Tol: ${t.tempoLimite || 0} min`;
+                if(statusTexto.includes("Atrasado") && t.justificativaAtraso) { horariosHtml += ` <span class="tooltip-justificativa">🚩 texto<span class="tooltip-texto">${escaparHtml(t.justificativaAtraso)}</span></span>`; }
+                if(statusTexto.includes("Atrasado") && t.justificativaRecusada === true) { horariosHtml += ` <span class="tooltip-justificativa" style="color:#6c757d;border-color:#6c757d">Usuário não quis justificar<span class="tooltip-texto">Usuário não quis justificar.</span></span>`; }
+                if(statusTexto.includes("Atrasado") && t.tipoJustificativa === 'voz-transcrita') { horariosHtml += ` <span title="Justificativa ditada por voz e convertida em texto">🎙️ voz→texto</span>`; }
+                horariosHtml += `</div>`;
+            } else {
+                horariosHtml += `<div style="font-size: 11px; color: #999; margin-top: 3px;">Real: Não executada | Tol: ${t.tempoLimite || 0} min</div>`;
+            }
+
+            tbody.innerHTML += `
+                <tr data-family-task-id="${escaparHtml(t.id)}" data-family-task-group="${escaparHtml(t.tarefaGrupoId||'')}" data-family-task-name="${escaparHtml(t.nome)}" data-family-task-day="${escaparHtml(t.diaSemana||'')}" data-family-task-time="${escaparHtml(t.horaSugeridaInicio||'')}" data-family-task-end="${escaparHtml(t.horaSugeridaFim||'')}" data-family-profile-id="${escaparHtml(t.perfilId||'')}" data-family-profile-name="${escaparHtml(t.perfilNome||'')}">
+                    <td>${horariosHtml}</td>
+                    <td><span class="task-icon-cell" aria-hidden="true">${escaparHtml(normalizarIconeTarefa(t.icone,t.nome))}</span><strong>${escaparHtml(t.nome)}</strong></td>
+                    <td>${escaparHtml(t.perfilNome)}</td>
+                    <td>${escaparHtml(t.diaSemana)}</td>
+                    <td><span class="badge ${badgeClass}">${escaparHtml(statusTexto)}</span></td>
+                    <td>${t.pontosGanhos || 0} / ${t.pontosMaximos} pts</td>
+                </tr>
+            `;
+        });
+    };
+
+    function inicioSemanaISO(){ return formatarDataISO(obterInicioSemana(new Date())); }
+    function calcularSequencia(perfil){
+        const datas=new Set(historicoGrupoCache.filter(h=>(h.perfilId===perfil.id || (!h.perfilId && h.perfilNome===perfil.nome)) && h.status?.includes('Prazo')).map(h=>h.data));
+        let d=new Date(),seq=0;
+        for(let i=0;i<60;i++){ const iso=formatarDataISO(d); if(datas.has(iso)) seq++; else if(i>0) break; d.setDate(d.getDate()-1); }
+        return seq;
+    }
+    window.renderizarDashboard = function(){
+        const box=document.getElementById('dashboardFamilia'), semanal=document.getElementById('rankingFamilia'), diario=document.getElementById('rankingDiario'), mensal=document.getElementById('rankingMensal');
+        if(!box||!semanal||!diario||!mensal) return;
+        const dataEl=document.getElementById('dashboardDataRef');
+        if(dataEl && !dataEl.value) dataEl.value=formatarDataISO(new Date());
+        const ref=new Date((dataEl?.value||formatarDataISO(new Date()))+'T12:00:00');
+        const diaISO=formatarDataISO(ref);
+        const iniSem=formatarDataISO(obterInicioSemana(ref));
+        const fimSemD=new Date(obterInicioSemana(ref)); fimSemD.setDate(fimSemD.getDate()+6); const fimSem=formatarDataISO(fimSemD);
+        const iniMes=`${ref.getFullYear()}-${String(ref.getMonth()+1).padStart(2,'0')}-01`;
+        const fimMes=formatarDataISO(new Date(ref.getFullYear(),ref.getMonth()+1,0));
+        const filtro=document.getElementById('dashboardPerfil');
+        if(filtro){ const atual=filtro.value; filtro.innerHTML='<option value="">Todos</option>'+perfisCache.map(p=>`<option value="${escaparHtml(p.id)}">${escaparHtml(p.nome)}</option>`).join(''); filtro.value=atual; }
+        const perfis=perfisCache.filter(p=>!filtro?.value||p.id===filtro.value);
+        const dados=perfis.map(p=>{
+            const hist=historicoGrupoCache.filter(h=>(h.perfilId===p.id||(!h.perfilId&&h.perfilNome===p.nome)));
+            const soma=(ini,fim)=>hist.filter(h=>h.data>=ini&&h.data<=fim).reduce((s,h)=>s+(Number(h.pontosGanhos)||0),0);
+            const hs=hist.filter(h=>h.data>=iniSem&&h.data<=fimSem);
+            return {p,diario:soma(diaISO,diaISO),semanal:soma(iniSem,fimSem),mensal:soma(iniMes,fimMes),concluidas:hs.length,prazo:hs.filter(h=>h.status?.includes('Prazo')).length,seq:calcularSequencia(p)};
+        });
+        box.innerHTML=dados.map(x=>`<div class="card-pontuacao"><span>${escaparHtml(x.p.nome)}</span><strong>${x.semanal} pts</strong><small style="display:block;margin-top:6px">Hoje ${x.diario} · Mês ${x.mensal}<br>✅ ${x.prazo}/${x.concluidas} no prazo · 🔥 ${x.seq} dias</small></div>`).join('')||'<p>Nenhum integrante.</p>';
+        const render=(campo,el)=>{ const ord=[...dados].sort((x,y)=>y[campo]-x[campo]); el.innerHTML=ord.map((x,i)=>`<div class="ranking-item"><strong>${i+1}º ${escaparHtml(x.p.nome)}</strong> — ${x[campo]} pts</div>`).join('')||'<p>Sem dados no período.</p>'; };
+        render('diario',diario); render('semanal',semanal); render('mensal',mensal);
+    }
+    window.salvarRecompensa=async()=>{ const nome=document.getElementById('recompensaNome').value.trim(); const pontos=Number(document.getElementById('recompensaPontos').value); if(!nome||pontos<=0)return alert('Informe recompensa e pontos.'); const grupoId=adminLogadoAtual.codigoCliente||adminLogadoAtual.grupoId; await addDoc(collection(db,'recompensas'),{grupoId,nome,pontos,ativa:true,criadoEm:new Date().toISOString()}); document.getElementById('recompensaNome').value=''; document.getElementById('recompensaPontos').value=''; };
+    window.excluirRecompensa=async id=>{ if(confirm('Excluir recompensa?')) await deleteDoc(doc(db,'recompensas',id)); };
+    function renderizarRecompensasAdmin(){ const el=document.getElementById('listaRecompensasAdmin'); if(!el)return; el.innerHTML=recompensasCache.map(r=>`<div class="recompensa-item"><strong>${escaparHtml(r.nome)}</strong> — ${Number(r.pontos)||0} pts <button onclick="excluirRecompensa('${r.id}')">Excluir</button></div>`).join('')||'<p>Nenhuma recompensa.</p>'; }
+    const resgatesEmDecisao=new Set();
+    window.decidirResgate=async(id,status)=>{ if(resgatesEmDecisao.has(id)) return; const atual=resgatesCache.find(r=>r.id===id); if(!atual||atual.status!=='Pendente'||!['Aprovado','Recusado'].includes(status)) return; resgatesEmDecisao.add(id); try{ const agora=new Date().toISOString(); await updateDoc(doc(db,'resgates',id),{status,decididoEm:agora,pushClientePendente:true,pushClienteSolicitadoEm:agora,pushClienteTentativas:0});window.rotinaLog?.('recompensa.decidida',{resgateId:id,status}); } finally { resgatesEmDecisao.delete(id); } };
+    function renderizarResgatesAdmin(){ const el=document.getElementById('listaResgatesAdmin'); if(!el)return; const lista=[...resgatesCache].sort((a,b)=>(b.criadoEm||'').localeCompare(a.criadoEm||'')); el.innerHTML=lista.map(r=>`<div class="resgate-item"><strong>${escaparHtml(r.perfilNome)}</strong> pediu <strong>${escaparHtml(r.recompensaNome)}</strong> (${Number(r.pontos)||0} pts) — ${escaparHtml(r.status||'Pendente')} ${r.status==='Pendente'?`<button onclick="decidirResgate('${r.id}','Aprovado')">Aprovar</button> <button onclick="decidirResgate('${r.id}','Recusado')">Recusar</button>`:''}</div>`).join('')||'<p>Nenhum pedido.</p>'; }
+
+    // Sessão administrativa validada pelo Firebase Authentication.
+    onAuthStateChanged(auth, async (user) => {
+        if(!user) {
+            if(!adminLogadoAtual) {
+                document.getElementById('sistemaPrincipal').style.display='none';
+                document.getElementById('telaAcesso').style.display='block';
+            }
+            return;
+        }
+        if(adminLogadoAtual?.uid === user.uid) return;
+        try {
+            const snap = await getDocs(query(collection(db,'administradores'), where('uid','==',user.uid)));
+            if(snap.empty) {
+                await signOut(auth);
+                alert('Sessão autenticada sem cadastro administrativo correspondente.');
+                return;
+            }
+            const adminDoc=snap.docs[0];
+            adminLogadoAtual={id:adminDoc.id,...adminDoc.data()};
+            document.getElementById('telaAcesso').style.display='none';
+            document.getElementById('sistemaPrincipal').style.display='block';
+            document.getElementById('displayCodigoAdmin').innerText=adminLogadoAtual.codigoAdmin || 'ADM-Gen';
+            document.getElementById('displayCodigoCliente').innerText=adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId || 'CLI-Gen';
+            window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));
+            iniciarEscutasFirebase();
+            Promise.allSettled([verificarEExecutarResetSemanal(adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId),carregarRegraAtraso()]);
+        } catch(e) { console.error('Falha ao restaurar sessão administrativa',e); }
+    });
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js?v=39')
+        .then(reg => console.log('Service Worker registrado com sucesso!', reg))
+        .catch(err => console.error('Erro ao registrar Service Worker:', err));
+    });
+  }
+</script>
+<div id="pwaInstallBanner" style="display:none;position:fixed;left:16px;right:16px;bottom:18px;z-index:9999;background:#fff;border:1px solid #d7e3f0;border-radius:16px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:14px 16px;max-width:520px;margin:auto;font-family:inherit">
+  <div style="display:flex;align-items:center;gap:12px">
+    <img src="icon-administrador-192.png" alt="Ícone" width="48" height="48" style="border-radius:12px">
+    <div style="flex:1"><strong style="display:block;color:#25476A">Instalar Rotina Family ADM</strong><small id="pwaInstallTexto" style="color:#666">Instale para acessar mais rápido e usar recursos offline.</small></div>
+    <button id="pwaInstallBtn" style="border:0;background:#4a90e2;color:#fff;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer">Instalar</button>
+    <button id="pwaInstallFechar" aria-label="Fechar" style="border:0;background:transparent;font-size:20px;cursor:pointer;color:#777">×</button>
+  </div>
+</div>
+<script>
+(() => {
+  let deferredPrompt=null;
+  const banner=document.getElementById('pwaInstallBanner');
+  const btn=document.getElementById('pwaInstallBtn');
+  const fechar=document.getElementById('pwaInstallFechar');
+  const texto=document.getElementById('pwaInstallTexto');
+  const standalone=window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+  const dispensado=sessionStorage.getItem('pwaInstallDismissed')==='1';
+  if(standalone || dispensado) return;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault(); deferredPrompt=e; banner.style.display='block';
+  });
+  btn.addEventListener('click', async () => {
+    if(deferredPrompt){ deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; banner.style.display='none'; return; }
+    const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+    if(ios){ texto.textContent='No Safari: toque em Compartilhar e depois em "Adicionar à Tela de Início".'; btn.style.display='none'; }
+  });
+  fechar.addEventListener('click',()=>{ banner.style.display='none'; sessionStorage.setItem('pwaInstallDismissed','1'); });
+  window.addEventListener('appinstalled',()=>{ banner.style.display='none'; deferredPrompt=null; });
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  if(ios){ banner.style.display='block'; texto.textContent='Instale no iPhone/iPad para acesso rápido.'; }
+})();
+</script>
+  <script type="module" src="./dashboard-ranking-pro.js"></script>
+<script type="module" src="./family-alarm-admin.js?v=6"></script>
+<script type="module" src="./reward-redemption-notifications.js?v=2"></script>
+<script type="module" src="./app-monitoring.js?v=2"></script>
+<script type="module" src="./admin-master.js?v=1"></script>
+<script type="module" src="./app-monitoring-dashboard.js?v=2"></script>
+<script type="module" src="./adm-auth-session-v1.js?v=1"></script>
+<script type="module" src="./adm-startup-stability-v1.js?v=2"></script>
+</body>
+</html>
