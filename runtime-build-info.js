@@ -3,7 +3,7 @@
   const INFO=Object.freeze({
     app:'ADM',
     appVersion:'1.0.0',
-    build:'20260825.3',
+    build:'20260825.4',
     htmlVersion:'index-ADMIN-v8',
     rulesModuleVersion:'6',
     expectedServiceWorkerVersion:'59'
@@ -11,7 +11,8 @@
   window.ROTINA_BUILD_INFO=INFO;
   const emit=(event,details={})=>{try{window.rotinaLog?.(event,{...INFO,...details});}catch{}};
   function badge(){
-    if(document.getElementById('rotinaBuildBadge'))return;
+    const existing=document.getElementById('rotinaBuildBadge');
+    if(existing){existing.textContent=`ADM v${INFO.appVersion} • ${INFO.build}`;return;}
     const el=document.createElement('button');
     el.id='rotinaBuildBadge';
     el.type='button';
