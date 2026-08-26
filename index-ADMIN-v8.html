@@ -344,8 +344,16 @@
         }
     </style>
     <link rel="stylesheet" href="./dashboard-ranking-pro.css">
+<style id="admStartupStabilityStyle">
+#admStartupShield{position:fixed;inset:0;z-index:50000;display:grid;place-items:center;background:#f4f7f6;color:#334155;font-family:Segoe UI,Tahoma,sans-serif}
+#admStartupShield .adm-startup-card{background:#fff;border:1px solid #dbe3ea;border-radius:16px;padding:22px 26px;box-shadow:0 10px 30px rgba(15,23,42,.10);display:grid;justify-items:center;gap:8px;min-width:220px;text-align:center}
+#admStartupShield .adm-startup-card small{color:#64748b}
+#admStartupShield .adm-startup-spinner{width:28px;height:28px;border:3px solid #dbeafe;border-top-color:#4a90e2;border-radius:50%;animation:admStartupSpin .8s linear infinite}
+@keyframes admStartupSpin{to{transform:rotate(360deg)}}
+</style>
 </head>
 <body>
+<div id="admStartupShield" role="status" aria-live="polite"><div class="adm-startup-card"><div class="adm-startup-spinner"></div><strong id="admStartupText">Carregando painel...</strong><small>Rotina Family ADM</small></div></div>
 
     <div id="telaAcesso">
         <h2>Painel do Administrador</h2>
@@ -1648,5 +1656,6 @@
 <script type="module" src="./admin-master.js?v=1"></script>
 <script type="module" src="./app-monitoring-dashboard.js?v=2"></script>
 <script type="module" src="./adm-auth-session-v1.js?v=1"></script>
+<script type="module" src="./adm-startup-stability-v1.js?v=1"></script>
 </body>
 </html>
