@@ -1,11 +1,12 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
-const VERSION = 1;
+const VERSION = 2;
 const startedAt = performance.now();
 let authenticated = false;
 let sessionReady = false;
 let blankSince = 0;
+let staleSessionHandled = false;
 
 const log = (event, details = {}, level = 'info') => {
   try { window.rotinaLog?.(event, { ...details, startupStabilityVersion: VERSION }, level); } catch {}
@@ -41,6 +42,16 @@ function visible(el) {
   return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity || 1) > 0;
 }
 
+function showLogin() {
+  sessionReady = false;
+  authenticated = false;
+  const access = document.getElementById('telaAcesso');
+  const main = document.getElementById('sistemaPrincipal');
+  if (main) main.style.display = 'none';
+  if (access) access.style.display = 'block';
+  hide();
+}
+
 function ensureSomethingVisible(reason = 'check') {
   const access = document.getElementById('telaAcesso');
   const main = document.getElementById('sistemaPrincipal');
@@ -61,6 +72,7 @@ function ensureSomethingVisible(reason = 'check') {
 
 function markSessionReady(event) {
   sessionReady = true;
+  authenticated = true;
   const elapsed = Math.round(performance.now() - startedAt);
   log('startup.adm_sessao_pronta', { ms: elapsed, grupoId: String(event?.detail?.grupoId || '').slice(0, 32) });
   requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -72,24 +84,34 @@ function markSessionReady(event) {
   }));
 }
 
+async function clearOrphanSession(auth) {
+  if (staleSessionHandled || sessionReady) return;
+  staleSessionHandled = true;
+  show('Restaurando acesso...');
+  log('startup.adm_sessao_orfa_detectada', { ms: Math.round(performance.now() - startedAt) }, 'warning');
+  try { await signOut(auth); }
+  catch (error) { log('startup.adm_logout_orfao_erro', { mensagem: String(error?.message || error).slice(0, 150) }, 'error'); }
+  showLogin();
+}
+
 function installAuthWatch(attempt = 0) {
   if (!getApps().length) {
     if (attempt < 80) setTimeout(() => installAuthWatch(attempt + 1), 100);
+    else showLogin();
     return;
   }
-  onAuthStateChanged(getAuth(getApp()), user => {
+  const auth = getAuth(getApp());
+  onAuthStateChanged(auth, user => {
     authenticated = !!user;
     log('startup.adm_auth_resolvido', { autenticado: authenticated, ms: Math.round(performance.now() - startedAt) });
     if (user) {
       if (!sessionReady) show('Abrindo seu painel...');
-      setTimeout(() => ensureSomethingVisible('auth-com-usuario'), 80);
+      setTimeout(() => {
+        if (!sessionReady && !visible(document.getElementById('sistemaPrincipal'))) clearOrphanSession(auth);
+        else ensureSomethingVisible('auth-com-usuario');
+      }, 900);
     } else {
-      sessionReady = false;
-      const access = document.getElementById('telaAcesso');
-      const main = document.getElementById('sistemaPrincipal');
-      if (main) main.style.display = 'none';
-      if (access) access.style.display = 'block';
-      hide();
+      showLogin();
     }
   });
 }
@@ -115,17 +137,8 @@ function boot() {
   installAuthWatch();
   setTimeout(() => ensureSomethingVisible('boot-250ms'), 250);
   setTimeout(() => {
-    if (authenticated && !sessionReady && !visible(document.getElementById('sistemaPrincipal'))) {
-      show('Carregando os dados da família...');
-      log('startup.adm_lento_3s', { ms: Math.round(performance.now() - startedAt) }, 'warning');
-    }
-  }, 3000);
-  setTimeout(() => {
-    if (authenticated && !visible(document.getElementById('sistemaPrincipal'))) {
-      show('Ainda carregando. Sua sessão continua ativa...');
-      log('startup.adm_lento_8s', { ms: Math.round(performance.now() - startedAt) }, 'warning');
-    }
-  }, 8000);
+    if (!sessionReady && !visible(document.getElementById('sistemaPrincipal')) && !visible(document.getElementById('telaAcesso'))) showLogin();
+  }, 2500);
   log('startup.adm_guard_pronto', { versao: VERSION });
 }
 
