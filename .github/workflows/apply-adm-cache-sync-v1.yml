@@ -1,0 +1,65 @@
+name: Aplicar cache-first 5 minutos no ADM
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-adm-cache-sync-v1.yml'
+      - 'scripts/apply-adm-cache-sync-v1.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Aplicar arquitetura cache-first ADM
+        run: python scripts/apply-adm-cache-sync-v1.py
+
+      - name: Validar sintaxe
+        run: |
+          node --check family-alarm-admin.js
+          node --check sw.js
+
+      - name: Auditar redução de listeners
+        shell: python
+        run: |
+          from pathlib import Path
+          base=Path('index-ADMIN-v8.html').read_text(encoding='utf-8')
+          alarm=Path('family-alarm-admin.js').read_text(encoding='utf-8')
+          entry=Path('index.html').read_text(encoding='utf-8')
+          sw=Path('sw.js').read_text(encoding='utf-8')
+          assert 'const SINCRONIZACAO_ADM_MS = 5 * 60 * 1000' in base
+          assert "sincronizarDadosAdm('cache-inicial',false)" in base
+          assert "sincronizarDadosAdm('intervalo-5min',true)" in base
+          assert 'window.rotinaAdmCacheSnapshot' in base
+          assert 'onSnapshot(qPerfis' not in base
+          assert 'unsubscribeHistoricoGrupo = onSnapshot' not in base
+          assert 'unsubscribeRecompensas = onSnapshot' not in base
+          assert 'unsubscribeResgates = onSnapshot' not in base
+          assert 'const ALARM_SYNC_MS=5*60*1000' in alarm
+          assert 'getDocsFromCache' in alarm and 'getDocsFromServer' in alarm
+          assert 'onSnapshot(' not in alarm
+          assert 'setInterval(decorarTarefas,60000)' in alarm
+          assert 'entry=20260827.1' in entry
+          assert "rotina-family-adm-v60" in sw
+          print('AUDITORIA_ADM_CACHE_FIRST=OK')
+
+      - name: Persistir migração validada
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index-ADMIN-v8.html index.html sw.js family-alarm-admin.js
+          if git diff --cached --quiet; then
+            echo 'Migração já aplicada.'
+          else
+            git commit -m "Migrar ADM para cache-first com sincronização de 5 minutos"
+            git push origin main
+          fi
