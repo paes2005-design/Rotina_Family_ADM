@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rotina Family — Sprint 2 • Tarefas</title>
+<style>
+:root{--ink:#20243d;--muted:#71778e;--purple:#6b35df;--purple2:#8d58ef;--soft:#f4efff;--nav:#17133e;--bg:#f6f7fb;--line:#e6e8f0;--green:#1c9b67;--red:#e45454;--amber:#d98a00}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}button,input,select{font:inherit}.app{min-height:100vh;display:grid;grid-template-columns:236px 1fr}.side{background:linear-gradient(180deg,#17133e,#211252);color:#fff;padding:22px 16px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}.brand{display:flex;gap:11px;align-items:center;font-size:21px;font-weight:850;margin-bottom:30px}.logo{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#a66cff,#6635e8);display:grid;place-items:center;font-size:24px}.brand small{display:block;color:#aaa5c3;font-size:11px;margin-top:2px}.navlabel{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#8f8aa8;margin:0 10px 9px}.nav{display:grid;gap:7px}.nav button{border:0;background:transparent;color:#d8d5e7;padding:12px 13px;border-radius:11px;display:flex;align-items:center;gap:11px;text-align:left;cursor:pointer}.nav button.active{background:linear-gradient(90deg,#5e2fd3,#782ee4);color:#fff;font-weight:800}.ico{width:23px;text-align:center}.bottom{margin-top:auto}.main{padding:25px 30px 44px;min-width:0}.top{display:flex;justify-content:space-between;gap:14px;align-items:center;margin-bottom:22px}.top h1{margin:0;font-size:25px}.top p{margin:5px 0 0;color:var(--muted);font-size:13px}.user{display:flex;align-items:center;gap:9px}.avatar{width:39px;height:39px;border-radius:50%;background:#ebe9f3;display:grid;place-items:center}.card{background:#fff;border:1px solid var(--line);border-radius:19px;box-shadow:0 15px 42px rgba(31,24,77,.09);overflow:hidden}.head{padding:22px 25px 17px;border-bottom:1px solid var(--line);display:flex;align-items:flex-end;justify-content:space-between;gap:16px}.crumb{font-size:11px;color:var(--purple);font-weight:850;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}.head h2{margin:0 0 5px;font-size:26px}.head p{margin:0;color:var(--muted);font-size:13px}.primary{border:0;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;border-radius:11px;padding:11px 16px;font-weight:850;cursor:pointer}.toolbar{padding:13px 25px;background:#fcfcfe;border-bottom:1px solid var(--line);display:flex;gap:9px;align-items:center}.toolbar input,.toolbar select{border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 11px}.toolbar input{width:min(420px,100%)}.count{margin-left:auto;color:var(--muted);font-size:12px}.tablewrap{overflow:auto}.tbl{width:100%;min-width:1050px;border-collapse:collapse}.tbl th{background:#f7f3ff;color:#514c75;text-transform:uppercase;letter-spacing:.035em;font-size:11px;text-align:left;padding:12px;border-bottom:1px solid #e5ddfb}.tbl td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:middle}.name{font-weight:800}.pill{display:inline-block;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:800}.activepill{background:#e7f8ef;color:#17744e}.inactivepill{background:#eff0f4;color:#73798b}.actions{display:flex;gap:6px}.ib{width:33px;height:33px;border-radius:9px;border:1px solid #ded8f5;background:#fff;color:var(--purple);cursor:pointer}.danger{color:var(--red);border-color:#f4cece}.edit td{background:#fffdf8}.edit input,.edit select{width:100%;border:1px solid #dbdde6;border-radius:8px;padding:8px;background:#fff}.expand{display:none}.expand.open{display:table-row}.expand td{padding:0;background:#fbfaff}.panel{padding:16px 18px 19px;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:12px;border-bottom:1px solid #ded8f5}.field label{display:block;font-size:10px;text-transform:uppercase;font-weight:850;color:#68617d;margin-bottom:5px}.field input{width:100%;border:1px solid #dedfe8;border-radius:8px;padding:9px}.week{display:flex;gap:5px;flex-wrap:wrap}.day{border:1px solid #ddd6f0;background:#fff;color:#68617f;padding:6px 8px;border-radius:8px;font-size:11px}.day.on{background:var(--soft);color:var(--purple);border-color:#b79af6;font-weight:800}.notice{padding:14px 25px 18px;color:var(--muted);font-size:12px}.notice b{color:#94610b;background:#fff2d2;border-radius:999px;padding:4px 7px;margin-right:6px}.monitor{display:none}.monitor.show{display:block}.monitorgrid{padding:18px 24px 24px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.metric{border:1px solid var(--line);border-radius:14px;padding:15px}.metric small{color:var(--muted)}.metric strong{display:block;font-size:25px;margin-top:5px}.timeline{grid-column:1/-1;border:1px solid var(--line);border-radius:14px;overflow:hidden}.row{display:grid;grid-template-columns:90px 1.6fr 1fr 1fr;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);align-items:center}.row:last-child{border-bottom:0}.status{font-weight:800}.ok{color:var(--green)}.late{color:var(--red)}.pending{color:var(--amber)}.mobile{display:none}.foot{margin-top:14px;text-align:right;color:#9096aa;font-size:11px}
+@media(max-width:900px){.app{grid-template-columns:1fr}.side{height:auto;position:static;padding:11px 12px}.brand{margin-bottom:9px}.brand small,.navlabel,.bottom{display:none}.nav{display:flex;overflow:auto;gap:4px}.nav button{min-width:78px;justify-content:center;flex-direction:column;gap:2px;font-size:10px;padding:7px 5px}.main{padding:15px 11px 70px}.user span{display:none}.head{align-items:flex-start}.toolbar{padding:11px 13px;flex-wrap:wrap}.toolbar input{width:100%;flex-basis:100%}.count{margin-left:0}.tablewrap{display:none}.mobile{display:grid;padding:11px;gap:9px}.mcard{border:1px solid var(--line);border-radius:13px;padding:13px}.mhead{display:flex;justify-content:space-between;gap:8px}.mmeta{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0;font-size:12px;color:#646a80}.monitorgrid{grid-template-columns:1fr 1fr;padding:13px}.timeline{grid-column:1/-1}.row{grid-template-columns:75px 1fr;gap:5px}.row span:nth-child(3),.row span:nth-child(4){font-size:11px}.panel{grid-template-columns:1fr}}
+@media(max-width:520px){.head{display:block}.primary{width:100%;margin-top:13px}.monitorgrid{grid-template-columns:1fr}.timeline{grid-column:1}.mmeta{grid-template-columns:1fr}.top h1{font-size:21px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+  <div class="brand"><div class="logo">⌂</div><div>Rotina <span style="color:#b678ff">Family</span><small>Painel Administrador</small></div></div>
+  <div class="navlabel">Menu</div>
+  <nav class="nav">
+    <button><span class="ico">⌂</span>Início</button>
+    <button id="navTasks" class="active"><span class="ico">☷</span>Tarefas</button>
+    <button id="navMonitor"><span class="ico">◉</span>Monitor</button>
+    <button><span class="ico">🎁</span>Recompensas</button>
+    <button><span class="ico">▥</span>Relatórios</button>
+    <button><span class="ico">🔐</span>Master</button>
+  </nav>
+  <div class="bottom"><nav class="nav"><button style="color:#ff6978"><span class="ico">↪</span>Sair</button></nav></div>
+</aside>
+<main class="main">
+  <div class="top"><div><h1>Rotina Family</h1><p>Sprint 2 • primeira versão para avaliação</p></div><div class="user"><div class="avatar">👤</div><span><b>Administrador</b><br><small style="color:#777d91">Grupo Família</small></span></div></div>
+
+  <section id="tasksView" class="card">
+    <div class="head"><div><div class="crumb">Tarefas</div><h2>Cadastro de tarefas</h2><p>Crie e edite a rotina diretamente nas linhas, sem uma tela extensa de cadastro.</p></div><button id="add" class="primary">＋ Nova tarefa</button></div>
+    <div class="toolbar"><input id="search" placeholder="Buscar tarefa ou participante"><select id="filter"><option value="all">Todas</option><option value="active">Ativas</option><option value="inactive">Inativas</option></select><div id="count" class="count"></div></div>
+    <div class="tablewrap"><table class="tbl"><thead><tr><th>Tarefa</th><th>Participante</th><th>Horário</th><th>Pontos</th><th>Tolerância</th><th>Dias</th><th>Status</th><th>Ações</th></tr></thead><tbody id="body"></tbody></table></div>
+    <div id="mobile" class="mobile"></div>
+    <div class="notice"><b>Prévia</b> Esta tela é isolada. Salvar, editar e excluir modificam apenas a demonstração local e não escrevem no Firebase.</div>
+  </section>
+
+  <section id="monitorView" class="card monitor">
+    <div class="head"><div><div class="crumb">Monitor</div><h2>Acompanhamento de hoje</h2><p>É aqui que ficam execução, atrasos, justificativas, horários reais e pontos. Cadastro e acompanhamento permanecem separados.</p></div><button class="primary" id="backTasks">Ir para Tarefas</button></div>
+    <div class="monitorgrid">
+      <div class="metric"><small>Previstas hoje</small><strong>6</strong></div>
+      <div class="metric"><small>Concluídas</small><strong>3</strong></div>
+      <div class="metric"><small>Em andamento</small><strong>1</strong></div>
+      <div class="metric"><small>Pendentes</small><strong>2</strong></div>
+      <div class="timeline">
+        <div class="row"><b>08:00</b><span>Estudar — Lara Vitoria</span><span class="status ok">Concluída</span><span>5 / 5 pts</span></div>
+        <div class="row"><b>09:30</b><span>Arrumar casa — Lara Vitoria</span><span class="status late">Atrasada</span><span>0 / 5 pts</span></div>
+        <div class="row"><b>10:30</b><span>Violão — Lara Vitoria</span><span class="status ok">Concluída</span><span>5 / 5 pts</span></div>
+        <div class="row"><b>11:16</b><span>Esquentar almoço — Lara Vitoria</span><span class="status pending">Pendente</span><span>0 / 5 pts</span></div>
+      </div>
+    </div>
+  </section>
+  <div class="foot">Sprint 2 • avaliação visual e de fluxo • sem conexão de escrita</div>
+</main>
+</div>
+<script>
+const days=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+let next=5,open=null,edit=null;
+let tasks=[
+{id:1,name:'Arrumar a cama',person:'Lara Vitoria',time:'07:15',points:5,tol:2,days:['Seg','Ter','Qua','Qui','Sex'],status:'active',alarm:'07:10'},
+{id:2,name:'Estudar',person:'Lara Vitoria',time:'08:00',points:5,tol:0,days:['Seg','Ter','Qua','Qui','Sex'],status:'active',alarm:'07:55'},
+{id:3,name:'Arrumar casa',person:'Lara Vitoria',time:'09:30',points:5,tol:0,days:['Seg','Qua','Sex'],status:'active',alarm:'09:25'},
+{id:4,name:'Violão',person:'Lara Vitoria',time:'10:30',points:5,tol:2,days:['Qui'],status:'inactive',alarm:'10:25'}];
+const $=s=>document.querySelector(s); const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function dsum(a){if(a.length===5&&['Seg','Ter','Qua','Qui','Sex'].every(x=>a.includes(x)))return'Seg–Sex';return a.join(', ')}
+function matches(t){const q=$('#search').value.trim().toLowerCase(),f=$('#filter').value;return(!q||(t.name+' '+t.person).toLowerCase().includes(q))&&(f==='all'||t.status===f)}
+function row(t){if(edit===t.id)return`<td><input data-k="name" value="${esc(t.name)}"></td><td><input data-k="person" value="${esc(t.person)}"></td><td><input data-k="time" type="time" value="${t.time}"></td><td><input data-k="points" type="number" value="${t.points}"></td><td><input data-k="tol" type="number" value="${t.tol}"></td><td>${dsum(t.days)}</td><td><select data-k="status"><option value="active" ${t.status==='active'?'selected':''}>Ativa</option><option value="inactive" ${t.status==='inactive'?'selected':''}>Inativa</option></select></td><td><div class="actions"><button class="ib" onclick="save(${t.id})">✓</button><button class="ib" onclick="cancelEdit()">×</button></div></td>`;
+return`<td class="name">${esc(t.name)}</td><td>${esc(t.person)}</td><td>${t.time}</td><td>${t.points}</td><td>${t.tol} min</td><td>${dsum(t.days)}</td><td><span class="pill ${t.status==='active'?'activepill':'inactivepill'}">${t.status==='active'?'● Ativa':'○ Inativa'}</span></td><td><div class="actions"><button class="ib" onclick="toggle(${t.id})">⌄</button><button class="ib" onclick="startEdit(${t.id})">✎</button><button class="ib danger" onclick="del(${t.id})">⌫</button></div></td>`}
+function expand(t){return`<div class="panel"><div class="field"><label>Dias da semana</label><div class="week">${days.map(d=>`<button class="day ${t.days.includes(d)?'on':''}" onclick="toggleDay(${t.id},'${d}')">${d}</button>`).join('')}</div></div><div class="field"><label>Alarme</label><input type="time" value="${t.alarm}" onchange="setAlarm(${t.id},this.value)"></div><div class="field"><label>Ordem</label><input value="${t.id}"></div><div class="field"><label>Observação</label><input placeholder="Opcional"></div></div>`}
+function render(){const list=tasks.filter(matches);$('#count').textContent=`${list.length} tarefa${list.length===1?'':'s'}`;$('#body').innerHTML='';list.forEach(t=>{$('#body').insertAdjacentHTML('beforeend',`<tr class="${edit===t.id?'edit':''}">${row(t)}</tr><tr class="expand ${open===t.id?'open':''}"><td colspan="8">${expand(t)}</td></tr>`)});$('#mobile').innerHTML=list.map(t=>`<div class="mcard"><div class="mhead"><b>${esc(t.name)}</b><span class="pill ${t.status==='active'?'activepill':'inactivepill'}">${t.status==='active'?'Ativa':'Inativa'}</span></div><div class="mmeta"><span><b>Participante:</b> ${esc(t.person)}</span><span><b>Horário:</b> ${t.time}</span><span><b>Pontos:</b> ${t.points}</span><span><b>Tolerância:</b> ${t.tol} min</span><span><b>Dias:</b> ${dsum(t.days)}</span></div><div class="actions"><button class="ib" onclick="toggle(${t.id})">⌄</button><button class="ib" onclick="startEdit(${t.id})">✎</button><button class="ib danger" onclick="del(${t.id})">⌫</button></div>${open===t.id?expand(t):''}</div>`).join('')}
+function toggle(id){open=open===id?null:id;render()}function startEdit(id){edit=id;open=null;render()}function cancelEdit(){edit=null;render()}function save(id){const t=tasks.find(x=>x.id===id);document.querySelectorAll(`tr.edit [data-k]`).forEach(el=>{let v=el.value;if(['points','tol'].includes(el.dataset.k))v=Number(v);t[el.dataset.k]=v});edit=null;render()}function del(id){tasks=tasks.filter(x=>x.id!==id);render()}function toggleDay(id,d){const t=tasks.find(x=>x.id===id);t.days=t.days.includes(d)?t.days.filter(x=>x!==d):[...t.days,d];render()}function setAlarm(id,v){tasks.find(x=>x.id===id).alarm=v}
+$('#add').onclick=()=>{const id=next++;tasks.unshift({id,name:'Nova tarefa',person:'Lara Vitoria',time:'12:00',points:5,tol:0,days:['Seg','Ter','Qua','Qui','Sex'],status:'active',alarm:'11:55'});edit=id;render()};$('#search').oninput=render;$('#filter').onchange=render;
+function show(view){const tasksOn=view==='tasks';$('#tasksView').style.display=tasksOn?'block':'none';$('#monitorView').classList.toggle('show',!tasksOn);$('#navTasks').classList.toggle('active',tasksOn);$('#navMonitor').classList.toggle('active',!tasksOn)}
+$('#navTasks').onclick=()=>show('tasks');$('#navMonitor').onclick=()=>show('monitor');$('#backTasks').onclick=()=>show('tasks');render();
+</script>
+</body></html>
