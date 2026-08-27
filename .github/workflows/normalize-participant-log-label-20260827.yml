@@ -1,0 +1,54 @@
+name: Normalizar Participante no monitor ADM 2026-08-27
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'scripts/normalize-participant-log-label-20260827.py'
+      - '.github/workflows/normalize-participant-log-label-20260827.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Aplicar nomenclatura Participante
+        run: python scripts/normalize-participant-log-label-20260827.py
+      - name: Validar regressão básica
+        run: |
+          set -euo pipefail
+          node --check app-monitoring-dashboard.js
+          node --check runtime-build-info.js
+          node --check sw.js
+          node --check adm-justification-review.js
+          node --check adm-auth-session-v1.js
+          python - <<'PY'
+          from pathlib import Path
+          d=Path('app-monitoring-dashboard.js').read_text(encoding='utf-8')
+          h=Path('index-ADMIN-v8.html').read_text(encoding='utf-8')
+          assert '<option value="participante">Participante</option>' in d
+          assert '<option value="cliente">Cliente</option>' not in d
+          assert 'normalizeApp(i.aplicativo)' in d
+          assert 'app-monitoring-dashboard.js?v=3' in h
+          assert 'adm-zero-points-restitution-20260827.js?v=1' in h
+          print('VALIDACAO_ADM_PARTICIPANTE=OK')
+          PY
+      - name: Persistir alterações
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app-monitoring-dashboard.js index-ADMIN-v8.html index.html runtime-build-info.js sw.js
+          if git diff --cached --quiet; then
+            echo 'Normalização já aplicada.'
+          else
+            git commit -m "Exibir Participante no monitor e atualizar build ADM"
+            git push origin HEAD:main
+          fi
