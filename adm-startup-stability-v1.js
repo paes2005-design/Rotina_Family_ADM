@@ -1,9 +1,10 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
-const VERSION = 4;
-const MAX_RETRIES = 3;
-const startedAt = performance.now();
+const VERSION = 5;
+const MAX_RETRIES = 1;
+let flowStartedAt = performance.now();
+const flowElapsed = () => Math.max(0, Math.round(performance.now() - flowStartedAt));
 let authenticated = false;
 let sessionReady = false;
 let blankSince = 0;
@@ -45,6 +46,7 @@ function visible(el) {
 }
 
 function showLogin() {
+  flowStartedAt = performance.now();
   sessionReady = false;
   authenticated = false;
   const access = document.getElementById('telaAcesso');
@@ -76,7 +78,7 @@ function markSessionReady(event) {
   sessionReady = true;
   authenticated = true;
   retryCount = 0;
-  const elapsed = Math.round(performance.now() - startedAt);
+  const elapsed = flowElapsed();
   log('startup.adm_sessao_pronta', { ms: elapsed, grupoId: String(event?.detail?.grupoId || '').slice(0, 32) });
   requestAnimationFrame(() => requestAnimationFrame(() => {
     const main = document.getElementById('sistemaPrincipal');
@@ -94,7 +96,7 @@ function requestRetry(auth, generation) {
   show(`Restaurando seu painel... (${retryCount}/${MAX_RETRIES})`);
   log('startup.adm_retry_solicitado', {
     tentativa: retryCount,
-    ms: Math.round(performance.now() - startedAt),
+    ms: flowElapsed(),
     uid: String(auth.currentUser.uid || '').slice(0, 24)
   }, 'warning');
   window.dispatchEvent(new CustomEvent('rotina-adm-auth-retry-requested', {
@@ -103,19 +105,19 @@ function requestRetry(auth, generation) {
 }
 
 function scheduleRecovery(auth, generation) {
-  [2200, 5200, 9000].forEach(delay => {
+  [6500].forEach(delay => {
     setTimeout(() => requestRetry(auth, generation), delay);
   });
   setTimeout(async () => {
     if (generation !== authGeneration || sessionReady || !auth.currentUser) return;
     log('startup.adm_restauracao_esgotada', {
       tentativas: retryCount,
-      ms: Math.round(performance.now() - startedAt)
+      ms: flowElapsed()
     }, 'error');
     show('Não foi possível restaurar sua sessão. Voltando ao login...');
     try { await signOut(auth); } catch {}
     showLogin();
-  }, 13000);
+  }, 14000);
 }
 
 function installAuthWatch(attempt = 0) {
@@ -129,7 +131,8 @@ function installAuthWatch(attempt = 0) {
     authGeneration += 1;
     const generation = authGeneration;
     authenticated = !!user;
-    log('startup.adm_auth_resolvido', { autenticado: authenticated, ms: Math.round(performance.now() - startedAt) });
+    if (user) flowStartedAt = performance.now();
+    log('startup.adm_auth_resolvido', { autenticado: authenticated, ms: flowElapsed() });
     if (user) {
       if (!sessionReady) show('Restaurando seu painel...');
       scheduleRecovery(auth, generation);

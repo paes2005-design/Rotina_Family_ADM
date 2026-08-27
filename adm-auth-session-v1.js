@@ -2,8 +2,8 @@ import { initializeApp, getApps, getApp, deleteApp } from 'https://www.gstatic.c
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken, signOut, deleteUser, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
 const API_ROOT = 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
-const VERSION = 6;
-const MAX_RESTORE_RETRIES = 3;
+const VERSION = 7;
+const MAX_RESTORE_RETRIES = 1;
 let installed = false;
 let promotingUid = '';
 let promotedUid = '';
@@ -33,19 +33,24 @@ async function closeTemporary(session) {
 }
 
 async function workerSession(path, idToken, body = {}) {
-  const response = await fetch(`${API_ROOT}${path}`, {
-    method: 'POST',
-    cache: 'no-store',
-    headers: { authorization: `Bearer ${idToken}`, 'content-type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok || !result.token) {
-    const error = new Error(result.error || `Falha HTTP ${response.status}`);
-    error.status = response.status;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort('timeout'), 9000);
+  try {
+    const response = await fetch(`${API_ROOT}${path}`, {
+      method: 'POST', cache: 'no-store', signal: controller.signal,
+      headers: { authorization: `Bearer ${idToken}`, 'content-type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.token) {
+      const error = new Error(result.error || `Falha HTTP ${response.status}`);
+      error.status = response.status; throw error;
+    }
+    return result;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('A restauração da sessão demorou além do limite seguro.');
     throw error;
-  }
-  return result;
+  } finally { clearTimeout(timeout); }
 }
 
 function publishRole(session = {}, reason = '') {
@@ -60,23 +65,20 @@ function publishRole(session = {}, reason = '') {
 async function installPromotedSession(session, reason) {
   const auth = mainAuth();
   promotedUid = auth.currentUser?.uid || promotedUid;
+  window.__rotinaAdmPromotionInProgress = true;
   try {
-    // Força uma transição real de autenticação para que o listener principal do
-    // ADM reconstrua adminLogadoAtual e inicie novamente as escutas do Firestore.
-    if (auth.currentUser) await signOut(auth);
+    // signInWithCustomToken já substitui a credencial atual. Não fazemos signOut antes,
+    // pois a transição vazio->usuário alimentava o loop do guard de inicialização.
     const credential = await signInWithCustomToken(auth, session.token);
     promotedUid = credential.user.uid;
     publishRole(session, reason);
-    window.rotinaLog?.('auth.adm_sessao_promovida', {
-      papel: session.papel,
-      grupoId: session.grupoId || '',
-      motivo: reason,
-      authVersion: VERSION
-    });
+    window.rotinaLog?.('auth.adm_sessao_promovida', { papel: session.papel, grupoId: session.grupoId || '', motivo: reason, authVersion: VERSION });
     return credential.user;
   } catch (error) {
     promotedUid = '';
     throw error;
+  } finally {
+    window.__rotinaAdmPromotionInProgress = false;
   }
 }
 
