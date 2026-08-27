@@ -1,0 +1,49 @@
+name: Centralizar leitores ativos do ADM no cache
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-adm-cache-centralization-v2.yml'
+      - 'scripts/apply-adm-cache-centralization-v2.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Aplicar segunda centralização
+        run: python scripts/apply-adm-cache-centralization-v2.py
+      - name: Validar leitores ativos
+        run: |
+          node --check reward-redemption-notifications.js
+          node --check family-alarm-admin.js
+          node --check sw.js
+          python - <<'PY'
+          from pathlib import Path
+          active=['index-ADMIN-v8.html','reward-redemption-notifications.js','family-alarm-admin.js']
+          for f in active:
+              s=Path(f).read_text(encoding='utf-8')
+              assert 'onSnapshot(' not in s, f'Listener ativo restante: {f}'
+          base=Path('index-ADMIN-v8.html').read_text(encoding='utf-8')
+          reward=Path('reward-redemption-notifications.js').read_text(encoding='utf-8')
+          entry=Path('index.html').read_text(encoding='utf-8')
+          assert 'historicoAdminCache = historicoGrupoCache.filter' in base
+          assert 'rotinaAdmCacheSnapshot' in reward
+          assert 'rotina-adm-cache-updated' in reward
+          assert 'entry=20260827.2' in entry
+          print('ADM_LEITORES_ATIVOS_CENTRALIZADOS=OK')
+          PY
+      - name: Persistir
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index-ADMIN-v8.html reward-redemption-notifications.js index.html sw.js
+          if git diff --cached --quiet; then echo 'Já aplicado.'; else git commit -m "Centralizar leitores ativos do ADM no cache" && git push origin main; fi
