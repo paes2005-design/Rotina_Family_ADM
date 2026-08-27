@@ -685,7 +685,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, where, onSnapshot, addDoc, getDocs, writeBatch, doc, deleteDoc, updateDoc, getDoc, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, where, addDoc, getDocs, getDocsFromCache, getDocsFromServer, writeBatch, doc, deleteDoc, updateDoc, getDoc, getDocFromCache, getDocFromServer, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const firebaseConfig = {
@@ -773,6 +773,12 @@
     let unsubscribeHistoricoGrupo = null;
     let unsubscribeRecompensas = null;
     let unsubscribeResgates = null;
+    const SINCRONIZACAO_ADM_MS = 5 * 60 * 1000;
+    let sincronizacaoAdmTimer = null;
+    let sincronizacaoAdmEmCurso = false;
+    let ultimaSincronizacaoAdmServidor = 0;
+    let eventosSincronizacaoAdmInstalados = false;
+    let migracaoLegadaConferida = false;
 
     const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
@@ -937,7 +943,8 @@
         document.getElementById('displayCodigoCliente').innerText=adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId || 'CLI-Gen';
         window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));
         iniciarEscutasFirebase();
-        Promise.allSettled([verificarEExecutarResetSemanal(adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId),carregarRegraAtraso()]);
+        // Regra/configuração é carregada pelo cache central. Reset semanal permanece em tarefa de manutenção separada.
+        setTimeout(()=>verificarEExecutarResetSemanal(adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId),1500);
     };
 
     window.esqueciSenha = async () => {
@@ -947,31 +954,80 @@
         catch(e) { alert('Não foi possível enviar a recuperação. Confirme o e-mail e se o Firebase Authentication está habilitado.'); }
     };
 
+    function snapshotAdmCompartilhado(){
+        return {grupoId:adminLogadoAtual?.codigoCliente||adminLogadoAtual?.grupoId||'',perfis:perfisCache.map(x=>({...x})),tarefas:tarefasCache.map(x=>({...x})),historico:historicoGrupoCache.map(x=>({...x})),recompensas:recompensasCache.map(x=>({...x})),resgates:resgatesCache.map(x=>({...x})),regraAtraso:{...regraAtrasoAtual},ultimaSincronizacaoServidor:ultimaSincronizacaoAdmServidor};
+    }
+    window.rotinaAdmCacheSnapshot=snapshotAdmCompartilhado;
+
+    function renderizarCachesAdm(){
+        atualizarSelects();
+        atualizarMonitor();
+        renderizarTabelaExclusao();
+        renderizarDashboard();
+        renderizarRecompensasAdmin();
+        renderizarResgatesAdmin();
+        atualizarExplicacaoRegraAtrasoAdmin();
+        window.dispatchEvent(new CustomEvent('rotina-family-tasks-rendered',{detail:{origem:'cache-central-adm'}}));
+        window.dispatchEvent(new CustomEvent('rotina-adm-cache-updated',{detail:{grupoId:adminLogadoAtual?.codigoCliente||adminLogadoAtual?.grupoId||''}}));
+    }
+
+    async function sincronizarDadosAdm(origem='intervalo-5min',servidor=true){
+        const gId=adminLogadoAtual?.codigoCliente||adminLogadoAtual?.grupoId;
+        if(!gId||sincronizacaoAdmEmCurso)return false;
+        sincronizacaoAdmEmCurso=true;
+        const inicio=performance.now();
+        try{
+            const lerColecao=servidor?getDocsFromServer:getDocsFromCache;
+            const lerDocumento=servidor?getDocFromServer:getDocFromCache;
+            const resultados=await Promise.allSettled([
+                lerColecao(query(collection(db,'perfis'),where('grupoId','==',gId))),
+                lerColecao(query(collection(db,'tarefas'),where('grupoId','==',gId))),
+                lerColecao(query(collection(db,'historico'),where('grupoId','==',gId))),
+                lerColecao(query(collection(db,'recompensas'),where('grupoId','==',gId))),
+                lerColecao(query(collection(db,'resgates'),where('grupoId','==',gId))),
+                lerDocumento(doc(db,'configGrupos',gId))
+            ]);
+            const [perfis,tarefas,historico,recompensas,resgates,config]=resultados;
+            if(perfis.status==='fulfilled')perfisCache=perfis.value.docs.map(d=>({id:d.id,perfilId:d.data().perfilId||d.id,...d.data()}));
+            if(tarefas.status==='fulfilled')tarefasCache=tarefas.value.docs.map(d=>({id:d.id,...d.data()}));
+            if(historico.status==='fulfilled')historicoGrupoCache=historico.value.docs.map(d=>({id:d.id,...d.data()}));
+            if(recompensas.status==='fulfilled')recompensasCache=recompensas.value.docs.map(d=>({id:d.id,...d.data()}));
+            if(resgates.status==='fulfilled')resgatesCache=resgates.value.docs.map(d=>({id:d.id,...d.data()}));
+            if(config.status==='fulfilled')regraAtrasoAtual=normalizarRegraAtraso(config.value.exists()?config.value.data():{});
+            const falhas=resultados.filter(x=>x.status==='rejected').length;
+            if(servidor&&falhas<resultados.length)ultimaSincronizacaoAdmServidor=Date.now();
+            renderizarCachesAdm();
+            if(!migracaoLegadaConferida&&perfisCache.length&&tarefasCache.length){migracaoLegadaConferida=true;migrarTarefasLegadas().catch(console.error);}
+            window.rotinaLog?.('sync.adm_ciclo',{origem,servidor,tempoMs:Math.round(performance.now()-inicio),falhas,intervaloMin:5},falhas?'warning':'info');
+            window.dispatchEvent(new CustomEvent('rotina-adm-sync-complete',{detail:{origem,servidor,falhas}}));
+            return falhas<resultados.length;
+        }catch(e){window.rotinaLog?.('sync.adm_erro',{origem,servidor,mensagem:String(e?.message||e)},'warning');return false;}
+        finally{sincronizacaoAdmEmCurso=false;}
+    }
+    window.rotinaSincronizarAdmAgora=(motivo='manual')=>sincronizarDadosAdm(motivo,true);
+    window.rotinaAtualizarAdmCacheLocal=(motivo='acao-local')=>sincronizarDadosAdm(motivo,false);
+
+    function encerrarSincronizacaoAdm(){if(sincronizacaoAdmTimer){clearInterval(sincronizacaoAdmTimer);sincronizacaoAdmTimer=null;}}
     function iniciarEscutasFirebase() {
-        const gId = adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId;
+        // Cache-first: o ADM não mantém mais cinco listeners funcionais permanentes.
         [unsubscribePerfis,unsubscribeTarefasAdmin,unsubscribeHistoricoGrupo,unsubscribeRecompensas,unsubscribeResgates].forEach(u=>u&&u());
-        const qPerfis = query(collection(db, "perfis"), where("grupoId", "==", gId));
-        unsubscribePerfis = onSnapshot(qPerfis,{includeMetadataChanges:true}, async (snapshot) => {
-            perfisCache = snapshot.docs.map(d => ({ id: d.id, perfilId: d.data().perfilId || d.id, ...d.data() }));
-            for (const perfil of perfisCache) {
-                if (perfil.pin && !perfil.pinHash) {
-                    const pinHash = await hashPin(String(perfil.pin));
-                    updateDoc(doc(db,'perfis',perfil.id),{pinHash,pinVersion:2,pin:deleteField(),pinMigradoEm:new Date().toISOString()}).catch(console.error);
-                }
-            }
-            atualizarSelects();
-            migrarTarefasLegadas().catch(console.error);
-        });
-        const qTarefas = query(collection(db, "tarefas"), where("grupoId", "==", gId));
-        unsubscribeTarefasAdmin = onSnapshot(qTarefas,{includeMetadataChanges:true}, async (snapshot) => {
-            tarefasCache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            await migrarTarefasLegadas();
-            atualizarMonitor(); renderizarTabelaExclusao(); renderizarDashboard();
-            window.dispatchEvent(new CustomEvent('rotina-family-tasks-rendered',{detail:{origem:snapshot.metadata.fromCache?'cache':'servidor'}}));
-        });
-        unsubscribeHistoricoGrupo = onSnapshot(query(collection(db,"historico"),where("grupoId","==",gId)), s => { historicoGrupoCache=s.docs.map(d=>({id:d.id,...d.data()})); renderizarDashboard(); });
-        unsubscribeRecompensas = onSnapshot(query(collection(db,"recompensas"),where("grupoId","==",gId)), s => { recompensasCache=s.docs.map(d=>({id:d.id,...d.data()})); renderizarRecompensasAdmin(); });
-        unsubscribeResgates = onSnapshot(query(collection(db,"resgates"),where("grupoId","==",gId)), s => { resgatesCache=s.docs.map(d=>({id:d.id,...d.data()})); renderizarResgatesAdmin(); });
+        encerrarSincronizacaoAdm();
+        unsubscribePerfis=encerrarSincronizacaoAdm;unsubscribeTarefasAdmin=null;unsubscribeHistoricoGrupo=null;unsubscribeRecompensas=null;unsubscribeResgates=null;
+        sincronizarDadosAdm('cache-inicial',false).finally(()=>sincronizarDadosAdm('servidor-inicial',true));
+        sincronizacaoAdmTimer=setInterval(()=>{if(!document.hidden)sincronizarDadosAdm('intervalo-5min',true);},SINCRONIZACAO_ADM_MS);
+        if(!eventosSincronizacaoAdmInstalados){
+            eventosSincronizacaoAdmInstalados=true;
+            document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('retorno-visivel-stale',true);});
+            window.addEventListener('online',()=>{if(Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('reconectado-stale',true);});
+            // Após comandos locais, releia somente o IndexedDB local; isso não gera leitura cobrada.
+            document.addEventListener('click',e=>{
+                const el=e.target.closest?.('button,[role="button"]');if(!el)return;
+                const acao=String(el.getAttribute('onclick')||el.dataset?.action||el.dataset?.act||'');
+                if(!/(salvar|excluir|aprovar|recusar|bloquear|desbloquear|confirmar|reverter|retirar|ativar)/i.test(acao))return;
+                setTimeout(()=>sincronizarDadosAdm('acao-local-cache',false),700);
+                setTimeout(()=>sincronizarDadosAdm('acao-local-cache-tardio',false),1800);
+            },true);
+        }
     }
 
     async function migrarTarefasLegadas(){
@@ -991,6 +1047,7 @@
     }
 
     window.realizarLogout = () => {
+        encerrarSincronizacaoAdm();
         window.desvincularAdmDoPush?.();
         signOut(auth).catch(()=>{});
         if(unsubscribePerfis) unsubscribePerfis();
