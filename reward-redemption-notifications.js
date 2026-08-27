@@ -1,6 +1,3 @@
-import { getApps, getApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
 const STORAGE_PREFIX = 'rotinaFamilyAdm.resgatesAvisados.';
 const avisadosNaSessao = new Set();
 const fila = [];
@@ -158,9 +155,9 @@ function mostrarProximo() {
   mostrarNotificacaoSistema(resgate);
 }
 
-function processarSnapshot(snapshot, grupoId) {
-  const pendentes = snapshot.docs
-    .map(docSnap => ({ id: docSnap.id, grupoId, ...docSnap.data() }))
+function processarLista(lista, grupoId) {
+  const pendentes = (lista || [])
+    .map(item => ({ grupoId, ...item }))
     .filter(resgate => String(resgate.status || 'Pendente').toLowerCase() === 'pendente')
     .sort((a, b) => String(a.criadoEm || '').localeCompare(String(b.criadoEm || '')));
   atualizarBadge(pendentes.length);
@@ -175,25 +172,20 @@ function processarSnapshot(snapshot, grupoId) {
 
 function iniciarEscuta() {
   const grupoId = grupoAtual();
-  if (!grupoId || grupoId === grupoEmEscuta || !getApps().length) return;
-  unsubscribe?.();
+  if (!grupoId) return;
   grupoEmEscuta = grupoId;
-  const db = getFirestore(getApp());
-  const consulta = query(collection(db, 'resgates'), where('grupoId', '==', grupoId));
-  unsubscribe = onSnapshot(consulta, snapshot => processarSnapshot(snapshot, grupoId), erro => {
-    console.error('Falha ao acompanhar resgates:', erro);
-  });
+  const lista = window.rotinaAdmCacheSnapshot?.().resgates || [];
+  processarLista(lista, grupoId);
 }
 
 function instalar() {
   garantirEstilo();
   iniciarEscuta();
-  const alvo = document.getElementById('displayCodigoCliente') || document.body;
-  new MutationObserver(iniciarEscuta).observe(alvo, { childList: true, subtree: true, characterData: true });
-  window.addEventListener('focus', iniciarEscuta);
-  window.addEventListener('online', iniciarEscuta);
+  window.addEventListener('rotina-admin-session-ready',()=>setTimeout(iniciarEscuta,100));
+  window.addEventListener('rotina-adm-cache-updated',iniciarEscuta);
   if (new URLSearchParams(location.search).get('abrir') === 'resgates') setTimeout(abrirRecompensas, 700);
 }
 
 if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', instalar, { once: true });
 else instalar();
+
