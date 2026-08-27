@@ -1,4 +1,4 @@
-name: Auditoria viva ADM 2026-08-27
+name: Auditoria viva Rotina Family 2026-08-27
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/live-adm-audit-20260827.yml'
       - 'adm-justification-review.js'
+      - 'app-monitoring-dashboard.js'
       - 'runtime-build-info.js'
       - 'index.html'
       - 'index-ADMIN-v8.html'
@@ -21,17 +22,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validar sintaxe e builds locais
+      - name: Validar sintaxe e build ADM local
         shell: bash
         run: |
           set -euo pipefail
           node --check adm-justification-review.js
+          node --check app-monitoring-dashboard.js
           node --check runtime-build-info.js
           node --check sw.js
           node --check adm-zero-points-restitution-20260827.js
-          grep -q "entry=20260827.3" index.html
-          grep -q "build:'20260827.3'" runtime-build-info.js
-          grep -q "expectedServiceWorkerVersion:'62'" runtime-build-info.js
+          grep -q "entry=20260827.4" index.html
+          grep -q "build:'20260827.4'" runtime-build-info.js
+          grep -q "expectedServiceWorkerVersion:'63'" runtime-build-info.js
+          grep -q '<option value="participante">Participante</option>' app-monitoring-dashboard.js
+          ! grep -q '<option value="cliente">Cliente</option>' app-monitoring-dashboard.js
           ! grep -q 'getDocs' adm-justification-review.js
           ! grep -q 'getDoc' adm-justification-review.js
       - name: Consultar producao e diagnosticos
@@ -46,29 +50,63 @@ jobs:
             head -c 30000 "$name.json" 2>/dev/null || true
             echo
             echo "=== fim $name ==="
+            test "$code" = "200"
           }
           fetch monitoramento "$BASE/monitoramento"
           fetch diagnostico_tecnico "$BASE/diagnostico-tecnico"
           fetch diagnostico_worker "$BASE/diagnostico-worker"
+
           code=$(curl -L -sS --max-time 20 -o adm-page.html -w '%{http_code}' 'https://paes2005-design.github.io/Rotina_Family_ADM/' || true)
           echo "=== ADM PAGE HTTP $code ==="
-          grep -Eo 'entry=[0-9.]+' adm-page.html | head -n 3 || true
-          curl -L -sS --max-time 20 'https://paes2005-design.github.io/Rotina_Family_ADM/runtime-build-info.js' | tee runtime-live.js | head -c 10000 || true
-          grep -q "build:'20260827.3'" runtime-live.js
-          grep -q "expectedServiceWorkerVersion:'62'" runtime-live.js
-      - name: Resumir diagnostico
+          test "$code" = "200"
+          grep -q 'entry=20260827.4' adm-page.html
+          curl -L -sS --max-time 20 'https://paes2005-design.github.io/Rotina_Family_ADM/runtime-build-info.js' -o adm-runtime-live.js
+          grep -q "build:'20260827.4'" adm-runtime-live.js
+          grep -q "expectedServiceWorkerVersion:'63'" adm-runtime-live.js
+          curl -L -sS --max-time 20 'https://paes2005-design.github.io/Rotina_Family_ADM/app-monitoring-dashboard.js' -o adm-monitor-live.js
+          grep -q '<option value="participante">Participante</option>' adm-monitor-live.js
+          ! grep -q '<option value="cliente">Cliente</option>' adm-monitor-live.js
+
+          code=$(curl -L -sS --max-time 20 -o participante-page.html -w '%{http_code}' 'https://paes2005-design.github.io/Rotina_Family_Cliente/' || true)
+          echo "=== PARTICIPANTE PAGE HTTP $code ==="
+          test "$code" = "200"
+          grep -q "const BUILD='20260827.5'" participante-page.html
+          curl -L -sS --max-time 20 'https://paes2005-design.github.io/Rotina_Family_Cliente/runtime-build-info.js' -o participante-runtime-live.js
+          grep -q "app:'PARTICIPANTE'" participante-runtime-live.js
+          grep -q "build:'20260827.5'" participante-runtime-live.js
+          grep -q "expectedServiceWorkerVersion:'77'" participante-runtime-live.js
+          curl -L -sS --max-time 20 'https://paes2005-design.github.io/Rotina_Family_Cliente/app-monitoring.js' -o participante-monitor-live.js
+          grep -q "const APP_KIND = 'participante';" participante-monitor-live.js
+          curl -L -sS --max-time 20 'https://paes2005-design.github.io/Rotina_Family_Cliente/index-CLIENTE-v6.html' -o participante-main-live.html
+          test "$(grep -o 'OneSignal.login(' participante-main-live.html | wc -l | tr -d ' ')" = "1"
+          grep -q "aplicativo:'participante'" participante-main-live.html
+      - name: Avaliar saude atual
         shell: bash
         run: |
           python - <<'PY'
-          import json, pathlib
-          for name in ['monitoramento','diagnostico_tecnico','diagnostico_worker']:
-              p=pathlib.Path(name+'.json')
-              if not p.exists():
-                  print(name,'SEM_ARQUIVO'); continue
-              try:
-                  d=json.loads(p.read_text(encoding='utf-8'))
-                  print(name.upper(), json.dumps(d, ensure_ascii=False)[:12000])
-              except Exception as e:
-                  print(name,'NAO_JSON',e)
+          import json, pathlib, sys
+          mon=json.loads(pathlib.Path('monitoramento.json').read_text(encoding='utf-8'))
+          diag=json.loads(pathlib.Path('diagnostico_tecnico.json').read_text(encoding='utf-8'))
+          work=json.loads(pathlib.Path('diagnostico_worker.json').read_text(encoding='utf-8'))
+          print('WORKER_STATUS=',mon.get('status'))
+          print('WORKER_STORAGE=',mon.get('storage'))
+          print('HEALTH_HARD=',mon.get('healthReasons',{}).get('hard',[]))
+          print('HEALTH_ATTENTION=',mon.get('healthReasons',{}).get('attention',[]))
+          print('TECH_SUMMARY=',diag.get('summary',{}))
+          print('ALARMS=',work.get('alarms',{}))
+          print('REWARD_ADMIN=',work.get('rewardAdmin',{}))
+          print('REWARD_PARTICIPANTE=',work.get('rewardClient',{}))
+          if mon.get('status') not in ('SAUDAVEL','ATENCAO'):
+              raise SystemExit('Worker em estado não aceitável')
+          if mon.get('healthReasons',{}).get('hard'):
+              raise SystemExit('Worker com falha dura')
+          if int(diag.get('summary',{}).get('http400',0) or 0)>0:
+              raise SystemExit('Há HTTP 400 no diagnóstico atual')
+          if int(diag.get('summary',{}).get('http429',0) or 0)>0:
+              raise SystemExit('Há HTTP 429 no diagnóstico atual')
+          if int(work.get('alarms',{}).get('withError',0) or 0)>0:
+              raise SystemExit('Há alarmes com erro')
+          if int(work.get('rewardAdmin',{}).get('withError',0) or 0)>0:
+              raise SystemExit('Há push de recompensa ADM com erro')
+          print('AUDITORIA_VIVA_ROTINA_FAMILY=OK')
           PY
-# post-hotfix-20260827.3
