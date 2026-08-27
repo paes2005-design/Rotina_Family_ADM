@@ -1,4 +1,4 @@
-name: Disable emergency reconciliation auto-run v4
+name: Guard ADM dashboard from stale history
 on:
   push:
     paths:
@@ -13,35 +13,53 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-      - name: Activate emergency module v4
+      - name: Patch active-task history precedence
         run: |
           python - <<'PY'
           from pathlib import Path
           p=Path('index-ADMIN-v8.html')
           s=p.read_text(encoding='utf-8')
-          old='./adm-emergency-reconcile-20260826.js?v=3'
-          new='./adm-emergency-reconcile-20260826.js?v=4'
-          if old not in s and new not in s:
-              raise SystemExit('emergency module tag not found')
-          p.write_text(s.replace(old,new),encoding='utf-8')
+
+          marker='    function inicioSemanaISO(){ return formatarDataISO(obterInicioSemana(new Date())); }\n'
+          helper="""    function historicoColideComExecucaoAtiva(h){
+              const tarefaId=String(h?.tarefaId||'').trim();
+              const data=String(h?.data||h?.dataExecucao||'').trim();
+              if(!tarefaId||!data) return false;
+              return tarefasCache.some(t=>t.id===tarefaId && t.status==='Em andamento' && String(t.dataExecucao||'')===data);
+          }
+"""
+          if 'function historicoColideComExecucaoAtiva' not in s:
+              if marker not in s:
+                  raise SystemExit('inicioSemanaISO marker not found')
+              s=s.replace(marker,helper+marker,1)
+
+          old1="const datas=new Set(historicoGrupoCache.filter(h=>(h.perfilId===perfil.id || (!h.perfilId && h.perfilNome===perfil.nome)) && h.status?.includes('Prazo')).map(h=>h.data));"
+          new1="const datas=new Set(historicoGrupoCache.filter(h=>(h.perfilId===perfil.id || (!h.perfilId && h.perfilNome===perfil.nome)) && !historicoColideComExecucaoAtiva(h) && h.status?.includes('Prazo')).map(h=>h.data));"
+          if old1 in s: s=s.replace(old1,new1,1)
+
+          old2="const hist=historicoGrupoCache.filter(h=>(h.perfilId===p.id||(!h.perfilId&&h.perfilNome===p.nome)));"
+          new2="const hist=historicoGrupoCache.filter(h=>(h.perfilId===p.id||(!h.perfilId&&h.perfilNome===p.nome))&&!historicoColideComExecucaoAtiva(h));"
+          if old2 in s: s=s.replace(old2,new2,1)
+
+          if new1 not in s or new2 not in s:
+              raise SystemExit('dashboard replacements not applied')
+          p.write_text(s,encoding='utf-8')
 
           p=Path('index.html')
-          s=p.read_text(encoding='utf-8')
-          s=s.replace('index-ADMIN-v8.html?entry=20260826.2','index-ADMIN-v8.html?entry=20260826.4')
-          s=s.replace('index-ADMIN-v8.html?entry=20260826.3','index-ADMIN-v8.html?entry=20260826.4')
+          s=p.read_text(encoding='utf-8').replace('index-ADMIN-v8.html?entry=20260826.4','index-ADMIN-v8.html?entry=20260826.5')
           p.write_text(s,encoding='utf-8')
           PY
       - name: Validate
         run: |
-          node --check adm-emergency-reconcile-20260826.js
+          grep -q 'historicoColideComExecucaoAtiva' index-ADMIN-v8.html
+          grep -q '!historicoColideComExecucaoAtiva(h)' index-ADMIN-v8.html
+          grep -q 'index-ADMIN-v8.html?entry=20260826.5' index.html
           grep -q 'adm-emergency-reconcile-20260826.js?v=4' index-ADMIN-v8.html
-          grep -q 'AUTO_ENABLED=false' adm-emergency-reconcile-20260826.js
-          grep -q 'index-ADMIN-v8.html?entry=20260826.4' index.html
       - name: Commit
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html index-ADMIN-v8.html
           git diff --cached --quiet && exit 0
-          git commit -m 'Stop ADM emergency reconciliation auto-run'
+          git commit -m 'Ignore stale history while ADM task is active'
           git push origin main
