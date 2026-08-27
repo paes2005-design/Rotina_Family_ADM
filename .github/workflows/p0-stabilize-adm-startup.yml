@@ -19,7 +19,7 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Patch ADM startup recovery versions
+      - name: Patch ADM startup recovery and live-task precedence
         shell: python
         run: |
           from pathlib import Path
@@ -29,11 +29,32 @@ jobs:
           s=p.read_text(encoding='utf-8')
           s=re.sub(r'adm-auth-session-v1\.js\?v=\d+', 'adm-auth-session-v1.js?v=6', s)
           s=re.sub(r'adm-startup-stability-v1\.js\?v=\d+', 'adm-startup-stability-v1.js?v=4', s)
+
+          marker="    function calcularSequencia(perfil){"
+          helper="""    function historicoColideComExecucaoAtiva(h){
+        const tarefaId=String(h?.tarefaId||'').trim();
+        const data=String(h?.data||h?.dataExecucao||'').trim();
+        if(!tarefaId||!data)return false;
+        return tarefasCache.some(t=>t.id===tarefaId && t.status==='Em andamento' && String(t.dataExecucao||'')===data);
+    }
+"""
+          if 'function historicoColideComExecucaoAtiva' not in s:
+              if marker not in s: raise SystemExit('calcularSequencia marker not found')
+              s=s.replace(marker,helper+marker,1)
+
+          s=s.replace(
+            "const datas=new Set(historicoGrupoCache.filter(h=>(h.perfilId===perfil.id || (!h.perfilId && h.perfilNome===perfil.nome)) && h.status?.includes('Prazo')).map(h=>h.data));",
+            "const datas=new Set(historicoGrupoCache.filter(h=>(h.perfilId===perfil.id || (!h.perfilId && h.perfilNome===perfil.nome)) && !historicoColideComExecucaoAtiva(h) && h.status?.includes('Prazo')).map(h=>h.data));"
+          )
+          s=s.replace(
+            "const hist=historicoGrupoCache.filter(h=>(h.perfilId===p.id||(!h.perfilId&&h.perfilNome===p.nome)));",
+            "const hist=historicoGrupoCache.filter(h=>(h.perfilId===p.id||(!h.perfilId&&h.perfilNome===p.nome))&&!historicoColideComExecucaoAtiva(h));"
+          )
           p.write_text(s,encoding='utf-8')
 
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
-          s=re.sub(r'index-ADMIN-v8\.html\?entry=[0-9.]+', 'index-ADMIN-v8.html?entry=20260826.2', s)
+          s=re.sub(r'index-ADMIN-v8\.html\?entry=[0-9.]+', 'index-ADMIN-v8.html?entry=20260826.3', s)
           p.write_text(s,encoding='utf-8')
 
       - name: Validate recovery
@@ -44,12 +65,13 @@ jobs:
           grep -q 'adm-startup-stability-v1.js?v=4' index-ADMIN-v8.html
           grep -q 'rotina-adm-auth-retry-requested' adm-auth-session-v1.js
           grep -q 'MAX_RETRIES = 3' adm-startup-stability-v1.js
-          grep -q 'index-ADMIN-v8.html?entry=20260826.2' index.html
+          grep -q 'historicoColideComExecucaoAtiva' index-ADMIN-v8.html
+          grep -q 'index-ADMIN-v8.html?entry=20260826.3' index.html
 
       - name: Commit recovery
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html index-ADMIN-v8.html
-          git diff --cached --quiet || git commit -m "Activate ADM startup retry recovery"
+          git diff --cached --quiet || git commit -m "Protect active tasks from stale history in ADM"
           git push origin main
