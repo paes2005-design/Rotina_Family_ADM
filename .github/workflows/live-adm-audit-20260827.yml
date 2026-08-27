@@ -1,0 +1,67 @@
+name: Auditoria viva ADM 2026-08-27
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/live-adm-audit-20260827.yml'
+      - 'adm-justification-review.js'
+      - 'runtime-build-info.js'
+      - 'index.html'
+      - 'index-ADMIN-v8.html'
+      - 'sw.js'
+      - 'adm-zero-points-restitution-20260827.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar sintaxe e builds locais
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check adm-justification-review.js
+          node --check runtime-build-info.js
+          node --check sw.js
+          test -f adm-zero-points-restitution-20260827.js && node --check adm-zero-points-restitution-20260827.js || true
+          grep -q "entry=20260827.3" index.html || true
+      - name: Consultar producao e diagnosticos
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev'
+          fetch(){
+            name="$1"; url="$2";
+            code=$(curl -L -sS --max-time 20 -o "$name.json" -w '%{http_code}' "$url" || true)
+            echo "=== $name HTTP $code ==="
+            head -c 30000 "$name.json" 2>/dev/null || true
+            echo
+            echo "=== fim $name ==="
+          }
+          fetch monitoramento "$BASE/monitoramento"
+          fetch diagnostico_tecnico "$BASE/diagnostico-tecnico"
+          fetch diagnostico_worker "$BASE/diagnostico-worker"
+          code=$(curl -L -sS --max-time 20 -o adm-page.html -w '%{http_code}' 'https://paes2005-design.github.io/Rotina_Family_ADM/' || true)
+          echo "=== ADM PAGE HTTP $code ==="
+          grep -Eo 'entry=[0-9.]+' adm-page.html | head -n 3 || true
+          curl -L -sS --max-time 20 'https://paes2005-design.github.io/Rotina_Family_ADM/runtime-build-info.js' | head -c 10000 || true
+      - name: Resumir diagnostico
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, pathlib
+          for name in ['monitoramento','diagnostico_tecnico','diagnostico_worker']:
+              p=pathlib.Path(name+'.json')
+              if not p.exists():
+                  print(name,'SEM_ARQUIVO'); continue
+              try:
+                  d=json.loads(p.read_text(encoding='utf-8'))
+                  print(name.upper(), json.dumps(d, ensure_ascii=False)[:12000])
+              except Exception as e:
+                  print(name,'NAO_JSON',e)
+          PY
