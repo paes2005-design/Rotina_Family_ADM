@@ -28,8 +28,12 @@ jobs:
           node --check adm-justification-review.js
           node --check runtime-build-info.js
           node --check sw.js
-          test -f adm-zero-points-restitution-20260827.js && node --check adm-zero-points-restitution-20260827.js || true
-          grep -q "entry=20260827.3" index.html || true
+          node --check adm-zero-points-restitution-20260827.js
+          grep -q "entry=20260827.3" index.html
+          grep -q "build:'20260827.3'" runtime-build-info.js
+          grep -q "expectedServiceWorkerVersion:'62'" runtime-build-info.js
+          ! grep -q 'getDocs' adm-justification-review.js
+          ! grep -q 'getDoc' adm-justification-review.js
       - name: Consultar producao e diagnosticos
         shell: bash
         run: |
@@ -49,7 +53,9 @@ jobs:
           code=$(curl -L -sS --max-time 20 -o adm-page.html -w '%{http_code}' 'https://paes2005-design.github.io/Rotina_Family_ADM/' || true)
           echo "=== ADM PAGE HTTP $code ==="
           grep -Eo 'entry=[0-9.]+' adm-page.html | head -n 3 || true
-          curl -L -sS --max-time 20 'https://paes2005-design.github.io/Rotina_Family_ADM/runtime-build-info.js' | head -c 10000 || true
+          curl -L -sS --max-time 20 'https://paes2005-design.github.io/Rotina_Family_ADM/runtime-build-info.js' | tee runtime-live.js | head -c 10000 || true
+          grep -q "build:'20260827.3'" runtime-live.js
+          grep -q "expectedServiceWorkerVersion:'62'" runtime-live.js
       - name: Resumir diagnostico
         shell: bash
         run: |
@@ -65,3 +71,4 @@ jobs:
               except Exception as e:
                   print(name,'NAO_JSON',e)
           PY
+# post-hotfix-20260827.3
