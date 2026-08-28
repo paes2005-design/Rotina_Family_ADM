@@ -4,9 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'sprint2-adm-preview-v1.html'
       - 'sprint2-adm-preview-v2.html'
-      - 'sprint2-participantes-preview-v4.html'
       - '.github/workflows/sprint2-navigation-audit.yml'
 
 permissions:
@@ -21,36 +19,58 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validar roteamento sem recursão
+      - name: Validar arquitetura SPA limpa
         shell: bash
         run: |
           set -euo pipefail
           test -f sprint2-adm-preview-v2.html
-          test -f sprint2-participantes-preview-v4.html
           python - <<'PY'
+          from pathlib import Path
           import re
-          text=open('sprint2-participantes-preview-v4.html',encoding='utf-8').read()
-          bad=re.findall(r'iframe[^>]*sprint2-adm-preview-v[12]|href=["\']sprint2-adm-preview-v[12]', text, re.I)
-          if bad:
-              raise SystemExit('ERRO: Participantes ainda referencia o shell dentro da própria tela: '+repr(bad[:4]))
-          if 'window.parent.location.hash' not in text:
-              raise SystemExit('ERRO: rota para o parent não encontrada em Participantes')
-          router=open('sprint2-adm-preview-v2.html',encoding='utf-8').read()
-          if 'sprint2-participantes-preview-v4.html' not in router:
-              raise SystemExit('ERRO: roteador não aponta para Participantes v4')
-          print('Roteamento estático sem recursão: OK')
+          text=Path('sprint2-adm-preview-v2.html').read_text(encoding='utf-8')
+          if re.search(r'<iframe\b', text, re.I):
+              raise SystemExit('ERRO: iframe encontrado na prévia consolidada')
+          for required in ('view-tarefas','view-participantes','view-monitor','mainNav','collective','targets','renderTasks','renderParticipants','renderMonitor'):
+              if required not in text:
+                  raise SystemExit(f'ERRO: estrutura obrigatória ausente: {required}')
+          for legacy in ('sprint2-tarefas-preview-v9.html','sprint2-participantes-preview-v4.html','window.parent.location.hash','contentWindow','contentDocument'):
+              if legacy in text:
+                  raise SystemExit(f'ERRO: dependência legada encontrada: {legacy}')
+          ids=re.findall(r'id="([^"]+)"', text)
+          if len(ids) != len(set(ids)):
+              raise SystemExit('ERRO: IDs HTML duplicados na estrutura principal')
+          print('SPA única, sem iframe e sem roteador aninhado: OK')
           PY
 
-      - name: Confirmar padrão visual aprovado
+      - name: Validar sintaxe JavaScript
         shell: bash
         run: |
           set -euo pipefail
-          grep -q '#17133e' sprint2-participantes-preview-v4.html
-          grep -q '#211252' sprint2-participantes-preview-v4.html
-          grep -q 'Rotina <span style="color:#b678ff">Family</span>' sprint2-participantes-preview-v4.html
-          echo 'Padrão visual escuro aprovado: OK'
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          text=Path('sprint2-adm-preview-v2.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script>([\s\S]*?)</script>', text)
+          if len(scripts) != 1:
+              raise SystemExit(f'ERRO: esperado 1 script principal, encontrados {len(scripts)}')
+          Path('/tmp/sprint2-clean.js').write_text(scripts[0], encoding='utf-8')
+          PY
+          node --check /tmp/sprint2-clean.js
+          echo 'Sintaxe JavaScript: OK'
 
-      - name: Ler logs reais de navegação
+      - name: Confirmar visual e regras aprovadas
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '#17133e' sprint2-adm-preview-v2.html
+          grep -q '#211252' sprint2-adm-preview-v2.html
+          grep -q 'Rotina <span style="color:#b678ff">Family</span>' sprint2-adm-preview-v2.html
+          grep -q "task.collective" sprint2-adm-preview-v2.html
+          grep -q "state.tasks.sort" sprint2-adm-preview-v2.html
+          grep -q "grid-template-columns:repeat(2,minmax(0,1fr))" sprint2-adm-preview-v2.html
+          echo 'Visual aprovado, coletivo único, ordenação e monitor mobile 2x2: OK'
+
+      - name: Ler saúde e logs reais
         shell: bash
         run: |
           set -euo pipefail
@@ -61,21 +81,10 @@ jobs:
           print('STATUS_WORKER=', d.get('status'))
           print('SUMMARY=', json.dumps(d.get('summary',{}), ensure_ascii=False))
           logs=d.get('logs',[]) or []
-          wanted=[]
-          for x in logs:
-              ev=str(x.get('evento',''))
-              pg=str(x.get('pagina',''))
-              if ('sprint2_router' in ev or 'sprint2_participantes' in ev or 'sprint2_shell' in ev or 'sprint2_navigation' in ev or 'sprint2-adm-preview' in pg or 'sprint2-participantes-preview' in pg):
-                  wanted.append(x)
-          print('NAV_LOG_COUNT=', len(wanted))
-          for x in wanted[:40]:
-              print(json.dumps({
-                  'clienteEm':x.get('clienteEm'),
-                  'evento':x.get('evento'),
-                  'nivel':x.get('nivel'),
-                  'pagina':x.get('pagina'),
-                  'detalhes':x.get('detalhes',{})
-              }, ensure_ascii=False))
+          wanted=[x for x in logs if 'sprint2_clean' in str(x.get('evento','')) or 'sprint2-adm-preview-v2' in str(x.get('pagina',''))]
+          print('CLEAN_LOG_COUNT=', len(wanted))
+          for x in wanted[:30]:
+              print(json.dumps({'clienteEm':x.get('clienteEm'),'evento':x.get('evento'),'nivel':x.get('nivel'),'detalhes':x.get('detalhes',{})}, ensure_ascii=False))
           if d.get('status') in ('ERRO_DIAGNOSTICO','DEGRADADO'):
               raise SystemExit('Worker não está saudável para auditoria')
           PY
