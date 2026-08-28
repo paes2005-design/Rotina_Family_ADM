@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rotina Family — Sprint 2 • Tarefas v9</title>
+<style>
+html,body{margin:0;width:100%;max-width:100vw;height:100%;overflow:hidden;background:#f6f7fb}
+#app{border:0;width:100%;max-width:100vw;height:100%;display:block;overflow:hidden}
+</style>
+</head>
+<body>
+<iframe id="app" src="sprint2-tarefas-preview-v6.html?v=9"></iframe>
+<script>
+const frame=document.getElementById('app');
+const TELEMETRY_ENDPOINT='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/app-log';
+const SESSION_KEY='rotinaFamily.sprint2.v9.session';
+const LOG_KEY='rotinaFamily.sprint2.v9.logs';
+const SESSION_ID=sessionStorage.getItem(SESSION_KEY)||(crypto.randomUUID?crypto.randomUUID():String(Date.now()));
+sessionStorage.setItem(SESSION_KEY,SESSION_ID);
+function clean(v){return String(v??'').replace(/\s+/g,' ').slice(0,160)}
+function sprintLog(event,details={},level='info'){
+  const safe={};
+  Object.entries(details||{}).forEach(([k,v])=>{if(!/senha|password|email|token|secret|pin/i.test(k)&&typeof v!=='object')safe[k.slice(0,40)]=typeof v==='number'||typeof v==='boolean'?v:clean(v)});
+  const item={aplicativo:'adm',versaoMonitor:9,evento:'sprint2.tarefas.'+clean(event).replace(/[^a-zA-Z0-9_.:-]/g,'_'),nivel:['info','warning','error'].includes(level)?level:'info',detalhes:safe,grupoId:clean(localStorage.getItem('rotina_admin_push_grupo')||'SPRINT2-PREVIEW'),perfilId:'',sessaoId:SESSION_ID,clienteEm:new Date().toISOString(),pagina:'sprint2-tarefas-preview-v9.html',navegador:'browser',online:navigator.onLine,visibilidade:document.visibilityState,instalado:false};
+  try{const q=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');q.push(item);localStorage.setItem(LOG_KEY,JSON.stringify(q.slice(-160)))}catch(_){ }
+  console[level==='error'?'error':level==='warning'?'warn':'info']('[Sprint2 v9]',event,safe);
+  if(navigator.onLine)fetch(TELEMETRY_ENDPOINT,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({events:[item]})}).catch(()=>{});
+}
+window.addEventListener('message',ev=>{if(ev.origin!==location.origin||ev.source!==frame.contentWindow)return;const m=ev.data||{};if(m.type==='sprint2-v9-log')sprintLog(m.event,m.details,m.level)});
+
+frame.addEventListener('load',()=>{
+  const w=frame.contentWindow,d=frame.contentDocument;
+  d.title='Rotina Family — Sprint 2 • Tarefas v9';
+
+  const style=d.createElement('style');
+  style.textContent=`
+    html,body{width:100%!important;max-width:100%!important;overflow-x:hidden!important}
+    .app,.main,.card,.top,.head,.agenda-bar,.toolbar,.mobile,.mcard,.monitor,.monitorgrid,.timeline{min-width:0!important;max-width:100%!important}
+    .monitor-bar-v9{padding:14px 25px;background:#fbf9ff;border-bottom:1px solid #e7dffa;display:flex;gap:12px;align-items:flex-end;min-width:0;max-width:100%}
+    .monitor-bar-v9 label{display:block;font-size:10px;text-transform:uppercase;font-weight:850;color:#655c84;margin-bottom:5px}
+    .monitor-bar-v9 select{min-width:260px;max-width:100%;border:1px solid #d9d2ef;border-radius:10px;background:#fff;padding:10px 11px}
+    .monitor-info-v9{font-size:12px;color:#686f85;line-height:1.45;min-width:0}
+    @media(max-width:900px){
+      html,body{width:100%!important;max-width:100vw!important;overflow-x:hidden!important}
+      .app{width:100%!important;max-width:100vw!important;overflow-x:hidden!important}
+      .side{width:100%!important;max-width:100vw!important;overflow:hidden!important}
+      .nav{max-width:100%!important}
+      .main{width:100%!important;max-width:100vw!important;padding:15px 9px 70px!important;overflow-x:hidden!important}
+      .top,.card,.head,.agenda-bar,.toolbar,.mobile,.mcard{width:100%!important;max-width:100%!important;min-width:0!important}
+      .head{padding-left:14px!important;padding-right:14px!important}
+      .agenda-bar,.toolbar{padding-left:12px!important;padding-right:12px!important}
+      .mobile{padding:8px!important;overflow-x:hidden!important}
+      .mcard{overflow:hidden!important;padding:12px!important}
+      .mhead,.mname,.mmeta,.time-window{min-width:0!important;max-width:100%!important}
+      .mname>div{min-width:0!important}.mname b{overflow-wrap:anywhere}
+      .m-actions{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important;width:100%!important}
+      .mbtn{width:100%!important;min-width:0!important;padding:9px 4px!important;font-size:clamp(12px,3.45vw,16px)!important;white-space:nowrap!important}
+      .mobile-time-grid,.mmeta{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+      .mobile-edit input,.mobile-edit select,.details-mobile input,.details-mobile textarea{min-width:0!important;max-width:100%!important}
+      .monitor-bar-v9{padding:12px;display:grid;grid-template-columns:minmax(0,1fr);width:100%;max-width:100%}
+      .monitor-bar-v9>div{min-width:0}.monitor-bar-v9 select{min-width:0;width:100%;max-width:100%}
+      .monitorgrid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;padding:12px!important;width:100%!important;overflow-x:hidden!important}
+      .metric-strip{display:contents!important}
+      .metric{min-width:0!important;width:100%!important;min-height:105px!important;padding:12px 7px!important;text-align:center!important;align-items:center!important}
+      .metric small{font-size:10px!important;line-height:1.2!important}.metric strong{font-size:29px!important}
+      .timeline{grid-column:1/-1!important;width:100%!important;min-width:0!important;margin-top:2px!important;overflow:visible!important;border:0!important;display:grid!important;gap:8px!important}
+      .mrow.header{display:none!important}
+      .mrow{min-width:0!important;width:100%!important;max-width:100%!important;display:grid!important;grid-template-columns:44px minmax(0,1fr)!important;gap:6px 10px!important;padding:12px!important;border:1px solid var(--line)!important;border-radius:13px!important;background:#fff!important;overflow:hidden!important}
+      .mrow>span{min-width:0!important;max-width:100%!important;overflow-wrap:anywhere}
+      .mrow>span:nth-child(1){grid-column:1;grid-row:1;align-self:start}
+      .mrow>span:nth-child(2){grid-column:2;grid-row:1}
+      .mrow>span:nth-child(n+3){grid-column:1/-1;padding-left:0}
+      .mrow>span:nth-child(3)::before{content:'Previsto: ';font-weight:800;color:#555d74}
+      .mrow>span:nth-child(4)::before{content:'Real: ';font-weight:800;color:#555d74}
+      .mrow>span:nth-child(5)::before{content:'Status: ';font-weight:800;color:#555d74}
+      .mrow>span:nth-child(6)::before{content:'Pontos: ';font-weight:800;color:#555d74}
+      .rtime{white-space:normal!important}
+    }
+    @media(max-width:360px){
+      .main{padding-left:6px!important;padding-right:6px!important}.mobile{padding:6px!important}.mcard{padding:10px!important}
+      .mbtn{font-size:12px!important;padding-left:2px!important;padding-right:2px!important}
+    }
+  `;
+  d.head.appendChild(style);
+
+  const monitor=d.querySelector('#monitorView'),head=monitor?.querySelector('.head');
+  if(monitor&&head&&!d.querySelector('#monitorParticipantV9')){
+    const bar=d.createElement('div');bar.className='monitor-bar-v9';
+    bar.innerHTML='<div><label>Participante no monitor</label><select id="monitorParticipantV9"></select></div><div class="monitor-info-v9" id="monitorInfoV9"></div>';
+    head.insertAdjacentElement('afterend',bar);
+  }
+
+  w.eval(`
+    function __v9Post(event,details,level){window.parent.postMessage({type:'sprint2-v9-log',event:event,details:details||{},level:level||'info'},location.origin)}
+    function __v9Order(){tasks.sort((a,b)=>a.person.localeCompare(b.person)||a.start.localeCompare(b.start)||a.end.localeCompare(b.end)||a.name.localeCompare(b.name))}
+    function __v9Fingerprint(t){return [t.name,t.start,t.end,t.points,t.tol,[...t.days].sort().join('|'),t.status,t.icon,t.alarm||'',t.note||''].join('::')}
+    function __v9Normalize(){
+      const out=[],index=new Map();let removed=0;
+      tasks.forEach(t=>{
+        const key=t.person+'::'+__v9Fingerprint(t);
+        if(!index.has(key)){index.set(key,out.length);out.push(t);return}
+        removed++;
+        const i=index.get(key);if(t.collectiveKey&&!out[i].collectiveKey)out[i]=t;
+      });
+      tasks=out;__v9Order();
+      if(removed)__v9Post('task.deduplicated',{removed:removed,remaining:tasks.length},'warning');
+      return removed;
+    }
+    function __v9Targets(t,oldSig){
+      if(t.collectiveKey)return tasks.filter(x=>x.collectiveKey===t.collectiveKey);
+      if(selectedParticipant()!=='__ALL__')return [t];
+      const candidates=tasks.filter(x=>signature(x)===oldSig),byPerson=new Map();
+      candidates.forEach(x=>{if(!byPerson.has(x.person))byPerson.set(x.person,x)});
+      const list=participants.map(p=>byPerson.get(p)).filter(Boolean);
+      if(list.length===participants.length){const key='collective-legacy-'+Date.now()+'-'+t.id;list.forEach(x=>x.collectiveKey=key);return list}
+      return [t];
+    }
+    function __v9Apply(t,patch,oldSig){const target=__v9Targets(t,oldSig);target.forEach(x=>Object.assign(x,patch));__v9Normalize();return target.length}
+    function __v9AddTask(){
+      if(edit!==null){__v9Post('task.add_blocked_editing',{editId:edit},'warning');return}
+      const p=selectedParticipant();
+      if(p==='__ALL__'){
+        const key='collective-'+Date.now()+'-'+next;let firstId=null;
+        participants.forEach(person=>{const id=next++;if(firstId===null)firstId=id;tasks.push({id:id,name:'Nova tarefa',person:person,start:'12:00',end:'12:15',points:5,tol:0,days:['Seg','Ter','Qua','Qui','Sex'],status:'active',alarm:'11:55',icon:'✅',note:'',collectiveKey:key})});
+        __v9Normalize();edit=firstId;open=firstId;render();__v9Post('task.add_collective',{targets:participants.length,taskId:firstId,collectiveKey:key});
+      }else{
+        const t={id:next++,name:'Nova tarefa',person:p,start:'12:00',end:'12:15',points:5,tol:0,days:['Seg','Ter','Qua','Qui','Sex'],status:'active',alarm:'11:55',icon:'✅',note:''};
+        tasks.push(t);__v9Normalize();edit=t.id;open=t.id;render();__v9Post('task.add_individual',{participant:p,taskId:t.id});
+      }
+    }
+    function save(id){
+      const tr=document.querySelector('tr[data-id="'+id+'"]'),t=tasks.find(x=>x.id===id);if(!tr||!t)return;
+      const oldSig=signature(t),patch={};tr.querySelectorAll('[data-k]').forEach(el=>{let v=el.value;if(['points','tol'].includes(el.dataset.k))v=Number(v);patch[el.dataset.k]=v});
+      const count=__v9Apply(t,patch,oldSig),updated=tasks.find(x=>x.id===id)||t;edit=null;open=null;render();
+      const group=updated.collectiveKey?tasks.filter(x=>x.collectiveKey===updated.collectiveKey):[updated];
+      const consistent=!updated.collectiveKey||group.length===participants.length&&group.every(x=>x.start===updated.start&&x.end===updated.end&&x.name===updated.name);
+      __v9Post('task.save_web',{taskId:id,start:updated.start,end:updated.end,targets:count,collective:!!updated.collectiveKey,consistent:consistent},consistent?'info':'error');
+    }
+    function saveMobile(id){
+      const t=tasks.find(x=>x.id===id);if(!t)return;const oldSig=signature(t);
+      const patch={icon:document.querySelector('#m-icon-'+id).value,name:document.querySelector('#m-name-'+id).value,start:document.querySelector('#m-start-'+id).value,end:document.querySelector('#m-end-'+id).value,points:Number(document.querySelector('#m-points-'+id).value),tol:Number(document.querySelector('#m-tol-'+id).value),status:document.querySelector('#m-status-'+id).value,alarm:document.querySelector('#m-alarm-'+id).value,note:document.querySelector('#m-note-'+id).value};
+      const count=__v9Apply(t,patch,oldSig),updated=tasks.find(x=>x.id===id)||t;edit=null;open=null;render();
+      const group=updated.collectiveKey?tasks.filter(x=>x.collectiveKey===updated.collectiveKey):[updated];
+      const consistent=!updated.collectiveKey||group.length===participants.length&&group.every(x=>x.start===updated.start&&x.end===updated.end&&x.name===updated.name);
+      __v9Post('task.save_mobile',{taskId:id,start:updated.start,end:updated.end,targets:count,collective:!!updated.collectiveKey,consistent:consistent},consistent?'info':'error');
+    }
+    function toggleDay(id,day){const t=tasks.find(x=>x.id===id);if(!t)return;const oldSig=signature(t),days=t.days.includes(day)?t.days.filter(x=>x!==day):[...t.days,day];const count=__v9Apply(t,{days:days},oldSig);render();__v9Post('task.days_changed',{taskId:id,targets:count})}
+    function setExtra(id,key,value){const t=tasks.find(x=>x.id===id);if(!t)return;const count=__v9Apply(t,{[key]:value},signature(t));__v9Post('task.detail_changed',{taskId:id,field:key,targets:count})}
+    function removeTask(id){const t=tasks.find(x=>x.id===id);if(!t)return;const ids=new Set(__v9Targets(t,signature(t)).map(x=>x.id));tasks=tasks.filter(x=>!ids.has(x.id));__v9Normalize();if(edit===id)edit=null;if(open===id)open=null;render();__v9Post('task.remove',{taskId:id,targets:ids.size,collective:ids.size>1})}
+    function __v9SelfTest(){
+      const snapshot=tasks.map(x=>({...x,days:[...x.days]})),nextSnapshot=next,participantValue=document.querySelector('#participant').value,editSnapshot=edit,openSnapshot=open;
+      try{
+        document.querySelector('#participant').value='__ALL__';edit=null;open=null;
+        const key='__v9_test__',ids=[];
+        participants.forEach(person=>{const id=900000+ids.length;ids.push(id);tasks.push({id:id,name:'Teste v9',person:person,start:'12:00',end:'12:15',points:5,tol:0,days:['Seg'],status:'active',alarm:'',icon:'✅',note:'',collectiveKey:key})});
+        tasks.push({...tasks.find(x=>x.id===ids[0]),id:900099});
+        const removed=__v9Normalize(),first=tasks.find(x=>x.collectiveKey===key),count=__v9Apply(first,{start:'08:00',end:'08:15'},signature(first));
+        const copies=tasks.filter(x=>x.collectiveKey===key),onePerPerson=participants.every(p=>copies.filter(x=>x.person===p).length===1),propagated=copies.length===participants.length&&copies.every(x=>x.start==='08:00'&&x.end==='08:15');
+        const collectiveVisible=commonAll().some(x=>x.collectiveKey===key&&x.start==='08:00');
+        return {ok:removed===1&&count===participants.length&&onePerPerson&&propagated&&collectiveVisible,removed:removed,count:count,onePerPerson:onePerPerson,propagated:propagated,collectiveVisible:collectiveVisible};
+      }finally{tasks=snapshot;next=nextSnapshot;edit=editSnapshot;open=openSnapshot;document.querySelector('#participant').value=participantValue;render()}
+    }
+  `);
+
+  const oldAdd=d.querySelector('#add');
+  if(oldAdd){
+    const add=oldAdd.cloneNode(true);oldAdd.replaceWith(add);
+    add.addEventListener('click',()=>{w.__v9AddTask();setTimeout(syncMonitor,0)});
+  }
+
+  function frameTasks(){try{return JSON.parse(w.eval('JSON.stringify(tasks)'))}catch(_){return[]}}
+  function frameParticipants(){try{return JSON.parse(w.eval('JSON.stringify(participants)'))}catch(_){return[]}}
+  function secondsEnd(h){if(!h)return '—';const p=h.split(':').map(Number),s=Math.max(0,p[0]*3600+p[1]*60-1),hh=String(Math.floor(s/3600)%24).padStart(2,'0'),mm=String(Math.floor(s%3600/60)).padStart(2,'0'),ss=String(s%60).padStart(2,'0');return hh+':'+mm+':'+ss}
+  function statusFor(t){
+    const key=t.person+'|'+t.name,map={
+      'Lara Vitoria|Estudar':['Concluída','ok','▶ 08:00:44<br>■ 09:28:51',t.points+' / '+t.points],
+      'Lara Vitoria|Arrumar casa':['Atrasada','late','▶ 09:30:44<br>■ 10:31:25','0 / '+t.points],
+      'Maria Eduarda|Arrumar a cama':['Concluída','ok','▶ 07:16:12<br>■ 07:25:40',t.points+' / '+t.points],
+      'Maria Eduarda|Estudar':['Em andamento','running','▶ 08:05:10<br>■ —','0 / '+t.points],
+      'Pedro|Estudar':['Concluída','ok','▶ 08:00:33<br>■ 09:20:02',t.points+' / '+t.points]
+    };return map[key]||['Pendente','pending','▶ —<br>■ —','0 / '+t.points];
+  }
+  function populateMonitorFilter(){
+    const sel=d.querySelector('#monitorParticipantV9');if(!sel)return;const old=sel.value||'__ALL__',people=frameParticipants();
+    sel.innerHTML='<option value="__ALL__">Todos os participantes</option>'+people.map(p=>'<option value="'+p.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">'+p+'</option>').join('');
+    sel.value=people.includes(old)||old==='__ALL__'?old:'__ALL__';
+  }
+  function uniqueMonitorRows(list){
+    const seen=new Set();return list.filter(t=>{const days=[...(t.days||[])].sort().join('|'),key=[t.person,t.name,t.start,t.end,t.points,t.tol,days,t.status,t.icon].join('::');if(seen.has(key))return false;seen.add(key);return true});
+  }
+  function syncMonitor(){
+    populateMonitorFilter();const sel=d.querySelector('#monitorParticipantV9');if(!sel)return;const chosen=sel.value;
+    const all=frameTasks(),raw=all.filter(t=>t.status==='active'&&(chosen==='__ALL__'||t.person===chosen));
+    const rows=uniqueMonitorRows(raw).sort((a,b)=>a.start.localeCompare(b.start)||a.person.localeCompare(b.person)||a.name.localeCompare(b.name));
+    const removed=raw.length-rows.length;if(removed)sprintLog('monitor.deduplicated',{removed:removed,participant:chosen},'warning');
+    const timeline=d.querySelector('.timeline');if(!timeline)return;timeline.querySelectorAll('.mrow:not(.header)').forEach(r=>r.remove());
+    rows.forEach(t=>{const st=statusFor(t),row=d.createElement('div');row.className='mrow';row.dataset.participant=t.person;row.dataset.taskId=t.id;row.innerHTML='<span class="taskicon">'+t.icon+'</span><span><b>'+String(t.name).replace(/</g,'&lt;')+'</b><br><small>'+t.person+'</small></span><span class="rtime">'+(t.start||'—')+':00 – '+secondsEnd(t.end)+'</span><span class="rtime">'+st[2]+'</span><span class="status '+st[1]+'">'+st[0]+'</span><span>'+st[3]+'</span>';timeline.appendChild(row)});
+    const metrics=[...d.querySelectorAll('.metric strong')],states=rows.map(statusFor);
+    if(metrics[0])metrics[0].textContent=rows.length;if(metrics[1])metrics[1].textContent=states.filter(s=>s[1]==='ok').length;if(metrics[2])metrics[2].textContent=states.filter(s=>s[1]==='running').length;if(metrics[3])metrics[3].textContent=states.filter(s=>s[1]==='pending'||s[1]==='late').length;
+    const info=d.querySelector('#monitorInfoV9');if(info)info.innerHTML=chosen==='__ALL__'?'Exibindo <b>todos os participantes</b>. Novas tarefas entram automaticamente no monitor.':'Exibindo o acompanhamento de <b>'+chosen+'</b>.';
+    sprintLog('monitor.render',{participant:chosen,rows:rows.length});
+  }
+
+  d.querySelector('#monitorParticipantV9')?.addEventListener('change',syncMonitor);
+  d.querySelector('#navMonitor')?.addEventListener('click',()=>setTimeout(syncMonitor,0));
+  d.querySelector('#navTasks')?.addEventListener('click',()=>setTimeout(()=>sprintLog('tasks.open'),0));
+  d.addEventListener('click',e=>{if(e.target.closest('button[onclick^="save"],button[onclick^="saveMobile"],button[onclick^="removeTask"]'))setTimeout(syncMonitor,0)},true);
+  d.querySelector('#participant')?.addEventListener('change',()=>sprintLog('tasks.participant_filter',{participant:d.querySelector('#participant').value}));
+
+  w.eval('__v9Normalize()');populateMonitorFilter();syncMonitor();
+  let test={ok:false};try{test=w.eval('__v9SelfTest()')}catch(error){test={ok:false,error:error.message}};
+  sprintLog(test.ok?'selftest.ok':'selftest.failed',{removed:test.removed||0,targets:test.count||0,onePerPerson:!!test.onePerPerson,propagated:!!test.propagated,collectiveVisible:!!test.collectiveVisible},test.ok?'info':'error');
+  syncMonitor();
+
+  requestAnimationFrame(()=>{
+    const overflow=Math.max(d.documentElement.scrollWidth,d.body.scrollWidth)-d.documentElement.clientWidth;
+    sprintLog(overflow>1?'mobile.horizontal_overflow':'mobile.width_ok',{viewport:d.documentElement.clientWidth,scrollWidth:Math.max(d.documentElement.scrollWidth,d.body.scrollWidth),overflow:Math.max(0,overflow)},overflow>1?'error':'info');
+  });
+});
+</script>
+</body>
+</html>
