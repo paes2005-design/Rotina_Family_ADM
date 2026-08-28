@@ -1,0 +1,19 @@
+name: Sprint 2 Tarefas v8 audit
+
+on:
+  push:
+    paths:
+      - 'sprint2-tarefas-preview-v8.html'
+      - 'sprint2-tarefas-v8-audit.js'
+      - '.github/workflows/sprint2-tarefas-v8-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax
+        run: node --check sprint2-tarefas-v8-audit.js
+      - name: Sprint 2 task flow audit
+        run: node sprint2-tarefas-v8-audit.js
