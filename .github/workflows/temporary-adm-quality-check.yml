@@ -28,15 +28,15 @@ jobs:
           node --check alarm-date-core.js
           node --check reward-redemption-notifications.js
           node --check adm-regression-audit.js
-          node --check sprint2-tarefas-v8-audit.js
+          node --check sprint2-tarefas-v9-audit.js
           node --check sw.js
           node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8')); console.log('manifest OK')"
-      - name: Sprint 2 tarefas v8 audit
-        run: node sprint2-tarefas-v8-audit.js
+      - name: Sprint 2 tarefas v9 audit
+        run: node sprint2-tarefas-v9-audit.js
       - name: Sprint 2 remote telemetry smoke test
         shell: bash
         run: |
-          body='{"events":[{"aplicativo":"adm","versaoMonitor":8,"evento":"sprint2.tarefas.ci_smoke","nivel":"info","detalhes":{"source":"github-actions-v4"},"grupoId":"SPRINT2-PREVIEW","perfilId":"","sessaoId":"ci-v8-v4","clienteEm":"2026-08-28T00:00:00.000Z","pagina":"sprint2-tarefas-preview-v8.html","navegador":"CI","online":true,"visibilidade":"visible","instalado":false}]}'
+          body='{"events":[{"aplicativo":"adm","versaoMonitor":9,"evento":"sprint2.tarefas.ci_smoke","nivel":"info","detalhes":{"source":"github-actions-v9"},"grupoId":"SPRINT2-PREVIEW","perfilId":"","sessaoId":"ci-v9","clienteEm":"2026-08-28T08:00:00.000Z","pagina":"sprint2-tarefas-preview-v9.html","navegador":"CI","online":true,"visibilidade":"visible","instalado":false}]}'
           response=$(curl --fail-with-body -sS -X POST 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/app-log' -H 'content-type: application/json' --data "$body")
           echo "$response"
           RESPONSE="$response" node -e "const r=JSON.parse(process.env.RESPONSE); if(Number(r.accepted)!==1||Number(r.dropped)!==0) throw new Error('Worker nao confirmou o log'); console.log('REMOTE_TELEMETRY=OK')"
