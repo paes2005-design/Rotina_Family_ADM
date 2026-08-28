@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rotina Family — Sprint 2 • Tarefas v7</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f6f7fb}#app{border:0;width:100%;height:100%;display:block}</style>
+</head>
+<body>
+<iframe id="app" src="sprint2-tarefas-preview-v6.html?v=7"></iframe>
+<script>
+const frame=document.getElementById('app');
+frame.addEventListener('load',()=>{
+  const w=frame.contentWindow,d=frame.contentDocument;
+  d.title='Rotina Family — Sprint 2 • Tarefas v7';
+
+  const style=d.createElement('style');
+  style.textContent=`
+    .monitor-bar-v7{padding:14px 25px;background:#fbf9ff;border-bottom:1px solid #e7dffa;display:flex;gap:12px;align-items:flex-end}
+    .monitor-bar-v7 label{display:block;font-size:10px;text-transform:uppercase;font-weight:850;color:#655c84;margin-bottom:5px}
+    .monitor-bar-v7 select{min-width:260px;border:1px solid #d9d2ef;border-radius:10px;background:#fff;padding:10px 11px}
+    .monitor-info-v7{font-size:12px;color:#686f85;line-height:1.45}
+    @media(max-width:900px){
+      .monitor-bar-v7{padding:12px 13px;display:grid;grid-template-columns:1fr}
+      .monitor-bar-v7 select{min-width:0;width:100%}
+      .monitorgrid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;padding:13px!important}
+      .metric-strip{display:contents!important}
+      .metric{min-width:0!important;min-height:108px!important;padding:13px 8px!important;text-align:center!important;align-items:center!important}
+      .metric small{font-size:10px!important;line-height:1.2!important}
+      .metric strong{font-size:30px!important}
+      .timeline{grid-column:1/-1!important;margin-top:2px!important;overflow:auto!important}
+    }
+  `;
+  d.head.appendChild(style);
+
+  const monitor=d.querySelector('#monitorView');
+  const head=monitor?.querySelector('.head');
+  if(monitor&&head&&!d.querySelector('#monitorParticipantV7')){
+    const bar=d.createElement('div');
+    bar.className='monitor-bar-v7';
+    bar.innerHTML=`<div><label>Participante no monitor</label><select id="monitorParticipantV7"><option value="__ALL__">Todos os participantes</option><option value="Lara Vitoria">Lara Vitoria</option><option value="Maria Eduarda">Maria Eduarda</option><option value="Pedro">Pedro</option></select></div><div class="monitor-info-v7" id="monitorInfoV7">Exibindo <b>todos os participantes</b>.</div>`;
+    head.insertAdjacentElement('afterend',bar);
+  }
+
+  const timeline=d.querySelector('.timeline');
+  if(timeline){
+    const extras=[
+      ['🛏️','Arrumar a cama','Maria Eduarda','07:15:00 – 07:29:59','▶ 07:16:12<br>■ 07:25:40','Concluída','ok','5 / 5'],
+      ['📚','Estudar','Maria Eduarda','08:00:00 – 09:29:59','▶ 08:05:10<br>■ —','Em andamento','running','0 / 5'],
+      ['🛏️','Arrumar a cama','Pedro','07:15:00 – 07:29:59','▶ —<br>■ —','Pendente','pending','0 / 5'],
+      ['📚','Estudar','Pedro','08:00:00 – 09:29:59','▶ 08:00:33<br>■ 09:20:02','Concluída','ok','5 / 5']
+    ];
+    extras.forEach(r=>{
+      const row=d.createElement('div'); row.className='mrow'; row.dataset.participant=r[2];
+      row.innerHTML=`<span class="taskicon">${r[0]}</span><span><b>${r[1]}</b><br><small>${r[2]}</small></span><span class="rtime">${r[3]}</span><span class="rtime">${r[4]}</span><span class="status ${r[6]}">${r[5]}</span><span>${r[7]}</span>`;
+      timeline.appendChild(row);
+    });
+    [...timeline.querySelectorAll('.mrow:not(.header)')].forEach(row=>{if(!row.dataset.participant){const s=row.querySelector('small');row.dataset.participant=s?s.textContent.trim():'';}});
+  }
+
+  function updateMonitor(){
+    const sel=d.querySelector('#monitorParticipantV7'); if(!sel)return;
+    const p=sel.value,rows=[...d.querySelectorAll('.timeline .mrow:not(.header)')];
+    const visible=rows.filter(r=>p==='__ALL__'||r.dataset.participant===p);
+    rows.forEach(r=>r.style.display=visible.includes(r)?'grid':'none');
+    const metrics=[...d.querySelectorAll('.metric strong')];
+    if(metrics[0])metrics[0].textContent=visible.length;
+    if(metrics[1])metrics[1].textContent=visible.filter(r=>r.querySelector('.status')?.classList.contains('ok')).length;
+    if(metrics[2])metrics[2].textContent=visible.filter(r=>r.querySelector('.status')?.classList.contains('running')).length;
+    if(metrics[3])metrics[3].textContent=visible.filter(r=>{const s=r.querySelector('.status');return s?.classList.contains('pending')||s?.classList.contains('late')}).length;
+    const info=d.querySelector('#monitorInfoV7');if(info)info.innerHTML=p==='__ALL__'?'Exibindo <b>todos os participantes</b>.':`Exibindo o acompanhamento de <b>${p}</b>.`;
+  }
+  d.querySelector('#monitorParticipantV7')?.addEventListener('change',updateMonitor);
+  d.querySelector('#navMonitor')?.addEventListener('click',()=>setTimeout(updateMonitor,0));
+  updateMonitor();
+
+  w.eval(`
+    function save(id){
+      const tr=document.querySelector('tr[data-id="'+id+'"]'),t=tasks.find(x=>x.id===id);if(!tr||!t)return;
+      tr.querySelectorAll('[data-k]').forEach(el=>{let v=el.value;if(['points','tol'].includes(el.dataset.k))v=Number(v);t[el.dataset.k]=v});
+      tasks.sort((a,b)=>a.person.localeCompare(b.person)||a.start.localeCompare(b.start)||a.end.localeCompare(b.end)||a.name.localeCompare(b.name));
+      edit=null;open=null;render();
+    }
+    function saveMobile(id){
+      const t=tasks.find(x=>x.id===id);if(!t)return;
+      t.icon=document.querySelector('#m-icon-'+id).value;
+      t.name=document.querySelector('#m-name-'+id).value;
+      t.start=document.querySelector('#m-start-'+id).value;
+      t.end=document.querySelector('#m-end-'+id).value;
+      t.points=Number(document.querySelector('#m-points-'+id).value);
+      t.tol=Number(document.querySelector('#m-tol-'+id).value);
+      t.status=document.querySelector('#m-status-'+id).value;
+      t.alarm=document.querySelector('#m-alarm-'+id).value;
+      t.note=document.querySelector('#m-note-'+id).value;
+      tasks.sort((a,b)=>a.person.localeCompare(b.person)||a.start.localeCompare(b.start)||a.end.localeCompare(b.end)||a.name.localeCompare(b.name));
+      edit=null;open=null;render();
+    }
+  `);
+});
+</script>
+</body>
+</html>
