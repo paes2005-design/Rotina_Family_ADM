@@ -28,10 +28,22 @@ jobs:
           node --check alarm-date-core.js
           node --check reward-redemption-notifications.js
           node --check adm-regression-audit.js
+          node --check sprint2-tarefas-v8-audit.js
           node --check sw.js
           node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8')); console.log('manifest OK')"
+      - name: Sprint 2 tarefas v8 audit
+        run: |
+          node sprint2-tarefas-v8-audit.js
+      - name: Sprint 2 remote telemetry smoke test
+        shell: bash
+        run: |
+          body='{"events":[{"aplicativo":"adm","versaoMonitor":8,"evento":"sprint2.tarefas.ci_smoke","nivel":"info","detalhes":{"source":"github-actions"},"grupoId":"SPRINT2-PREVIEW","perfilId":"","sessaoId":"ci-v8","clienteEm":"2026-08-28T00:00:00.000Z","pagina":"sprint2-tarefas-preview-v8.html","navegador":"CI","online":true,"visibilidade":"visible","instalado":false}]}'
+          response=$(curl --fail-with-body -sS -X POST 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/app-log' -H 'content-type: application/json' --data "$body")
+          echo "$response"
+          RESPONSE="$response" node -e "const r=JSON.parse(process.env.RESPONSE); if(Number(r.accepted)!==1) throw new Error('Worker nao confirmou o log'); console.log('REMOTE_TELEMETRY=OK')"
       - name: Full ADM regression audit
         run: |
+          sed -i "s/rotina-family-adm-v46/rotina-family-adm-v63/g" adm-regression-audit.js
           node adm-regression-audit.js
       - name: Historical monitor regression
         run: |
@@ -48,7 +60,7 @@ jobs:
           assert(h.includes('toleranciaConsumidaSeg'),'exact tolerance consumption is displayed');
           assert(h.includes('inicioExecutadoEm')&&h.includes('terminoExecutadoEm'),'exact execution timestamps are used');
           assert(h.includes("| Consumido: ${formatarSegundos(consumido)}"),'monitor exposes consumed tolerance');
-          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v42'"),'ADM cache is v42');
+          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v63'"),'ADM cache is v63');
           assert(sw.includes("'./adm-monitor-history-fix.js'"),'historical monitor is cached offline');
           assert(entry.includes('adm-monitor-history-fix.js'),'historical monitor is loaded by ADM entry');
           console.log('ALL ADM HISTORICAL MONITOR CHECKS PASSED');
