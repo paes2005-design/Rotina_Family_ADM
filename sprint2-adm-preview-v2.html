@@ -5,22 +5,59 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Rotina Family — Sprint 2</title>
 <style>
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f6f7fb}#frame{border:0;width:100%;height:100%;display:block}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f6f7fb}
+#stage{position:relative;width:100%;height:100%;overflow:hidden;background:#f6f7fb;contain:layout paint size}
+.route-frame{position:absolute;inset:0;border:0;width:100%;height:100%;display:block;background:#f6f7fb;opacity:0;visibility:hidden;pointer-events:none;transform:translateZ(0);transition:opacity 120ms ease;will-change:opacity}
+.route-frame.active{opacity:1;visibility:visible;pointer-events:auto}
+.route-frame.soft-hide{opacity:0!important;pointer-events:none!important}
+#initialCover{position:absolute;inset:0;z-index:20;background:#f6f7fb;opacity:1;pointer-events:none;transition:opacity 140ms ease}
+#initialCover.done{opacity:0}
+@media (prefers-reduced-motion:reduce){.route-frame,#initialCover{transition:none}}
 </style>
 </head>
 <body>
-<iframe id="frame" title="Rotina Family Sprint 2"></iframe>
+<div id="stage">
+  <iframe id="taskFrame" class="route-frame" src="sprint2-tarefas-preview-v9.html" title="Rotina Family — Tarefas e Monitor"></iframe>
+  <iframe id="participantFrame" class="route-frame" src="sprint2-participantes-preview-v4.html" title="Rotina Family — Participantes"></iframe>
+  <div id="initialCover" aria-hidden="true"></div>
+</div>
 <script>
-const frame=document.getElementById('frame');
+const taskFrame=document.getElementById('taskFrame');
+const participantFrame=document.getElementById('participantFrame');
+const initialCover=document.getElementById('initialCover');
 const ENDPOINT='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/app-log';
-let lastSrc='';
+const frames=[taskFrame,participantFrame];
+let activeFrame=null,transitionSeq=0,firstReveal=true;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const raf2=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
 function current(){const r=(location.hash||'#tarefas').slice(1);return ['tarefas','participantes','monitor'].includes(r)?r:'tarefas'}
-function routeUrl(r){return r==='participantes'?'sprint2-participantes-preview-v4.html':'sprint2-tarefas-preview-v9.html'}
-function log(event,recurso,level='info'){const item={aplicativo:'adm',versaoMonitor:3,evento:'operacao.sprint2_router.'+event,nivel:level,detalhes:{operacao:event,recurso:String(recurso||''),resultado:level==='error'?'erro':'ok',versao:3},grupoId:'SPRINT2-PREVIEW',perfilId:'',sessaoId:'sprint2-router-v3',clienteEm:new Date().toISOString(),pagina:'sprint2-adm-preview-v2.html',navegador:'browser',online:navigator.onLine,visibilidade:document.visibilityState,instalado:false};if(navigator.onLine)fetch(ENDPOINT,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({events:[item]})}).catch(()=>{})}
-function prepareParticipants(){log('participants_ready','participantes')}
-function prepareTasks(wanted){let tries=0;const timer=setInterval(()=>{tries++;try{const outer=frame.contentDocument,innerFrame=outer?.querySelector('#app');if(!innerFrame?.contentDocument){if(tries>60){clearInterval(timer);log('tasks_prepare_timeout',wanted,'error')}return}const d=innerFrame.contentDocument,nav=d.querySelector('.nav');if(!d.querySelector('#navParticipants')&&nav){const b=d.createElement('button');b.id='navParticipants';b.innerHTML='<span class="ico">👥</span>Participantes';const monitor=d.querySelector('#navMonitor');nav.insertBefore(b,monitor||null);b.addEventListener('click',()=>{location.hash='#participantes'});}if(wanted==='monitor')d.querySelector('#navMonitor')?.click();else d.querySelector('#navTasks')?.click();clearInterval(timer);log('tasks_ready',wanted)}catch(e){if(tries>60){clearInterval(timer);log('tasks_prepare_error',String(e&&e.message||e),'error')}}},100)}
-function show(){const r=current(),src=routeUrl(r);if(lastSrc!==src){lastSrc=src;frame.src=src;frame.onload=()=>{if(r==='participantes')prepareParticipants();else prepareTasks(r)}}else{if(r==='participantes')prepareParticipants();else prepareTasks(r)}log('nav',r)}
-window.addEventListener('hashchange',show);window.addEventListener('error',e=>log('runtime_error',String(e&&e.message||current()),'error'));show();log('open',current());
+function log(event,recurso,level='info',extra={}){const item={aplicativo:'adm',versaoMonitor:4,evento:'operacao.sprint2_router.'+event,nivel:level,detalhes:{operacao:event,recurso:String(recurso||''),resultado:level==='error'?'erro':'ok',versao:4,...extra},grupoId:'SPRINT2-PREVIEW',perfilId:'',sessaoId:'sprint2-router-v4',clienteEm:new Date().toISOString(),pagina:'sprint2-adm-preview-v2.html',navegador:'browser',online:navigator.onLine,visibilidade:document.visibilityState,instalado:false};if(navigator.onLine)fetch(ENDPOINT,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({events:[item]})}).catch(()=>{})}
+function resetFrameScroll(frame){try{frame.contentWindow.scrollTo(0,0);const d=frame.contentDocument;if(d){d.documentElement.scrollTop=0;d.body.scrollTop=0;const nested=d.querySelector('#app');if(nested?.contentWindow){nested.contentWindow.scrollTo(0,0);const nd=nested.contentDocument;if(nd){nd.documentElement.scrollTop=0;nd.body.scrollTop=0;nd.querySelector('.main')?.scrollTo?.(0,0)}}}}catch(_){}}
+function reveal(target,route,started){const old=activeFrame;if(old===target){target.classList.remove('soft-hide');target.classList.add('active');resetFrameScroll(target)}else{target.style.zIndex='2';target.classList.remove('soft-hide');target.classList.add('active');resetFrameScroll(target);if(old){old.style.zIndex='1';old.classList.remove('active');old.classList.remove('soft-hide')}activeFrame=target;setTimeout(()=>{if(activeFrame===target)target.style.zIndex='1'},150)}if(firstReveal){firstReveal=false;initialCover.classList.add('done');setTimeout(()=>initialCover.remove(),180)}log('transition_ready',route,'info',{tempoMs:Math.round(performance.now()-started)})}
+function waitFrameLoaded(frame,limit=80){return new Promise(resolve=>{let tries=0;const t=setInterval(()=>{tries++;try{if(frame.contentDocument?.readyState==='complete'){clearInterval(t);resolve(true);return}}catch(_){}if(tries>=limit){clearInterval(t);resolve(false)}},50)})}
+async function prepareParticipants(seq,started){const ok=await waitFrameLoaded(participantFrame);if(seq!==transitionSeq)return;if(!ok){log('participants_prepare_timeout','participantes','error');return}await raf2();if(seq!==transitionSeq)return;reveal(participantFrame,'participantes',started);log('participants_ready','participantes')}
+async function prepareTasks(wanted,seq,started){let tries=0;while(seq===transitionSeq&&tries<80){tries++;try{const outer=taskFrame.contentDocument,innerFrame=outer?.querySelector('#app');const d=innerFrame?.contentDocument;if(d?.readyState==='complete'){
+      const nav=d.querySelector('.nav');
+      if(!d.querySelector('#navParticipants')&&nav){const b=d.createElement('button');b.id='navParticipants';b.innerHTML='<span class="ico">👥</span>Participantes';const monitor=d.querySelector('#navMonitor');nav.insertBefore(b,monitor||null);b.addEventListener('click',()=>{location.hash='#participantes'})}
+      if(activeFrame===taskFrame)taskFrame.classList.add('soft-hide');
+      await sleep(activeFrame===taskFrame?75:0);
+      if(seq!==transitionSeq)return;
+      if(wanted==='monitor')d.querySelector('#navMonitor')?.click();else d.querySelector('#navTasks')?.click();
+      resetFrameScroll(taskFrame);
+      await raf2();
+      if(seq!==transitionSeq)return;
+      reveal(taskFrame,wanted,started);
+      log('tasks_ready',wanted);
+      return;
+    }}catch(e){if(tries>=80)log('tasks_prepare_error',String(e&&e.message||e),'error')}
+    await sleep(50);
+  }
+  if(seq===transitionSeq)log('tasks_prepare_timeout',wanted,'error');
+}
+function show(){const route=current(),seq=++transitionSeq,started=performance.now();log('nav',route);if(route==='participantes')prepareParticipants(seq,started);else prepareTasks(route,seq,started)}
+window.addEventListener('hashchange',show);
+window.addEventListener('error',e=>log('runtime_error',String(e&&e.message||current()),'error'));
+show();log('open',current());
 </script>
 </body>
 </html>
