@@ -1,0 +1,76 @@
+name: Sprint 2 navigation audit
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'sprint2-adm-preview-v1.html'
+      - 'sprint2-adm-preview-v2.html'
+      - 'sprint2-participantes-preview-v4.html'
+      - '.github/workflows/sprint2-navigation-audit.yml'
+
+permissions:
+  contents: read
+
+env:
+  DIAG_URL: https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/diagnostico-tecnico
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validar roteamento sem recursão
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f sprint2-adm-preview-v2.html
+          test -f sprint2-participantes-preview-v4.html
+          if grep -nE 'iframe[^>]*sprint2-adm-preview-v[12]|href=["'"']sprint2-adm-preview-v[12]' sprint2-participantes-preview-v4.html; then
+            echo 'ERRO: Participantes ainda referencia o shell dentro da própria tela.'
+            exit 1
+          fi
+          grep -q "window.parent.location.hash" sprint2-participantes-preview-v4.html
+          grep -q "sprint2-participantes-preview-v4.html" sprint2-adm-preview-v2.html
+          echo 'Roteamento estático sem recursão: OK'
+
+      - name: Confirmar padrão visual aprovado
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '#17133e' sprint2-participantes-preview-v4.html
+          grep -q '#211252' sprint2-participantes-preview-v4.html
+          grep -q 'Rotina <span style="color:#b678ff">Family</span>' sprint2-participantes-preview-v4.html
+          echo 'Padrão visual escuro aprovado: OK'
+
+      - name: Ler logs reais de navegação
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 25 "$DIAG_URL?limit=120" -o /tmp/diag.json
+          python - <<'PY'
+          import json
+          p='/tmp/diag.json'
+          d=json.load(open(p,encoding='utf-8'))
+          print('STATUS_WORKER=', d.get('status'))
+          print('SUMMARY=', json.dumps(d.get('summary',{}), ensure_ascii=False))
+          logs=d.get('logs',[]) or []
+          wanted=[]
+          for x in logs:
+              ev=str(x.get('evento',''))
+              pg=str(x.get('pagina',''))
+              if ('sprint2_router' in ev or 'sprint2_participantes' in ev or 'sprint2_shell' in ev or 'sprint2_navigation' in ev or 'sprint2-adm-preview' in pg or 'sprint2-participantes-preview' in pg):
+                  wanted.append(x)
+          print('NAV_LOG_COUNT=', len(wanted))
+          for x in wanted[:40]:
+              print(json.dumps({
+                  'clienteEm':x.get('clienteEm'),
+                  'evento':x.get('evento'),
+                  'nivel':x.get('nivel'),
+                  'pagina':x.get('pagina'),
+                  'detalhes':x.get('detalhes',{})
+              }, ensure_ascii=False))
+          if d.get('status') in ('ERRO_DIAGNOSTICO','DEGRADADO'):
+              raise SystemExit('Worker não está saudável para auditoria')
+          PY
