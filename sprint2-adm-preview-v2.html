@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rotina Family — Sprint 2</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f6f7fb}#frame{border:0;width:100%;height:100%;display:block}
+</style>
+</head>
+<body>
+<iframe id="frame" title="Rotina Family Sprint 2"></iframe>
+<script>
+const frame=document.getElementById('frame');
+const ENDPOINT='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/app-log';
+let lastSrc='';
+function current(){const r=(location.hash||'#tarefas').slice(1);return ['tarefas','participantes','monitor'].includes(r)?r:'tarefas'}
+function routeUrl(r){return r==='participantes'?'sprint2-participantes-preview-v3.html':'sprint2-tarefas-preview-v9.html'}
+function log(event,recurso){const item={aplicativo:'adm',versaoMonitor:2,evento:'operacao.sprint2_router.'+event,nivel:'info',detalhes:{operacao:event,recurso:String(recurso||''),resultado:'ok',versao:2},grupoId:'SPRINT2-PREVIEW',perfilId:'',sessaoId:'sprint2-router-v2',clienteEm:new Date().toISOString(),pagina:'sprint2-adm-preview-v2.html',navegador:'browser',online:navigator.onLine,visibilidade:document.visibilityState,instalado:false};if(navigator.onLine)fetch(ENDPOINT,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({events:[item]})}).catch(()=>{})}
+function prepareParticipants(){try{const d=frame.contentDocument;if(!d)return;d.querySelectorAll('.nav a').forEach(a=>{const t=(a.textContent||'').trim();if(t.includes('Tarefas'))a.href='sprint2-adm-preview-v2.html#tarefas';else if(t.includes('Participantes'))a.href='sprint2-adm-preview-v2.html#participantes';else if(t.includes('Monitor'))a.href='sprint2-adm-preview-v2.html#monitor';else a.href='#';});log('participants_ready','participantes')}catch(_){}}
+function prepareTasks(wanted){let tries=0;const timer=setInterval(()=>{tries++;try{const outer=frame.contentDocument,innerFrame=outer?.querySelector('#app');if(!innerFrame?.contentDocument){if(tries>60)clearInterval(timer);return}const d=innerFrame.contentDocument,nav=d.querySelector('.nav');if(!d.querySelector('#navParticipants')&&nav){const b=d.createElement('button');b.id='navParticipants';b.innerHTML='<span class="ico">👥</span>Participantes';const monitor=d.querySelector('#navMonitor');nav.insertBefore(b,monitor||null);b.addEventListener('click',()=>{location.hash='participantes'});}if(wanted==='monitor')d.querySelector('#navMonitor')?.click();else d.querySelector('#navTasks')?.click();clearInterval(timer);log('tasks_ready',wanted)}catch(_){if(tries>60)clearInterval(timer)}},100)}
+function show(){const r=current(),src=routeUrl(r);if(lastSrc!==src){lastSrc=src;frame.src=src;frame.onload=()=>{if(r==='participantes')prepareParticipants();else prepareTasks(r)}}else{if(r==='participantes')prepareParticipants();else prepareTasks(r)}log('nav',r)}
+window.addEventListener('hashchange',show);window.addEventListener('error',()=>log('runtime_error',current()));show();log('open',current());
+</script>
+</body>
+</html>
