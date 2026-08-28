@@ -38,3 +38,4 @@ ok(monitorB.length===1,'filtro individual do Monitor encontra a nova tarefa');
 const ordered=sortTasks([{start:'10:00',name:'C'},{start:'08:00',name:'A'},{start:'09:00',name:'B'}]);
 ok(ordered.map(x=>x.start).join(',')==='08:00,09:00,10:00','ordenacao automatica por horario funciona');
 console.log('SPRINT2_TAREFAS_V8_AUDIT=OK');
+// touch: workflow ja presente no branch principal
