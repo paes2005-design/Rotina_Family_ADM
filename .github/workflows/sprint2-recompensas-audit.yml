@@ -1,0 +1,54 @@
+name: Sprint 2 Recompensas audit
+
+on:
+  push:
+    paths:
+      - 'sprint2-recompensas-preview-v4.html'
+      - 'rewards-admin-ui-v2.js'
+      - '.github/workflows/sprint2-recompensas-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static and behavior contract audit
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile
+          p=Path('sprint2-recompensas-preview-v4.html').read_text(encoding='utf-8')
+          old=Path('rewards-admin-ui-v2.js').read_text(encoding='utf-8')
+          checks={
+            'v4 marker':'Recompensas v4' in p,
+            'no iframe':'<iframe' not in p.lower(),
+            'complete edit modal':all(x in p for x in ['id="editName"','id="editPoints"','id="editStatus"','function saveEdits()']),
+            'edit same reward record':all(x in p for x in ['r.name=name','r.points=points','r.active=']),
+            'quick activate/deactivate':'function toggleReward(id)' in p,
+            'delete reward':'function removeReward(id)' in p,
+            'approve/refuse pending only':"r.status!=='Pendente'" in p and "['Aprovado','Recusado']" in p,
+            'history preserved on delete':'histórico de resgates será preservado' in p.lower(),
+            'catalog status filter':'id="catalogStatus"' in p,
+            'participant filter':'id="participantFilter"' in p,
+            'resgate status filter':'id="requestStatus"' in p,
+            'reference date filter':'id="refDate"' in p,
+            'day/week/month filter':all(x in p for x in ['data-period="day"','data-period="week"','data-period="month"']),
+            'legacy participant filter preserved':'recompensaPerfil' in old,
+            'legacy reference date preserved':'recompensaDataRef' in old,
+            'legacy period tabs preserved':"[data-rp]" in old,
+            'mobile no horizontal page overflow':'overflow-x:hidden' in p and 'max-width:100vw' in p,
+            'preview no firebase writes':'firebase' not in p.lower(),
+            'no prompt based edit':'prompt(' not in p,
+          }
+          failed=[k for k,v in checks.items() if not v]
+          for k,v in checks.items(): print(('OK   ' if v else 'FAIL ')+k)
+          if failed: raise SystemExit('Audit failed: '+', '.join(failed))
+          scripts=re.findall(r'<script>(.*?)</script>',p,re.S)
+          if not scripts: raise SystemExit('No inline script found')
+          js='\n'.join(scripts)
+          with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False,encoding='utf-8') as f:
+            f.write(js); name=f.name
+          subprocess.run(['node','--check',name],check=True)
+          print('SPRINT2_RECOMPENSAS_V4_AUDIT=OK')
+          PY
