@@ -17,3 +17,10 @@ jobs:
         run: node --check sprint2-tarefas-v8-audit.js
       - name: Sprint 2 task flow audit
         run: node sprint2-tarefas-v8-audit.js
+      - name: Remote telemetry smoke test
+        shell: bash
+        run: |
+          body='{"events":[{"aplicativo":"adm","versaoMonitor":8,"evento":"sprint2.tarefas.ci_smoke","nivel":"info","detalhes":{"source":"github-actions"},"grupoId":"SPRINT2-PREVIEW","perfilId":"","sessaoId":"ci-v8","clienteEm":"2026-08-28T00:00:00.000Z","pagina":"sprint2-tarefas-preview-v8.html","navegador":"CI","online":true,"visibilidade":"visible","instalado":false}]}'
+          response=$(curl --fail-with-body -sS -X POST 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/app-log' -H 'content-type: application/json' --data "$body")
+          echo "$response"
+          RESPONSE="$response" node -e "const r=JSON.parse(process.env.RESPONSE); if(Number(r.accepted)!==1) throw new Error('Worker nao confirmou o log'); console.log('REMOTE_TELEMETRY=OK')"
