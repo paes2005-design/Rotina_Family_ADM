@@ -27,13 +27,19 @@ jobs:
           set -euo pipefail
           test -f sprint2-adm-preview-v2.html
           test -f sprint2-participantes-preview-v4.html
-          if grep -nE 'iframe[^>]*sprint2-adm-preview-v[12]|href=["'"']sprint2-adm-preview-v[12]' sprint2-participantes-preview-v4.html; then
-            echo 'ERRO: Participantes ainda referencia o shell dentro da própria tela.'
-            exit 1
-          fi
-          grep -q "window.parent.location.hash" sprint2-participantes-preview-v4.html
-          grep -q "sprint2-participantes-preview-v4.html" sprint2-adm-preview-v2.html
-          echo 'Roteamento estático sem recursão: OK'
+          python - <<'PY'
+          import re
+          text=open('sprint2-participantes-preview-v4.html',encoding='utf-8').read()
+          bad=re.findall(r'iframe[^>]*sprint2-adm-preview-v[12]|href=["\']sprint2-adm-preview-v[12]', text, re.I)
+          if bad:
+              raise SystemExit('ERRO: Participantes ainda referencia o shell dentro da própria tela: '+repr(bad[:4]))
+          if 'window.parent.location.hash' not in text:
+              raise SystemExit('ERRO: rota para o parent não encontrada em Participantes')
+          router=open('sprint2-adm-preview-v2.html',encoding='utf-8').read()
+          if 'sprint2-participantes-preview-v4.html' not in router:
+              raise SystemExit('ERRO: roteador não aponta para Participantes v4')
+          print('Roteamento estático sem recursão: OK')
+          PY
 
       - name: Confirmar padrão visual aprovado
         shell: bash
@@ -51,8 +57,7 @@ jobs:
           curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 25 "$DIAG_URL?limit=120" -o /tmp/diag.json
           python - <<'PY'
           import json
-          p='/tmp/diag.json'
-          d=json.load(open(p,encoding='utf-8'))
+          d=json.load(open('/tmp/diag.json',encoding='utf-8'))
           print('STATUS_WORKER=', d.get('status'))
           print('SUMMARY=', json.dumps(d.get('summary',{}), ensure_ascii=False))
           logs=d.get('logs',[]) or []
