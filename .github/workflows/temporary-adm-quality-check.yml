@@ -47,12 +47,12 @@ jobs:
           const fs=require('fs');
           const p='adm-regression-audit.js';
           let s=fs.readFileSync(p,'utf8');
-          s=s.replace("rotina-family-adm-v46","rotina-family-adm-v63");
+          s=s.replace("rotina-family-adm-v46","rotina-family-adm-v64");
           s=s.replace("assert(notify.includes(\"collection(db, 'resgates')\"),'redemption notification listens to the resgates collection');","assert(notify.includes(\"window.rotinaAdmCacheSnapshot?.().resgates\"),'redemption notification reads the shared ADM cache');");
           fs.writeFileSync(p,s);
           NODE
           node adm-regression-audit.js
-      - name: Historical monitor regression
+      - name: Historical monitor and service worker isolation
         run: |
           node <<'NODE'
           const fs=require('fs');
@@ -66,8 +66,11 @@ jobs:
           assert(h.includes('toleranciaConsumidaSeg'),'exact tolerance consumption is displayed');
           assert(h.includes('inicioExecutadoEm')&&h.includes('terminoExecutadoEm'),'exact execution timestamps are used');
           assert(h.includes("| Consumido: ${formatarSegundos(consumido)}"),'monitor exposes consumed tolerance');
-          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v63'"),'ADM cache is v63');
+          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v64'"),'ADM cache is v64');
           assert(sw.includes("'./adm-monitor-history-fix.js'"),'historical monitor is cached offline');
-          assert(sw.includes("adm-monitor-history-fix.js?v=3")&&sw.includes('faltantes.push'),'historical monitor is injected into HTML by the service worker when absent');
-          console.log('ALL ADM HISTORICAL MONITOR CHECKS PASSED');
+          assert(sw.includes("adm-monitor-history-fix.js?v=3")&&sw.includes('faltantes.push'),'historical monitor remains available to production ADM');
+          assert(sw.includes('function deveAplicarAddons(url)'),'service worker has an explicit addon scope guard');
+          assert(sw.includes('url.pathname===APP_MAIN_PATH'),'addons are restricted to the production ADM path');
+          assert(sw.includes('deveAplicarAddons(url)?respostaComAddons(response):response'),'preview navigations are returned without production addon injection');
+          console.log('ALL ADM HISTORICAL MONITOR / SW ISOLATION CHECKS PASSED');
           NODE
