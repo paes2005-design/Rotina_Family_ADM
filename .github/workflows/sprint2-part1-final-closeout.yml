@@ -1,0 +1,73 @@
+name: Sprint 2 Parte 1 final closeout
+on:
+  push:
+    paths:
+      - '.github/workflows/sprint2-part1-final-closeout.yml'
+      - 'sprint2-tarefas-preview-v9.html'
+      - 'sprint2-tarefas-v9-audit.js'
+  workflow_dispatch:
+
+jobs:
+  closeout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Static v9 audit
+        run: node sprint2-tarefas-v9-audit.js
+
+      - name: Live v9 page smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body -sS --retry 4 --retry-delay 2 \
+            'https://paes2005-design.github.io/Rotina_Family_ADM/sprint2-tarefas-preview-v9.html' \
+            -o /tmp/v9.html
+          grep -q 'Tarefas v9' /tmp/v9.html
+          grep -q 'sprint2.tarefas' /tmp/v9.html
+          echo 'LIVE_V9=OK'
+
+      - name: Worker health and v9 telemetry audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body -sS --retry 4 --retry-delay 2 \
+            'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/health' \
+            -o /tmp/health.json
+          curl --fail-with-body -sS --retry 4 --retry-delay 2 \
+            'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/diagnostico-tecnico?limit=120' \
+            -o /tmp/diag.json
+          node <<'NODE'
+          const fs=require('fs');
+          const health=JSON.parse(fs.readFileSync('/tmp/health.json','utf8'));
+          const diag=JSON.parse(fs.readFileSync('/tmp/diag.json','utf8'));
+          console.log('HEALTH_STATUS='+health.status);
+          console.log('HEALTH_LAST_RUN='+(health.lastRunAt||''));
+          console.log('DIAG_STATUS='+diag.status);
+          console.log('DIAG_STORAGE='+diag.storage);
+          console.log('DIAG_LAST_LOG='+(diag.lastLogAt||''));
+          console.log('DIAG_SUMMARY='+JSON.stringify(diag.summary||{}));
+          if (['DEGRADADO','ERRO_DIAGNOSTICO'].includes(String(health.status||diag.status))) {
+            throw new Error('Worker health degradado');
+          }
+          const logs=Array.isArray(diag.logs)?diag.logs:[];
+          const v9=logs.filter(x=>String(x.pagina||'').includes('sprint2-tarefas-preview-v9.html'));
+          const errors=v9.filter(x=>x.nivel==='error');
+          const duplicateWarnings=v9.filter(x=>x.nivel==='warning' && /deduplicated|duplicate/i.test(String(x.evento||'')));
+          console.log('V9_TECHNICAL_LOGS='+v9.length);
+          console.log('V9_ERRORS='+errors.length);
+          console.log('V9_DUPLICATE_WARNINGS='+duplicateWarnings.length);
+          if (errors.length) {
+            console.log(JSON.stringify(errors,null,2));
+            throw new Error('Erros tecnicos da v9 encontrados');
+          }
+          if (duplicateWarnings.length) {
+            console.log(JSON.stringify(duplicateWarnings,null,2));
+            throw new Error('Aviso de duplicacao da v9 encontrado');
+          }
+          console.log('SPRINT2_PART1_TELEMETRY=OK');
+          NODE
+
+      - name: Closeout summary
+        run: |
+          echo 'SPRINT2_PART1_STATUS=FECHADA'
