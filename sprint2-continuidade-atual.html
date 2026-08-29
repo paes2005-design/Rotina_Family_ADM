@@ -1,4 +1,4 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Continuidade Sprint 2</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f7fb;color:#20243d;margin:0;padding:24px}main{max-width:1000px;margin:auto;background:#fff;border:1px solid #e6e8f0;border-radius:18px;padding:24px;box-shadow:0 15px 42px rgba(31,24,77,.08)}pre{white-space:pre-wrap;word-wrap:break-word;font:14px/1.55 Inter,system-ui,sans-serif;margin:0}a{color:#6b35df}</style></head><body><main><pre># CONTINUIDADE OFICIAL — ROTINA FAMILY — SPRINT 2
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Continuidade Sprint 2</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f7fb;color:#20243d;margin:0;padding:24px}main{max-width:1000px;margin:auto;background:#fff;border:1px solid #e6e8f0;border-radius:18px;padding:24px;box-shadow:0 15px 42px rgba(31,24,77,.08)}pre{white-space:pre-wrap;word-wrap:break-word;font:14px/1.55 Inter,system-ui,sans-serif;margin:0}</style></head><body><main><pre># CONTINUIDADE OFICIAL — ROTINA FAMILY — SPRINT 2
 
 Atualizado em: 29/08/2026
 Status: versão de teste isolada. Não integrar aos aplicativos oficiais sem aprovação explícita.
@@ -6,160 +6,142 @@ Status: versão de teste isolada. Não integrar aos aplicativos oficiais sem apr
 ## LINKS OFICIAIS DO TESTE
 - Teste atual: https://paes2005-design.github.io/Rotina_Family_ADM/sprint2-teste-atual.html
 - Continuidade: https://paes2005-design.github.io/Rotina_Family_ADM/sprint2-continuidade-atual.html
-- Auditoria atual: https://paes2005-design.github.io/Rotina_Family_ADM/sprint2-auditoria-atual.html
+- Auditoria: https://paes2005-design.github.io/Rotina_Family_ADM/sprint2-auditoria-atual.html
 
 ## REGRA DE RETOMADA
-Em uma conversa nova, abrir este arquivo e dizer: **“Leia a Continuidade Sprint 2 e prossiga do ponto atual.”**
-Antes de qualquer alteração, conferir o teste atual, esta continuidade e a auditoria. Não reconstruir o estado apenas pela memória da conversa.
+Em uma nova conversa, abrir este arquivo e dizer: **“Leia a Continuidade Sprint 2 e prossiga do ponto atual.”**
+Antes de qualquer alteração, conferir também o teste e a auditoria. Não reconstruir o estado apenas pela memória da conversa.
 
 ## REGRA OBRIGATÓRIA PARA TODA PUBLICAÇÃO DE TESTE
-Sempre que uma nova versão de teste da Sprint 2 for divulgada, entregar junto:
+Sempre divulgar juntos:
 1. link web real do teste;
-2. Continuidade Sprint 2 atualizada;
-3. auditoria/testes da versão;
+2. Continuidade atualizada;
+3. auditoria/testes;
 4. análise dos logs/telemetria;
 5. ponto atual e próximo passo.
 
 ## PRINCÍPIOS TÉCNICOS
 - Sprint 2 é separada da produção.
-- Código limpo, modular e leve; sem remendos, iframes, scripts sobre scripts ou duplicação de regras.
-- Web e mobile precisam manter paridade funcional.
-- Não alterar `index.html`, `index-ADMIN-v8.html`, Cliente, Service Worker ou Firebase de produção durante a validação.
-- Os arquivos publicados para teste têm nomes exclusivos `sprint2-*`.
-- Tarefas, Participantes e Monitor estão congelados como aprovados. Só reabrir se o usuário pedir explicitamente.
+- Código limpo, modular e leve; sem remendos, iframes, duplicação de regras ou scripts sobre scripts.
+- Web e mobile com paridade funcional.
+- Não alterar `index.html`, `index-ADMIN-v8.html`, Cliente, Service Worker ou Firebase de produção enquanto estivermos validando a Sprint 2.
+- Arquivos de teste usam nomes exclusivos `sprint2-*`.
+- Módulo aprovado = congelado. Só reabrir se o usuário pedir explicitamente.
 
-## PLANEJAMENTO DA SPRINT 2
-### Parte 1 — Tarefas + Monitor — APROVADA
-### Parte 2 — Participantes — APROVADA
-### Parte 3 — Início / Dashboard — PLANEJADA, AINDA NÃO DESENVOLVIDA
-### Parte 4 — Recompensas + Conquistas + Histórico — EM DELIBERAÇÃO FINAL
+# STATUS OFICIAL DA SPRINT 2
+## Parte 1 — Tarefas + Monitor — ✅ APROVADA E CONGELADA
+## Parte 2 — Participantes — ✅ APROVADA E CONGELADA
+## Parte 3 — Início / Dashboard — 🗓️ PRÓXIMA ETAPA; AINDA NÃO DESENVOLVIDA
+## Parte 4 — Recompensas + Conquistas + Histórico — ✅ APROVADA E CONGELADA EM 29/08/2026
 
-## INÍCIO / DASHBOARD — NÃO TRATAR COMO PRONTO
-O Início ainda não foi desenvolvido. A tela atual é apenas um marcador de planejamento e não representa aparência aprovada.
-Planejamento já discutido:
-- **Hoje:** previstas, concluídas, atrasadas/pendentes e pontos.
-- **Pendências:** justificativas, resgates e alertas que exigem ação.
-- **Atalhos:** Nova tarefa, Novo participante, Monitor e Recompensas pendentes.
-- Deve ser uma visão rápida, sem formulário completo.
-
-## TAREFAS — APROVADO / FONTE CONGELADA
-- Agenda por participante; opção Todos para tarefa coletiva.
+# TAREFAS — FONTE CONGELADA
+- Agenda por participante; opção Todos cria tarefa coletiva.
 - Nome, ícone, início, término, pontos, tolerância e status na área principal.
 - Ordenação automática pelo horário de início; não existe campo manual Ordenar.
 - Web em tabela; mobile em cartões.
-- **Edição:** web na própria linha; mobile dentro do próprio cartão. Não usar modal.
-- **Detalhes web:** botão `⋯` abre uma linha expandida abaixo da tarefa.
-- **Detalhes mobile:** botão Detalhes abre dentro do cartão.
-- **Somente opcionais em Detalhes:** Dias da semana, Alarme e Observação.
-- **Resumo dos dias:** intervalo somente se todos os dias intermediários estiverem selecionados. Exemplos: `Segunda a sexta`; `Segunda, quarta e sexta`; `Terça e quinta`.
+- Edição web na própria linha; mobile dentro do cartão. Não usar modal.
+- Botão `⋯` no web abre Detalhes logo abaixo da tarefa.
+- Botão Detalhes no mobile abre os mesmos opcionais dentro do cartão.
+- Somente opcionais em Detalhes: Dias da semana, Alarme e Observação.
+- Resumo de dias só usa intervalo quando todos os dias intermediários estão selecionados. Exemplos: `Segunda a sexta`; `Segunda, quarta e sexta`; `Terça e quinta`.
 - Bloqueio de sobreposição de horários para o mesmo participante em dias coincidentes.
-- Fontes congeladas: `sprint2-adm-base-v3.js`, `sprint2-tarefas-preview-v6.html`, commits `f9336ad...`, `6102d3d...`, `d9adfea...`.
+- Fontes: `sprint2-adm-base-v3.js`, `sprint2-tarefas-preview-v6.html`, commits `f9336ad...`, `6102d3d...`, `d9adfea...`.
 
-## PARTICIPANTES — APROVADO
-- Cadastro/manutenção de participante.
+# PARTICIPANTES — CONGELADO
+- Cadastro/manutenção.
 - Nome, tema e PIN.
-- PIN de 4 a 6 dígitos e nunca exibido em claro.
+- PIN de 4 a 6 dígitos, nunca exibido em claro.
 - Avatar acompanha o tema.
 - Web/mobile no padrão aprovado.
 
-## MONITOR — APROVADO
+# MONITOR — CONGELADO
 - Filtro por participante ou Todos.
 - Horário previsto separado do horário real.
 - Situação e pontos.
 - Indicadores: previstas, concluídas, em andamento e pendentes.
 - Web/mobile responsivos.
 
-## RECOMPENSAS — PRESERVAR
-Referência: `sprint2-recompensas-preview-v4.html` apenas para este módulo.
+# RECOMPENSAS — CONGELADO
+Referência histórica do módulo: `sprint2-recompensas-preview-v4.html`.
 - Cadastro livre do ADM: nome + custo em pontos.
-- Ativar/desativar, editar e excluir preservando histórico.
-- Solicitações de resgate: Pendente, Aprovado, Recusado.
+- Editar, ativar/desativar e excluir preservando histórico.
+- Resgates: Pendente, Aprovado, Recusado.
 - Aprovar/recusar somente pendentes.
 - Filtros por participante, status, data e Dia/Semana/Mês.
 
-## CONQUISTAS — REGRAS FIXAS
-Conquistas não são cadastro livre de Recompensas. Tipos:
+# CONQUISTAS — CONGELADO
+Conquistas não são cadastro livre de Recompensas. Regras fixas:
 1. Dias com todas as tarefas dentro do horário.
 2. Tarefas consecutivas com 100%.
 3. Dias sem necessidade de justificativa.
 4. Pontos atingidos.
 5. Percentual dos pontos possíveis.
 
-### Campos condicionais
+Campos condicionais:
 - Dias no horário / sem justificativa: meta + consecutivos/acumulados.
 - Tarefas 100%: meta de tarefas consecutivas.
 - Pontos: alvo + Sem prazo/Com prazo; com prazo define duração e dias/semanas/meses.
 - Percentual: alvo + Semana/Mês.
 
-### Recorrência
+Recorrência:
 - Única: 1 ciclo e encerra.
 - Periódica: quantidade definida pelo ADM; sucesso ou falha consome ciclo.
 - Contínua: sem limite.
 
-### Validação ADM
-- Atingir a meta gera **Aguardando validação do ADM**.
-- Não entregar automaticamente.
+Validação ADM:
+- Meta atingida gera **Aguardando validação do ADM**.
+- Não entrega automaticamente.
 - Próximo ciclo só abre após validação quando houver ciclo válido.
 - Sem ciclos válidos: desativa no ADM e some do participante.
-- Sucesso na última tentativa mantém a pendência de validação no ADM.
+- Sucesso na última tentativa mantém a pendência no ADM até validação.
 
-## LAYOUT EM DELIBERAÇÃO
-### Web
-Recompensas à esquerda, Conquistas à direita, Histórico embaixo ocupando largura total.
-### Mobile
-Recompensas → Conquistas → Histórico.
-Ideia de cartões expansíveis é futura e ainda não substituiu este layout.
+# HISTÓRICO — CONGELADO
+- Reúne movimentações de Recompensas e eventos de Conquistas.
+- Pode filtrar por tipo e participante.
+- Não mistura regras dos módulos; unifica apenas a visualização das movimentações.
 
-## LOGS / DIAGNÓSTICO — REGRA DE TRABALHO
-Foi combinado que os logs/diagnóstico técnico devem permitir ao assistente **ler, analisar, executar testes/homologação, corrigir a versão de teste quando seguro e testar novamente**.
-- Infraestrutura histórica: eventos `ui.acao`, APIs, erros de rede e diagnóstico técnico.
-- Endpoints planejados/implantados anteriormente: `/app-log`, `/diagnostico-tecnico` e `/diagnostico-worker`.
-- Nova prévia emite apenas telemetria técnica com `grupoId=SPRINT2-PREVIEW` e prefixo `operacao.sprint2_test.*`.
-- Não enviar PIN, nome, e-mail, token, senha ou outros dados sensíveis nos detalhes.
-- O teste em navegador desta versão interceptou e validou 43 eventos de telemetria com o formato esperado.
+# LAYOUT APROVADO DA PARTE 4
+Web:
+- Recompensas à esquerda.
+- Conquistas à direita.
+- Histórico embaixo ocupando a largura total.
 
-## AUDITORIA DE 29/08/2026
-### Código/estrutura
-- 54/54 verificações aprovadas.
-- Sem iframe.
-- Sem Firebase funcional na prévia.
-- Código modular: HTML + CSS + JS.
-- Sem `taskModal` residual.
-- Sem função `toMin` duplicada.
-- Início explicitamente marcado como planejado/não desenvolvido.
+Mobile:
+1. Recompensas.
+2. Conquistas.
+3. Histórico.
 
-### Navegador real
-- 56/56 verificações aprovadas em Chromium.
-- Desktop 1440×1000 e mobile 390×844.
-- Sem erros JavaScript.
+A ideia de cartões expansíveis não substituiu este layout e permanece apenas como hipótese futura.
+
+# AUDITORIA QUE FECHOU A PARTE 4
+- 54/54 verificações estruturais aprovadas.
+- 56/56 testes funcionais em navegador desktop/mobile.
+- Bundle publicado repetiu 56/56 depois da separação modular.
+- Sem erro JavaScript bloqueador.
 - Tarefas: `⋯`, opcionais, dias consecutivos/alternados, edição inline e conflito de horário.
-- Participantes: renderização e validação de PIN.
+- Participantes: renderização e PIN.
 - Monitor: quatro indicadores.
-- Recompensas: criação e layout.
-- Conquistas: campos condicionais, periódica, sucesso/falha, validação e encerramento.
-- Layout web/mobile confirmado.
+- Recompensas: criação/filtros/layout.
+- Conquistas: regras fixas, campos condicionais, ciclos, falha, sucesso, Aguardando ADM, validação e encerramento.
+- Telemetria de teste: 43 eventos interceptados, todos com `grupoId=SPRINT2-PREVIEW`, prefixo `operacao.sprint2_test.*` e sem chaves sensíveis nos detalhes.
+- Usuário aprovou a Parte 4 em 29/08/2026 após receber o link auditado.
 
-### Logs históricos recuperados
-Exportação de 500 registros do sistema oficial em 27/08/2026:
-- 496 info, 3 warning, 1 error.
-- 348 Cliente, 152 ADM.
-- 2 eventos `rede.http_erro` com status 400 (um `/app-log`, um `Write/channel`).
-- 1 `rede.http_lento` em `Write/channel`.
-- 1 `auth.adm_promocao_erro` por 429.
-- 69 registros duplicados quando comparados sem o ID; maior repetição: `startup.adm_auth_resolvido` 11 vezes, com `ms=1838757`.
-Esses logs são do ADM/Cliente oficiais anteriores, **não da nova Sprint 2**. Servem para apontar melhorias na telemetria geral, não como falha funcional deste teste.
+# LOGS / DIAGNÓSTICO — REGRA DE TRABALHO
+O sistema de diagnóstico deve permitir ao assistente ler logs, analisar, testar, corrigir a versão de teste quando seguro e testar novamente.
+- Infraestrutura histórica: `ui.acao`, APIs, erros de rede e diagnóstico técnico.
+- Endpoints já discutidos/implantados: `/app-log`, `/diagnostico-tecnico`, `/diagnostico-worker`.
+- A prévia Sprint 2 usa `SPRINT2-PREVIEW` e `operacao.sprint2_test.*`.
+- Não enviar PIN, nome, e-mail, token, senha ou outros dados sensíveis nos detalhes.
 
-### Limitação da auditoria remota desta execução
-O ambiente atual não conseguiu resolver DNS diretamente para os endpoints Cloudflare, portanto a leitura **ao vivo** de `/diagnostico-tecnico` e `/diagnostico-worker` não foi possível nesta execução. Não confundir isso com falha do Worker. A estrutura/payload da telemetria da Sprint 2 foi validada localmente por interceptação HTTP no navegador.
+# PRÓXIMA ETAPA OFICIAL — INÍCIO / DASHBOARD
+O Início ainda NÃO foi desenvolvido. A tela atual no teste é somente um marcador e não representa aparência aprovada.
+Planejamento já discutido:
+- **Hoje:** previstas, concluídas, atrasadas/pendentes e pontos.
+- **Pendências:** justificativas, resgates e alertas que exigem ação do responsável.
+- **Atalhos:** Nova tarefa, Novo participante, Monitor e Recompensas pendentes.
+- Deve ser uma visão rápida, sem formulário completo.
 
-## PONTO EXATO PARA DELIBERAÇÃO
-- Tarefas ✅
-- Participantes ✅
-- Monitor ✅
-- Início 🗓️ planejado, ainda não desenvolvido
-- Recompensas ✅ regras preservadas
-- Conquistas ✅ regras/ciclo funcionando no teste
-- Histórico ✅ funcionando no layout atual
-
-**Deliberação agora:** decidir se Recompensas + Conquistas + Histórico pode ser encerrado como aprovado. Se aprovado, congelar esta Parte 4 e depois partir para o desenvolvimento do Início/Dashboard em etapa própria.
+## PONTO EXATO DE RETOMADA
+Não mexer mais em Tarefas, Participantes, Monitor ou Parte 4 sem solicitação explícita.
+Próximo trabalho: **desenvolver o Início/Dashboard da Sprint 2 a partir do planejamento**, mantendo todas as partes aprovadas congeladas.
 </pre></main></body></html>
