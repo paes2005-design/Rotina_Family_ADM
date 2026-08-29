@@ -1,0 +1,41 @@
+name: Sprint 2 Conquistas v3 audit
+on:
+  push:
+    paths:
+      - 'sprint2-conquistas-preview-v3.html'
+      - '.github/workflows/sprint2-conquistas-v3-audit.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar botão independente
+        run: |
+          grep -q 'id="newConquistaBtn"' sprint2-conquistas-preview-v3.html
+          grep -q 'onclick="return window.__rfOpenNew(event)"' sprint2-conquistas-preview-v3.html
+          grep -q 'window.__rfOpenNew=function' sprint2-conquistas-preview-v3.html
+          grep -q '● botão pronto' sprint2-conquistas-preview-v3.html
+      - name: Verificar simuladores
+        run: |
+          grep -q 'window.__rfOpenSim' sprint2-conquistas-preview-v3.html
+          grep -q 'window.__rfDay' sprint2-conquistas-preview-v3.html
+          grep -q 'window.__rfTask' sprint2-conquistas-preview-v3.html
+          grep -q 'window.__rfPoints' sprint2-conquistas-preview-v3.html
+          grep -q 'window.__rfPercent' sprint2-conquistas-preview-v3.html
+      - name: Validar JavaScript inline
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import re, pathlib
+          s=pathlib.Path('sprint2-conquistas-preview-v3.html').read_text(encoding='utf-8')
+          blocks=re.findall(r'<script>(.*?)</script>',s,re.S)
+          assert len(blocks)>=2, 'scripts inline não encontrados'
+          for i,b in enumerate(blocks):
+              pathlib.Path(f'/tmp/conquistas_v3_{i}.js').write_text(b,encoding='utf-8')
+          PY
+          for f in /tmp/conquistas_v3_*.js; do node --check "$f"; done
+      - name: Confirmar ausência de iframe e Firebase
+        run: |
+          ! grep -qi '<iframe' sprint2-conquistas-preview-v3.html
+          ! grep -qi 'firebase' sprint2-conquistas-preview-v3.html
