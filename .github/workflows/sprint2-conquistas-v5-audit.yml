@@ -1,0 +1,39 @@
+name: Sprint 2 Conquistas v5 audit
+on:
+  push:
+    paths:
+      - 'sprint2-conquistas-preview-v5.html'
+      - '.github/workflows/sprint2-conquistas-v5-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate recurrence rules and JavaScript
+        run: |
+          set -euo pipefail
+          FILE=sprint2-conquistas-preview-v5.html
+          test -f "$FILE"
+          grep -q 'Única' "$FILE"
+          grep -q 'Periódica' "$FILE"
+          grep -q 'Contínua' "$FILE"
+          grep -q 'Quantidade de tentativas' "$FILE"
+          grep -q "cycleMode==='unique'" "$FILE"
+          grep -q "cycleMode==='periodic'" "$FILE"
+          grep -q "attemptsUsed" "$FILE"
+          grep -q "finishAttempt(c,false)" "$FILE"
+          grep -q 'Recompensa aguardando validação do ADM' "$FILE"
+          ! grep -q 'Reinício aguardando ADM' "$FILE"
+          ! grep -q 'Reinício automático' "$FILE"
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('sprint2-conquistas-preview-v5.html').read_text()
+          scripts=re.findall(r'<script>(.*?)</script>',s,re.S)
+          Path('/tmp/conquistas-v5.js').write_text('\n'.join(scripts))
+          PY
+          node --check /tmp/conquistas-v5.js
+          echo 'Conquistas v5 audit OK'
