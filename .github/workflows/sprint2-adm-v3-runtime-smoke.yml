@@ -1,0 +1,58 @@
+name: Sprint 2 ADM SPA v3 runtime smoke
+
+on:
+  push:
+    paths:
+      - '.github/workflows/sprint2-adm-v3-runtime-smoke.yml'
+  workflow_dispatch:
+
+jobs:
+  runtime-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify published SPA assets
+        run: |
+          set -euo pipefail
+          BASE='https://paes2005-design.github.io/Rotina_Family_ADM'
+          for f in sprint2-adm-preview-v3.html sprint2-adm-v3.css sprint2-adm-base-v3.js sprint2-adm-rewards-v3.js sprint2-recompensas-core-v1.js; do
+            curl -fsS --retry 4 --retry-delay 2 "$BASE/$f" -o "/tmp/$f"
+          done
+          grep -q 'id="view-recompensas"' /tmp/sprint2-adm-preview-v3.html
+          grep -q 'id="rewardsSection"' /tmp/sprint2-adm-preview-v3.html
+          grep -q 'id="conquestsSection"' /tmp/sprint2-adm-preview-v3.html
+          grep -q 'Subproduto de Recompensas' /tmp/sprint2-adm-preview-v3.html
+          ! grep -qi '<iframe' /tmp/sprint2-adm-preview-v3.html
+          grep -q "sprint2-clean-v3" /tmp/sprint2-adm-base-v3.js
+          grep -q 'task_schedule_blocked' /tmp/sprint2-adm-base-v3.js
+          grep -q 'app.registerModule' /tmp/sprint2-adm-rewards-v3.js
+          grep -q 'Ciclo atual' /tmp/sprint2-recompensas-core-v1.js
+          echo 'PUBLISHED SPA ASSETS OK'
+          wc -c /tmp/sprint2-adm-preview-v3.html /tmp/sprint2-adm-v3.css /tmp/sprint2-adm-base-v3.js /tmp/sprint2-adm-rewards-v3.js /tmp/sprint2-recompensas-core-v1.js
+
+      - name: Verify Worker telemetry and diagnostics
+        run: |
+          set -euo pipefail
+          LOG='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/app-log'
+          DIAG='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/diagnostico-tecnico'
+          MARKER="sprint2-adm-v3-${GITHUB_RUN_ID}"
+          NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          cat >/tmp/payload.json <<JSON
+          {"events":[{"aplicativo":"adm","versaoMonitor":3,"evento":"operacao.sprint2_clean.runtime_smoke","nivel":"info","detalhes":{"operacao":"runtime_smoke","resultado":"ok","marker":"$MARKER"},"grupoId":"SPRINT2-PREVIEW","perfilId":"","sessaoId":"sprint2-clean-v3","clienteEm":"$NOW","pagina":"sprint2-adm-preview-v3.html","navegador":"github_actions","online":true,"visibilidade":"visible","instalado":false}]}
+          JSON
+          POST=$(curl -sS -o /tmp/post.out -w '%{http_code}' -X POST -H 'content-type: application/json' --data-binary @/tmp/payload.json "$LOG")
+          case "$POST" in 2*) ;; *) echo "Telemetry failed HTTP $POST"; cat /tmp/post.out; exit 1;; esac
+          GET=$(curl -sS -o /tmp/diag.out -w '%{http_code}' "$DIAG")
+          case "$GET" in 2*) ;; *) echo "Diagnostic failed HTTP $GET"; cat /tmp/diag.out; exit 1;; esac
+          export POST GET
+          python - <<'PY'
+          import json,os,pathlib
+          text=pathlib.Path('/tmp/diag.out').read_text(errors='replace')
+          print('TELEMETRY HTTP',os.environ['POST'])
+          print('DIAGNOSTIC HTTP',os.environ['GET'])
+          obj=json.loads(text)
+          status=obj.get('status') or obj.get('estado') or obj.get('Status')
+          print('DIAGNOSTIC STATUS',status)
+          if status is not None:
+              assert str(status).upper() in {'SAUDAVEL','SAUDÁVEL','OK','HEALTHY'}, status
+          PY
+          echo 'WORKER RUNTIME OK'
