@@ -20,6 +20,15 @@ Sempre divulgar juntos:
 4. análise dos logs/telemetria;
 5. ponto atual e próximo passo.
 
+## MÉTODO DE TRABALHO — ALINHADO AO PERFIL PROFISSIONAL DO USUÁRIO
+O desenvolvimento e a tomada de decisão do Rotina Family devem ser conduzidos com mentalidade de engenharia de produção e gestão operacional, aplicando as ferramentas abaixo quando fizerem sentido:
+- **PDCA:** Planejar requisito e critério de sucesso; Executar somente no ambiente de teste; Checar por testes, auditoria, uso e logs; Agir corrigindo, aprovando e congelando o padrão validado.
+- **Toyotismo / Lean:** eliminar desperdícios, retrabalho, duplicação de regra e complexidade desnecessária; priorizar fluxo simples, qualidade na origem, padronização e melhoria contínua.
+- **Teoria das Restrições:** identificar primeiro o gargalo ou restrição que limita o resultado do módulo; priorizar a restrição antes de otimizações secundárias e reavaliar após a correção.
+- **Scrum:** trabalhar em incrementos pequenos e testáveis dentro da Sprint; manter backlog/ponto atual claros; revisar cada incremento com o usuário; módulos aprovados ficam congelados e só são reabertos por solicitação explícita.
+- **Gestão por indicadores e causa/efeito:** sempre que aplicável, usar métricas objetivas, comparação previsto x realizado e análise de causa raiz antes de alterar regras consolidadas.
+Regra prática: **desenvolver → testar → discutir → agir**, preservando o que já foi validado.
+
 ## PRINCÍPIOS TÉCNICOS
 - Sprint 2 é separada da produção.
 - Código limpo, modular e leve; sem remendos, iframes, duplicação de regras ou scripts sobre scripts.
@@ -31,7 +40,7 @@ Sempre divulgar juntos:
 # STATUS OFICIAL DA SPRINT 2
 ## Parte 1 — Tarefas + Monitor — ✅ APROVADA E CONGELADA
 ## Parte 2 — Participantes — ✅ APROVADA E CONGELADA
-## Parte 3 — Início / Dashboard — 🗓️ PRÓXIMA ETAPA; AINDA NÃO DESENVOLVIDA
+## Parte 3 — Início / Dashboard — 🧪 PREVIEW V1 IMPLEMENTADA; EM TESTE E DISCUSSÃO
 ## Parte 4 — Recompensas + Conquistas + Histórico — ✅ APROVADA E CONGELADA EM 29/08/2026
 
 # TAREFAS — FONTE CONGELADA
@@ -133,15 +142,31 @@ O sistema de diagnóstico deve permitir ao assistente ler logs, analisar, testar
 - A prévia Sprint 2 usa `SPRINT2-PREVIEW` e `operacao.sprint2_test.*`.
 - Não enviar PIN, nome, e-mail, token, senha ou outros dados sensíveis nos detalhes.
 
-# PRÓXIMA ETAPA OFICIAL — INÍCIO / DASHBOARD
-O Início ainda NÃO foi desenvolvido. A tela atual no teste é somente um marcador e não representa aparência aprovada.
-Planejamento já discutido:
-- **Hoje:** previstas, concluídas, atrasadas/pendentes e pontos.
-- **Pendências:** justificativas, resgates e alertas que exigem ação do responsável.
-- **Atalhos:** Nova tarefa, Novo participante, Monitor e Recompensas pendentes.
-- Deve ser uma visão rápida, sem formulário completo.
+# PARTE 3 — INÍCIO / DASHBOARD — PREVIEW V1
+Objetivo: funcionar como painel de comando e gestão à vista, sem virar um segundo Monitor.
+Perguntas que a tela deve responder rapidamente:
+1. **Como está o dia?**
+2. **O que precisa da minha ação?**
+3. **Para onde eu quero ir agora?**
+
+Implementado na Preview V1:
+- **Hoje:** previstas, concluídas, em andamento, atrasadas/pendentes e pontos conquistados.
+- Indicador de percentual de tarefas concluídas.
+- **Pendências:** ocorrências atrasadas para revisão, resgates pendentes e conquistas aguardando validação do ADM.
+- **Atalhos:** Nova tarefa, Novo participante, Monitor, Resgates pendentes e Conquistas pendentes.
+- **Resumo do dia por participante:** quantidade concluída/prevista, pontos e acesso direto ao Monitor filtrado.
+- Web em painel horizontal; mobile reorganiza em cartões verticais, preservando a mesma função.
+- Sem gráficos na primeira versão.
+- Sem formulários completos no Dashboard.
+- Os números são derivados do estado do próprio ambiente de teste; não são valores decorativos fixos.
+
+Arquivos exclusivos desta etapa:
+- `sprint2-inicio-v1.css`
+- `sprint2-inicio-v1.js`
+- integração somente em `sprint2-teste-atual.html`
 
 ## PONTO EXATO DE RETOMADA
-Não mexer mais em Tarefas, Participantes, Monitor ou Parte 4 sem solicitação explícita.
-Próximo trabalho: **desenvolver o Início/Dashboard da Sprint 2 a partir do planejamento**, mantendo todas as partes aprovadas congeladas.
+Não mexer em Tarefas, Participantes, Monitor ou Parte 4 sem solicitação explícita.
+Ponto atual: **Parte 3 Preview V1 publicada para teste e discussão com o usuário.**
+Próximo passo: testar web/mobile, discutir utilidade e hierarquia visual e então agir pelo PDCA: corrigir ou aprovar/congelar a Parte 3.
 </pre></main></body></html>
