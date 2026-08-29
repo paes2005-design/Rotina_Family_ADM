@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const BUILD='inicio-v3';
+const BUILD='inicio-v4';
 const SCENARIO_DATE='2026-08-29';
 let analysisPeriod='day';
 let analysisRef=SCENARIO_DATE;
@@ -61,22 +61,22 @@ function ensureAnalysisShell(){
   host.insertAdjacentHTML('beforeend',`
     <section class="dash-analysis" id="dashAnalysis">
       <div class="dash-analysis-head">
-        <div><div class="crumb">Análise gerencial • Preview V3</div><h2>Desempenho</h2><p>Classificação geral separada da análise individual.</p></div>
+        <div><div class="crumb">Análise gerencial • Preview V4</div><h2>Desempenho</h2><p>Primeiro a leitura geral do grupo; depois a análise filtrada do participante.</p></div>
         <div class="dash-period-tabs" id="dashPeriodTabs">
           <button data-period="day" class="active">Dia</button>
           <button data-period="week">Semana</button>
           <button data-period="month">Mês</button>
         </div>
       </div>
-      <div class="dash-filterbar">
+
+      <div class="dash-filterbar" style="grid-template-columns:minmax(210px,.8fr) minmax(260px,1.4fr)">
         <label>Data de referência<input type="date" id="dashAnalysisDate" value="${SCENARIO_DATE}"></label>
-        <label>Analisar integrante<select id="dashAnalysisParticipant"><option value="all">Todos</option></select><small class="dash-filter-help">Este filtro não altera líder, pódio ou ranking geral.</small></label>
         <div class="dash-period-label"><small>Período analisado</small><b id="dashAnalysisPeriodLabel">—</b></div>
       </div>
 
       <section class="dash-scope dash-scope-general" id="dashGeneralScope">
         <div class="dash-scope-head">
-          <div><span class="dash-scope-kicker">VISÃO GERAL DO GRUPO</span><h3>Classificação do período</h3><p>Líder, pódio e ranking usam sempre todos os participantes. Só mudam com Dia/Semana/Mês ou data.</p></div>
+          <div><span class="dash-scope-kicker">VISÃO GERAL DO GRUPO</span><h3>Classificação do período</h3><p>Líder, pódio, comparação e ranking usam sempre todos os participantes.</p></div>
           <span class="dash-scope-lock">🔒 Sem filtro individual</span>
         </div>
         <div class="dash-general-leader" id="dashGeneralLeader"></div>
@@ -90,7 +90,7 @@ function ensureAnalysisShell(){
             <div class="dash-chart" id="dashPointsChart"></div>
           </article>
           <article class="dash-analysis-panel dash-ranking-panel">
-            <div class="dash-panel-head"><div><h3>Ranking geral detalhado</h3><p>Classificação do grupo, independente do integrante escolhido abaixo.</p></div></div>
+            <div class="dash-panel-head"><div><h3>Ranking geral detalhado</h3><p>Classificação do grupo, independente da análise individual abaixo.</p></div></div>
             <div class="dash-ranking" id="dashDetailedRanking"></div>
           </article>
         </div>
@@ -98,9 +98,19 @@ function ensureAnalysisShell(){
 
       <section class="dash-scope dash-scope-individual" id="dashIndividualScope">
         <div class="dash-scope-head">
-          <div><span class="dash-scope-kicker">DESEMPENHO FILTRÁVEL</span><h3 id="dashIndividualTitle">Todos os participantes</h3><p>Esta área responde ao filtro “Analisar integrante”.</p></div>
+          <div><span class="dash-scope-kicker">DESEMPENHO INDIVIDUAL</span><h3>Análise por participante</h3><p>Escolha o integrante e veja imediatamente abaixo somente os indicadores desse recorte.</p></div>
+        </div>
+
+        <div class="dash-filterbar" id="dashIndividualFilterbar" style="grid-template-columns:minmax(240px,420px) minmax(260px,1fr);border-top:1px solid #e7dffa">
+          <label>Integrante<select id="dashAnalysisParticipant"><option value="all">Todos</option></select><small class="dash-filter-help">Este seletor altera somente a área abaixo.</small></label>
+          <div class="dash-period-label"><small>Escopo do filtro</small><b>Líder, pódio e ranking geral permanecem inalterados.</b></div>
+        </div>
+
+        <div class="dash-scope-head">
+          <div><span class="dash-scope-kicker">RESULTADO FILTRADO</span><h3 id="dashIndividualTitle">Desempenho consolidado do grupo</h3><p>Indicadores e gráficos correspondentes ao integrante selecionado acima.</p></div>
           <span class="dash-scope-person" id="dashIndividualBadge">Todos</span>
         </div>
+
         <div class="dash-analysis-kpis" id="dashAnalysisKpis"></div>
         <div class="dash-analysis-grid dash-individual-grid">
           <article class="dash-analysis-panel">
@@ -124,8 +134,8 @@ function ensureAnalysisShell(){
     $('dashPeriodTabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===btn));
     renderAnalytics();
   }));
-  const tag=document.querySelector('.dash-date');if(tag)tag.textContent='PREVIEW V3';
-  const version=document.querySelector('.version');if(version)version.textContent='Sprint 2 • teste completo v6 • Início v3';
+  const tag=document.querySelector('.dash-date');if(tag)tag.textContent='PREVIEW V4';
+  const version=document.querySelector('.version');if(version)version.textContent='Sprint 2 • teste completo v7 • Início v4';
 }
 
 function svgBars(items){
@@ -285,6 +295,9 @@ function audit(){
   const leaderAfterIndividualFilter=$('dashGeneralLeader')?.querySelector('strong')?.textContent||'—';
   const rankingRowsAfterFilter=$('dashDetailedRanking')?.querySelectorAll('tbody tr').length||0;
   analysisParticipant=originalParticipant;renderAnalytics();
+  const generalScope=$('dashGeneralScope');
+  const individualScope=$('dashIndividualScope');
+  const participantFilter=$('dashAnalysisParticipant');
   const checks=[
     ['dashboard operacional montado',!!$('dashboardHome')],
     ['cards Hoje presentes',['dashExpected','dashDone','dashRunning','dashAttention','dashPoints'].every(id=>!!$(id))],
@@ -293,8 +306,10 @@ function audit(){
     ['resumo participantes presente',!!$('dashParticipantList')],
     ['analise gerencial montada',!!$('dashAnalysis')],
     ['filtros Dia/Semana/Mês',document.querySelectorAll('#dashPeriodTabs button').length===3],
-    ['visao geral separada',!!$('dashGeneralScope')&&!!$('dashGeneralLeader')&&!!$('dashPodium')&&!!$('dashDetailedRanking')],
-    ['desempenho filtravel separado',!!$('dashIndividualScope')&&!!$('dashAnalysisKpis')&&!!$('dashStatusChart')&&!!$('dashTrendChart')],
+    ['visao geral separada',!!generalScope&&!!$('dashGeneralLeader')&&!!$('dashPodium')&&!!$('dashDetailedRanking')],
+    ['desempenho filtravel separado',!!individualScope&&!!$('dashAnalysisKpis')&&!!$('dashStatusChart')&&!!$('dashTrendChart')],
+    ['filtro individual dentro da secao filtrada',!!participantFilter&&!!individualScope?.contains(participantFilter)],
+    ['visao geral aparece antes do filtro individual',!!generalScope&&!!participantFilter&&Boolean(generalScope.compareDocumentPosition(participantFilter)&Node.DOCUMENT_POSITION_FOLLOWING)],
     ['lider geral nao muda com filtro individual',leaderAfterIndividualFilter===expectedLeader],
     ['ranking geral mantem todos com filtro individual',rankingRowsAfterFilter===state.participants.length],
     ['podio presente',!!$('dashPodium')],
