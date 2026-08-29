@@ -1,0 +1,127 @@
+name: Sprint 2 Recompensas v5 audit
+
+on:
+  push:
+    paths:
+      - 'sprint2-recompensas-preview-v5.html'
+      - 'sprint2-recompensas-core-v1.js'
+      - '.github/workflows/sprint2-recompensas-v5-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check sprint2-recompensas-core-v1.js
+          python - <<'PY'
+          import re, pathlib
+          s=pathlib.Path('sprint2-recompensas-preview-v5.html').read_text()
+          blocks=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,re.S)
+          inline='\n'.join(b for b in blocks if b.strip())
+          pathlib.Path('/tmp/rewards-v5-inline.js').write_text(inline)
+          PY
+          node --check /tmp/rewards-v5-inline.js
+
+      - name: Audit clean structure and UI contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from html.parser import HTMLParser
+          s=Path('sprint2-recompensas-preview-v5.html').read_text()
+          low=s.lower()
+          assert '<iframe' not in low, 'iframe is forbidden'
+          assert 'prompt(' not in s, 'native prompt edit is forbidden'
+          for bad in ['firebase.firestore','addDoc(','setDoc(','updateDoc(','deleteDoc(','getFirestore(']:
+              assert bad not in s, f'preview must not write Firebase: {bad}'
+          assert s.index('id="rewardsSection"') < s.index('id="conquestsSection"'), 'Conquistas must be below Recompensas'
+          for needle in [
+              'Subproduto de Recompensas','Nova recompensa','Nova conquista',
+              'requestParticipant','requestStatus','requestRefDate','requestPeriod',
+              'rewardFilter','conquestParticipant','conquestType','conquestStatus',
+              'Validar recompensa','Visíveis participante','participantPreview',
+              'Única','Periódica','Contínua','Sem necessidade de justificativa',
+              'sprint2-recompensas-core-v1.js','operacao.sprint2_rewards_v5.',
+              'overflow-x:hidden','max-width:100vw'
+          ]:
+              assert needle in s, f'missing contract: {needle}'
+          assert len(s.encode()) < 65000, 'HTML preview grew beyond lightweight budget'
+          assert Path('sprint2-recompensas-core-v1.js').stat().st_size < 10000, 'core grew beyond lightweight budget'
+          class IDs(HTMLParser):
+              def __init__(self): super().__init__(); self.ids=[]
+              def handle_starttag(self,tag,attrs):
+                  for k,v in attrs:
+                      if k=='id': self.ids.append(v)
+          p=IDs(); p.feed(s)
+          dup={x for x in p.ids if p.ids.count(x)>1}
+          assert not dup, f'duplicate ids: {sorted(dup)}'
+          print('STRUCTURE AUDIT OK')
+          PY
+
+      - name: Test Conquistas lifecycle rules
+        run: |
+          node - <<'NODE'
+          const assert=require('assert');
+          const core=require('./sprint2-recompensas-core-v1.js');
+          const base=(mode,repeat=3)=>({active:true,cycleMode:mode,repeatCount:repeat,target:2,runtime:{progress:0,attemptsUsed:0,rewardsValidated:0,pendingValidation:false,closed:false,lastResult:''}});
+
+          let c=core.finishAttempt(base('unique'),false);
+          assert.equal(c.runtime.attemptsUsed,1); assert.equal(c.active,false); assert.equal(c.runtime.closed,true); assert.equal(core.participantVisible(c),false);
+
+          c=core.addProgress(base('unique'),2);
+          assert.equal(c.runtime.pendingValidation,true); assert.equal(c.active,false); assert.equal(core.participantVisible(c),false);
+          c=core.validateReward(c);
+          assert.equal(c.runtime.rewardsValidated,1); assert.equal(c.active,false); assert.equal(c.runtime.closed,true);
+
+          c=core.finishAttempt(base('periodic',3),false);
+          assert.equal(c.runtime.attemptsUsed,1); assert.equal(c.active,true);
+          c=core.addProgress(c,2);
+          assert.equal(c.runtime.attemptsUsed,2); assert.equal(c.runtime.pendingValidation,true); assert.equal(core.participantVisible(c),true);
+          c=core.validateReward(c);
+          assert.equal(c.active,true); assert.equal(c.runtime.progress,0);
+          c=core.finishAttempt(c,false);
+          assert.equal(c.runtime.attemptsUsed,3); assert.equal(c.active,false); assert.equal(c.runtime.closed,true); assert.equal(core.participantVisible(c),false);
+
+          c=core.finishAttempt(base('periodic',2),false);
+          c=core.addProgress(c,2);
+          assert.equal(c.runtime.pendingValidation,true); assert.equal(c.active,false); assert.equal(core.participantVisible(c),false);
+          assert.equal(core.status(c).key,'pending_closed');
+          c=core.validateReward(c);
+          assert.equal(c.active,false); assert.equal(c.runtime.rewardsValidated,1);
+
+          c=core.finishAttempt(base('continuous'),false);
+          assert.equal(c.active,true); assert.equal(c.runtime.closed,false); assert.equal(core.participantVisible(c),true);
+          assert.equal(core.attemptLabel(c),'Ciclo atual 2 · 1 concluído(s)');
+          c=core.addProgress(c,2);
+          assert.equal(c.runtime.pendingValidation,true); assert.equal(c.active,true);
+          c=core.validateReward(c);
+          assert.equal(c.active,true); assert.equal(c.runtime.closed,false); assert.equal(core.participantVisible(c),true);
+          assert.equal(core.attemptLabel(c),'Ciclo atual 3 · 2 concluído(s)');
+
+          c=base('periodic',3); c.runtime.closed=true; c.active=true;
+          assert.equal(core.participantVisible(c),false, 'closed must stay hidden even after accidental active edit');
+          console.log('CONQUISTAS LIFECYCLE TESTS OK');
+          NODE
+
+      - name: Verify normal rewards behavior contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('sprint2-recompensas-preview-v5.html').read_text()
+          checks={
+            'edit same record': 'const r=rewardById(editReward);r.name=name;r.points=points;r.active=',
+            'history preserved on delete': "reward_delete',{historyPreserved:true}",
+            'pending-only decision': "r.status!=='Pendente'",
+            'approve': "'Aprovado'",
+            'refuse': "'Recusado'",
+            'participant filter': "requestParticipant",
+            'reference date': "requestRefDate",
+            'day/week/month': "requestPeriod",
+            'catalog active filter': "rewardFilter"
+          }
+          for label,needle in checks.items(): assert needle in s, f'missing {label}'
+          print('NORMAL REWARDS CONTRACT OK')
+          PY
