@@ -31,7 +31,7 @@ Regra prática: **desenvolver → testar → discutir → agir**.
 # STATUS OFICIAL
 - Parte 1 — Tarefas + Monitor: ✅ APROVADA / CONGELADA
 - Parte 2 — Participantes: ✅ APROVADA / CONGELADA
-- Parte 3 — Início / Dashboard: 🧪 PREVIEW V4 EM TESTE
+- Parte 3 — Início / Dashboard: 🧪 PREVIEW V5 EM TESTE
 - Parte 4 — Recompensas + Conquistas + Histórico: ✅ APROVADA / CONGELADA
 
 # MÓDULOS CONGELADOS — RESUMO
@@ -44,14 +44,14 @@ Nome, tema e PIN de 4 a 6 dígitos; PIN nunca exibido em claro; avatar conforme 
 ## Recompensas + Conquistas + Histórico
 Recompensas livres com custo em pontos e resgates Pendente/Aprovado/Recusado. Conquistas usam regras fixas e validação ADM. Histórico reúne movimentações sem misturar regras. Layout web aprovado: Recompensas à esquerda, Conquistas à direita e Histórico abaixo; mobile em sequência vertical.
 
-# PARTE 3 — INÍCIO / DASHBOARD — PREVIEW V4
-## Estrutura mantida
-O Dashboard continua híbrido:
-1. **Gestão operacional do dia:** previstas, concluídas, em andamento, atrasadas/pendentes, pontos, percentual, Pendências, Atalhos e Resumo por participante.
+# PARTE 3 — INÍCIO / DASHBOARD — PREVIEW V5
+## Estrutura atual
+O Dashboard continua híbrido e enxuto:
+1. **Gestão operacional do dia:** previstas, concluídas, em andamento, atrasadas/pendentes, pontos, percentual, Pendências contextuais e Resumo por participante.
 2. **Análise gerencial:** período Dia/Semana/Mês, data, classificação do grupo, indicadores, gráficos e análise por integrante.
 
 ## REGRA CONSOLIDADA — GERAL x INDIVIDUAL
-A Preview V3 corrigiu a contaminação do ranking pelo filtro individual. A partir daí existem dois recortes independentes:
+A Preview V3 corrigiu a contaminação do ranking pelo filtro individual. Existem dois recortes independentes:
 
 ### A. VISÃO GERAL DO GRUPO — NÃO RECEBE FILTRO INDIVIDUAL
 Usa todos os participantes do período/data e contém:
@@ -74,53 +74,64 @@ O seletor de integrante altera somente:
 - evolução do recorte escolhido.
 Quando “Todos” estiver selecionado, essa área apresenta o consolidado do grupo.
 
-## CORREÇÃO DE CONCEITO VISUAL — PREVIEW V4
-O Check de uso da Preview V3 mostrou um problema de proximidade entre controle e resultado: o seletor de integrante ficava no topo, depois apareciam todas as informações gerais do grupo e somente mais abaixo apareciam os dados filtrados. Embora a regra matemática estivesse correta, a hierarquia visual induzia uma relação errada entre filtro e ranking.
+## REGRA VISUAL CONSOLIDADA — PREVIEW V4
+O filtro deve ficar próximo daquilo que filtra. A ordem permanece:
+1. contexto global Dia/Semana/Mês + data;
+2. Visão Geral do Grupo;
+3. Desempenho Individual;
+4. filtro do integrante dentro da seção individual;
+5. resultado filtrado imediatamente abaixo.
 
-A Preview V4 aplica a seguinte hierarquia obrigatória:
-1. **Contexto da análise:** Dia/Semana/Mês + data/período, pois estes controles afetam toda a análise;
-2. **Visão geral do grupo:** líder, pódio, comparação e ranking, sem filtro individual;
-3. **Desempenho individual:** título próprio;
-4. **Filtro de integrante:** posicionado dentro da seção individual e imediatamente antes do resultado que altera;
-5. **Resultado filtrado:** KPIs pessoais/consolidados, cumprimento e evolução.
+## ENXUGAMENTO LEAN — PREVIEW V5
+O Check da Preview V4 identificou desperdício de interface: a seção permanente **Atalhos** repetia destinos já disponíveis no menu lateral da web e na navegação do mobile, aumentava o comprimento do Dashboard e criava uma terceira forma de navegação sem ganho proporcional.
 
-Princípio de interface adotado: **o filtro deve ficar próximo daquilo que filtra**. Controle individual não deve aparecer antes de conteúdo geral que ele não altera.
+A Preview V5 consolida a regra:
+- **não existe mais seção permanente de Atalhos no Dashboard**;
+- navegação genérica continua no menu próprio de cada plataforma;
+- um atalho só é permitido quando nasce de uma **informação real que exige ação** e reduz passos para resolver aquela situação;
+- o próprio cartão/ocorrência acionável faz a navegação contextual.
 
-## Comportamento visual V4
-- A área geral e a área individual têm separação visual clara.
-- A Visão Geral mostra aviso “Sem filtro individual”.
-- A área individual informa que o seletor altera somente o conteúdo abaixo.
-- O nome/escopo selecionado aparece no cabeçalho do resultado filtrado.
-- No mobile, filtro e conteúdo individual empilham na mesma seção para manter proximidade e leitura linear.
+### Ações contextuais atuais
+- **Tarefa atrasada:** a ocorrência mostra o participante e a tarefa; o clique abre o Monitor já filtrado naquele participante.
+- **Resgate aguardando aprovação:** o clique abre Recompensas já filtrando solicitações Pendentes.
+- **Conquista aguardando ADM:** o clique abre Conquistas já filtrando validações Pendentes.
+- **Sem pendências acionáveis:** nenhum botão artificial é exibido; aparece apenas estado neutro informando que nada exige ação do ADM.
 
-## Teste lógico com o fixture atual
-Classificação geral do cenário:
+Princípio consolidado: **não duplicar navegação; aproximar ação da informação que justifica a ação**.
+
+## Teste lógico preservado
+Classificação geral do fixture:
 1. Lara Vitória — 15 pts;
 2. Maria Eduarda — 5 pts;
 3. Pedro — 5 pts.
 A classificação permanece igual ao alternar o filtro individual. Somente o desempenho individual muda.
 
-## Arquitetura da V4
-- JS: `sprint2-inicio-v1.js`, build interno `inicio-v4`.
-- Commit de reposicionamento lógico/estrutural: `ee6acc712cf77e63741b9bbff01c60640072a33e`.
-- CSS: `sprint2-inicio-v1.css`.
-- Commit de acabamento visual/responsivo: `b6f289e1739649c96fe083e8ff71a2456e3bf90e`.
+## Arquitetura atual V5
+- JS: `sprint2-inicio-v1.js`, build interno `inicio-v5`.
+- Commit da lógica contextual: `625d5d783f320845dfa38a05185752b30db30ac0`.
+- HTML de teste sem a seção Atalhos + cache-busting V5: commit `7d5554755a1260ea7811ad7b4c387ab8aa4c449a`.
+- Assets do Início no teste usam `?v=5` para evitar cache antigo durante validação.
 - Integração continua somente em `sprint2-teste-atual.html`.
 - Nenhum arquivo oficial de produção foi alterado.
 
-## Auditoria interna V4
-`RFInicio.audit()` agora também verifica explicitamente:
-- filtro individual está dentro da seção de desempenho individual;
+## Auditoria interna V5
+`RFInicio.audit()` contém 23 verificações, incluindo:
+- seção/botões de atalhos redundantes ausentes;
+- quantidade de ações contextuais coerente com pendências reais;
+- atrasos identificam participante;
+- resgate pendente possui ação contextual;
+- conquista pendente possui ação contextual;
+- filtro individual continua dentro da seção individual;
 - Visão Geral aparece antes do filtro individual;
 - líder geral permanece invariável ao filtro;
-- ranking geral continua com todos os participantes.
-Total atual da auditoria interna: 19 verificações.
+- ranking geral continua com todos os participantes;
+- sem iframe e sem duplicação da timeline do Monitor.
 
 ## LOGS / TELEMETRIA
-Eventos continuam isolados como `SPRINT2-PREVIEW`: `dashboard_render`, `dashboard_analysis_render` e `dashboard_audit`. Não enviar nome, PIN, e-mail, token, senha ou outros dados sensíveis nos detalhes.
+Eventos continuam isolados como `SPRINT2-PREVIEW`: `dashboard_render`, `dashboard_analysis_render` e `dashboard_audit`. `dashboard_render` também registra a quantidade de ações contextuais. Não enviar nome, PIN, e-mail, token, senha ou outros dados sensíveis nos detalhes.
 
 ## PONTO EXATO DE RETOMADA
 Não mexer nas Partes 1, 2 ou 4 sem solicitação explícita.
-Ponto atual: **Parte 3 Preview V4 publicada para revisão visual e funcional.**
-Próximo Check: abrir web e mobile e validar a leitura na ordem **contexto → visão geral → filtro individual → resultado filtrado**. Confirmar também que trocar o integrante não altera líder/pódio/ranking. Depois aplicar o Act do PDCA: ajustar ou aprovar/congelar a Parte 3.
+Ponto atual: **Parte 3 Preview V5 publicada para revisão visual e funcional.**
+Próximo Check: validar web/mobile verificando que a seção Atalhos desapareceu, a tela ficou mais curta e as ocorrências acionáveis levam diretamente ao contexto correto. Confirmar também que a estrutura geral x individual da V4 continua intacta. Depois aplicar o Act do PDCA: ajustar ou aprovar/congelar a Parte 3.
 </pre></main></body></html>
