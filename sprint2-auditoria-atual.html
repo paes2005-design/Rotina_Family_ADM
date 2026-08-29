@@ -1,112 +1,99 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Auditoria Sprint 2</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f7fb;color:#20243d;margin:0;padding:24px}main{max-width:1100px;margin:auto;background:#fff;border:1px solid #e6e8f0;border-radius:18px;padding:24px}pre{white-space:pre-wrap;font:14px/1.55 Inter,system-ui,sans-serif}</style></head><body><main><pre># AUDITORIA SPRINT 2 — PARTE 3 PREVIEW V2
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Auditoria Sprint 2</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f7fb;color:#20243d;margin:0;padding:24px}main{max-width:1100px;margin:auto;background:#fff;border:1px solid #e6e8f0;border-radius:18px;padding:24px}pre{white-space:pre-wrap;font:14px/1.55 Inter,system-ui,sans-serif}</style></head><body><main><pre># AUDITORIA SPRINT 2 — PARTE 3 PREVIEW V3
 
 Data: 29/08/2026
 Estado: 🧪 EM TESTE E DISCUSSÃO
-Escopo atual: **Início / Dashboard híbrido Preview V2**
-Módulos preservados: Tarefas + Monitor, Participantes e Parte 4 continuam congelados.
+Escopo: correção da separação entre **classificação geral do grupo** e **desempenho individual**.
+Módulos preservados: Partes 1, 2 e 4 permanecem congeladas.
 
-## Motivo da revisão V1 → V2
-O Check do PDCA identificou que a Preview V1 simplificou além do necessário e removeu informação gerencial útil existente no Dashboard atual do aplicativo. A V2 adota o Dashboard atual como baseline e combina duas camadas:
-1. gestão operacional rápida do dia;
-2. análise gerencial com indicadores, filtros e gráficos.
+## Problema reproduzido na Preview V2
+Ao trocar o filtro de participante de “Todos” para uma pessoa específica, o Dashboard recalculava a coleção usada por Líder, Pódio e Ranking somente com aquela pessoa. Consequência: qualquer participante selecionado virava artificialmente o 1º colocado.
 
-## Implementação verificada — camada operacional
-- Hoje: previstas, concluídas, em andamento, atrasadas/pendentes e pontos conquistados.
-- Percentual concluído com barra de progresso.
-- Pendências: ocorrências atrasadas, resgates pendentes e conquistas aguardando validação do ADM.
-- Atalhos: Nova tarefa, Novo participante, Monitor, Resgates pendentes e Conquistas pendentes.
-- Resumo por participante com concluídas/previstas, pontos e acesso ao Monitor filtrado.
-- Sem formulário completo no Dashboard.
+## Causa raiz
+A mesma coleção já filtrada por `analysisParticipant` alimentava simultaneamente:
+- KPIs individuais;
+- Líder;
+- Pódio;
+- gráfico comparativo de pontos;
+- Ranking detalhado.
+Isso misturava duas perguntas diferentes: “quem lidera o grupo?” e “como está este participante?”.
 
-## Implementação verificada — camada gerencial
-Recuperada e reorganizada a partir da capacidade já existente no Dashboard atual:
-- filtros Dia / Semana / Mês;
-- data de referência;
-- filtro por integrante;
-- 7 KPIs: Líder, Alcançado, Resgatado, % Resgatado, Pendente, Pontualidade e Maior sequência;
-- pódio do período;
-- gráfico SVG de pontos por participante;
-- gráfico SVG de cumprimento das tarefas;
-- gráfico SVG de evolução dos últimos 7 dias;
-- ranking detalhado: pontos, conclusão, pontualidade e atenção.
+## Correção V3
+Foram criados dois fluxos lógicos independentes:
 
-## Limitação de dados do cenário isolado
-O fixture da Sprint 2 concentra execuções de tarefas em **29/08/2026**. Para não fabricar histórico:
-- evolução de 7 dias mostra zero nos dias sem execução disponível;
-- Maior sequência aparece como `—` enquanto o fixture não tiver base diária suficiente;
-- os pedidos de recompensa respeitam as datas reais presentes no estado de teste.
-Na integração oficial futura, os gráficos devem consumir o histórico real do app.
+### Visão geral do grupo
+`groupRows` + `groupPeople` usam sempre todos os participantes do período/data. Alimentam:
+- Líder geral;
+- Pódio / 1º, 2º e 3º;
+- Pontos por participante;
+- Ranking geral detalhado.
+O filtro individual não participa desses cálculos.
+
+### Desempenho filtrável
+`filteredRows` é derivado de `groupRows` somente depois da classificação geral estar definida. Alimenta:
+- Alcançado;
+- Resgatado;
+- % resgatado;
+- Pendente;
+- Pontualidade;
+- gráfico de cumprimento;
+- evolução de 7 dias.
+
+## Teste lógico com o fixture atual
+Dados atuais:
+- Lara Vitória: 15 pts;
+- Maria Eduarda: 5 pts;
+- Pedro: 5 pts.
+
+Resultado esperado e obtido em teste lógico:
+- filtro Todos → líder Lara Vitória; top 3 Lara Vitória / Maria Eduarda / Pedro;
+- filtro Lara → líder geral continua Lara Vitória; top 3 inalterado;
+- filtro Maria → líder geral continua Lara Vitória; top 3 inalterado;
+- filtro Pedro → líder geral continua Lara Vitória; top 3 inalterado.
+Somente o bloco de desempenho filtrável muda conforme a pessoa selecionada.
+
+## Auditoria interna V3
+`RFInicio.audit()` passou a testar explicitamente:
+- existência de área geral separada;
+- existência de área filtrável separada;
+- líder geral permanece igual após aplicar filtro individual;
+- ranking geral continua contendo todos os participantes após aplicar filtro individual;
+- pódio, gráficos e ranking continuam montados;
+- dados “Hoje” continuam vinculados ao estado;
+- ausência de iframe e de duplicação da timeline do Monitor.
 
 ## Isolamento técnico
-- JavaScript: `sprint2-inicio-v1.js`, build interno `inicio-v2`.
-- CSS: `sprint2-inicio-v1.css`.
-- Nome legado dos arquivos mantido para evitar carregadores extras/scripts sobre scripts.
-- Integração continua somente no ambiente `sprint2-teste-atual.html`.
-- Nenhum iframe.
+- JavaScript: `sprint2-inicio-v1.js`, build interno `inicio-v3`.
+- Commit da correção: `7cf5ac4c93b59129c8caff6613116ff6ab1ee745`.
+- Integração continua em `sprint2-teste-atual.html`.
 - Nenhuma alteração em `index.html`, `index-ADMIN-v8.html`, Cliente, Firebase ou Service Worker de produção.
-- Nenhuma alteração funcional nas Partes 1, 2 e 4.
+- Nenhuma alteração funcional nas Partes 1, 2 ou 4.
 
-## Commits da V2
-- Lógica V2: `198e1576224fe17686215cbbf5056af7c661bf56`.
-- Estilos V2: `6a7871381148a7c7993f9aeb7ecdec8f64cf0007`.
+## Gates automáticos da publicação V3
+No commit `7cf5ac4...`:
+- ✅ **Rotina Family ADM regression audit** — SUCCESS.
+- ✅ **Sprint 2 Tarefas v8 audit** — SUCCESS.
+- ✅ **pages build and deployment** — SUCCESS.
 
-## Validação técnica
-### Sintaxe
-- ✅ `sprint2-inicio-v1.js` / Preview V2 passou em `node --check` antes da publicação.
-
-### Auditorias GitHub Actions no commit V2 final
-- ✅ **Rotina Family ADM regression audit** — SUCCESS, run `33275957714`.
-- ✅ **Sprint 2 Tarefas v8 audit** — SUCCESS, run `33275957757`. Este permanece o gate dedicado da Sprint 2.
-- ✅ **pages build and deployment** — SUCCESS, run `33275953455`.
-
-### Workflows gerais/históricos
-Existem workflows antigos de manutenção que também disparam a cada push e alguns encerram como `failure`. Exemplos observados nesta publicação incluem rotinas antigas de tolerância, startup e observabilidade. Eles são registrados como ruído/dívida histórica do repositório e **não substituem nem invalidam o gate específico da Sprint 2**, que passou.
-Estado correto: gates regressivo + Sprint 2 + Pages aprovados; conjunto global de workflows históricos não está integralmente verde.
-
-## Auditoria interna prevista no módulo V2
-`RFInicio.audit()` contém 14 verificações para:
-- montagem do Dashboard operacional;
-- cards Hoje;
-- Pendências;
-- pelo menos cinco Atalhos;
-- Resumo por participante;
-- montagem da análise gerencial;
-- três filtros de período;
-- sete KPIs;
-- pódio;
-- três gráficos SVG;
-- ranking detalhado;
-- vínculo dos indicadores Hoje ao estado real;
-- ausência de iframe;
-- ausência de duplicação da timeline do Monitor.
-Esta função é uma checagem interna disponível no módulo; o CI atual continua sendo o gate regressivo existente e não deve ser confundido com execução automatizada dessa função em navegador real.
+Workflows históricos de manutenção do repositório continuam podendo falhar paralelamente. Eles permanecem registrados como dívida/histórico e não substituem os gates regressivo, Sprint 2 e Pages acima.
 
 ## Telemetria / logs
-A V2 mantém a telemetria técnica isolada já prevista na Sprint 2 e acrescenta eventos seguros:
-- `dashboard_render`;
-- `dashboard_analysis_render`;
-- `dashboard_audit`.
-Eles passam por `techLog`, portanto usam o prefixo `operacao.sprint2_test.*` e `grupoId=SPRINT2-PREVIEW`, seguindo a regra de não incluir PIN, nome, e-mail, token, senha ou outros dados sensíveis nos detalhes.
-Não foi executada nesta sessão uma automação de navegador real para gerar novo lote de telemetria da V2; a validação runtime/visual agora depende do teste do usuário no link publicado.
+A V3 mantém os eventos `dashboard_render`, `dashboard_analysis_render` e `dashboard_audit` no ambiente `SPRINT2-PREVIEW`. O evento de análise foi ajustado para registrar apenas build, período, contagem de linhas gerais/filtradas, existência de filtro individual, pontos e quantidade de pedidos. Nenhum nome de participante é colocado nos detalhes da telemetria.
+Não foi executada nesta sessão automação de navegador real para produzir um novo lote de logs runtime; a validação visual/interativa final desta alteração será feita pelo usuário no teste publicado.
 
-## Auditoria anterior preservada — Parte 4
-A Parte 4 permanece oficialmente aprovada e congelada, com o fechamento anterior de:
-- 54/54 verificações estruturais.
-- 56/56 testes funcionais em navegador desktop/mobile.
-- Bundle publicado revalidado 56/56.
-- Sem erro JavaScript bloqueador.
-- 43 eventos de telemetria isolados como SPRINT2-PREVIEW e sem chaves sensíveis.
-
-## Método de trabalho desta etapa
-- **PDCA:** a V1 foi o Do; o feedback do usuário foi parte do Check; a V2 é o Act que restaura valor gerencial sem abandonar a gestão rápida.
-- **Toyotismo / Lean:** eliminar desperdício não significa eliminar informação útil; os gráficos mantidos devem apoiar decisão ou identificação de anomalia.
-- **Teoria das Restrições:** o Dashboard deve ajudar a encontrar rapidamente onde está a restrição do dia/participante antes de aprofundar no Monitor/Relatórios.
-- **Scrum:** V2 é novo incremento testável; ainda não é padrão congelado.
+## Leitura PDCA
+- **Plan:** separar informação comparativa geral de informação individual.
+- **Do:** implementar `groupRows/groupPeople` e `filteredRows` independentes.
+- **Check técnico:** teste lógico + auditorias regressivas + Pages aprovados.
+- **Check de uso:** usuário deve alternar Todos/Lara/Maria/Pedro e confirmar que classificação geral não se move.
+- **Act:** após o teste de uso, ajustar eventual questão visual ou aprovar/congelar a Parte 3.
 
 ## Gate atual
-A validação técnica disponível está aprovada e o Pages publicou a V2, mas a **Parte 3 ainda NÃO está aprovada nem congelada**.
-Falta o Check funcional/visual do usuário em web e mobile: hierarquia, densidade de informação, utilidade dos KPIs, leitura dos gráficos, filtros e navegação.
+A correção técnica está publicada e os gates específicos passaram. A **Parte 3 continua não congelada**, aguardando validação do usuário em web e mobile.
 
-## Próximo passo
-Abrir o teste publicado em web e mobile, comparar a V2 com a necessidade gerencial real e então aplicar o próximo Act: ajustar o que gerar desperdício/confusão ou aprovar e congelar a Parte 3.
+## Próximo passo de teste
+No Dashboard, alternar o seletor “Analisar integrante”. Confirmar:
+1. Líder geral não muda por causa do filtro;
+2. 1º, 2º e 3º lugares não mudam por causa do filtro;
+3. ranking geral continua com todos;
+4. somente os indicadores e gráficos da área “Desempenho filtrável” mudam.
 </pre></main></body></html>
