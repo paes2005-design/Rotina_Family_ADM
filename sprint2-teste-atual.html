@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rotina Family — Sprint 2 • Teste completo</title>
+<link rel="stylesheet" href="sprint2-teste-atual.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><div class="logo">⌂</div><div>Rotina <span>Family</span><small>Painel Administrador • Sprint 2</small></div></div>
+    <div class="navlabel">Menu</div>
+    <nav class="nav" id="mainNav">
+      <button data-route="inicio"><span class="ico">⌂</span>Início</button>
+      <button data-route="tarefas"><span class="ico">📝</span>Tarefas</button>
+      <button data-route="participantes"><span class="ico">👥</span>Participantes</button>
+      <button data-route="monitor"><span class="ico">👁️</span>Monitor</button>
+      <button data-route="recompensas"><span class="ico">🎁</span>Recompensas</button>
+      <button data-route="relatorios"><span class="ico">📊</span>Relatórios</button>
+      <button data-route="master"><span class="ico">🔐</span>Master</button>
+    </nav>
+    <div class="bottom"><a class="memory-link" href="sprint2-continuidade-atual.html" target="_blank">📌 Memória Sprint 2</a></div>
+  </aside>
+
+  <main class="main" id="mainScroll">
+    <div class="top">
+      <div><h1>Rotina Family</h1><p>Sprint 2 • teste isolado • código limpo • telemetria técnica</p></div>
+      <div class="user"><div class="user-avatar">👤</div><span><b>Administrador</b><br><small>Ambiente de teste</small></span></div>
+    </div>
+
+    <section class="view" id="view-inicio">
+      <div class="card">
+        <div class="head"><div><div class="crumb">Início • planejado</div><h2>Início ainda não desenvolvido</h2><p>Esta área permanece somente como marcador da Sprint 2. O layout final será desenvolvido em uma etapa própria.</p></div><span class="plan-badge">PLANEJADO</span></div>
+        <div class="plan-grid">
+          <article><b>Hoje</b><p>Visão rápida: previstas, concluídas, atrasadas/pendentes e pontos.</p></article>
+          <article><b>Pendências</b><p>Justificativas, resgates e alertas que exigem ação do responsável.</p></article>
+          <article><b>Atalhos</b><p>Nova tarefa, novo participante, Monitor e Recompensas pendentes.</p></article>
+        </div>
+        <div class="notice"><b>Não aprovado</b> Estes itens registram apenas o planejamento já discutido. Não representam a futura aparência da tela Início.</div>
+      </div>
+    </section>
+
+    <section class="view" id="view-tarefas">
+      <div class="card">
+        <div class="head"><div><div class="crumb">Tarefas • aprovado</div><h2>Agenda de tarefas</h2><p>Agenda por participante, ordem automática por horário e bloqueio de sobreposição.</p><div class="auto-note">↕ Sem campo “Ordenar”: ao salvar, a agenda se reorganiza automaticamente.</div></div><button class="primary" id="newTaskBtn">＋ Nova tarefa</button></div>
+        <div class="agenda-bar"><div class="agenda-field"><label>Participante da agenda</label><select id="taskParticipant"></select></div><div class="agenda-info" id="agendaInfo"></div><div class="all-note" id="allNote" hidden><b>Todos:</b> a tarefa será coletiva e aparecerá uma única vez nesta visão.</div></div>
+        <div class="conflict" id="taskConflict" hidden></div>
+        <div class="toolbar"><input id="taskSearch" placeholder="Buscar tarefa"><select id="taskFilter"><option value="all">Todas</option><option value="active">Ativas</option><option value="inactive">Inativas</option></select><div class="count" id="taskCount"></div></div>
+        <div class="tablewrap"><table class="tbl"><thead><tr><th>Tarefa</th><th>Início</th><th>Término</th><th>Pontos</th><th>Tolerância</th><th>Status</th><th>Ações</th></tr></thead><tbody id="taskBody"></tbody></table></div>
+        <div class="mobile" id="taskMobile"></div>
+        <div class="notice">Dias, alarme e observação ficam em <b>Detalhes</b>. Tarefa coletiva é idempotente e a agenda é ordenada automaticamente.</div>
+      </div>
+    </section>
+
+    <section class="view" id="view-participantes">
+      <div class="card">
+        <div class="head"><div><div class="crumb">Participantes • aprovado</div><h2>Cadastro de participantes</h2><p>Nome, tema e PIN com o padrão visual definido na Sprint 2.</p></div><button class="primary" id="newParticipantBtn">＋ Novo participante</button></div>
+        <div class="metrics"><div class="metric"><small>Participantes</small><strong id="participantTotal">0</strong></div><div class="metric"><small>Com PIN</small><strong id="participantPin">0</strong></div><div class="metric"><small>Sem PIN</small><strong id="participantNoPin">0</strong></div></div>
+        <div class="notice">PIN de 4 a 6 dígitos. O PIN nunca é exibido; apenas o estado “Configurado/Não configurado”.</div>
+        <div class="tablewrap"><table class="tbl compact"><thead><tr><th>Participante</th><th>Tema</th><th>PIN</th><th>ID</th><th>Ações</th></tr></thead><tbody id="participantBody"></tbody></table></div>
+        <div class="mobile" id="participantMobile"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-monitor">
+      <div class="card">
+        <div class="head"><div><div class="crumb">Monitor • aprovado</div><h2>Acompanhamento da rotina</h2><p>Horário sugerido, cliques reais, situação e pontos separados da configuração.</p></div></div>
+        <div class="monitor-bar"><div class="agenda-field"><label>Participante no monitor</label><select id="monitorParticipant"></select></div><div class="agenda-info" id="monitorInfo"></div></div>
+        <div class="monitorgrid"><div class="metric"><small>Previstas hoje</small><strong id="mExpected">0</strong></div><div class="metric"><small>Concluídas</small><strong id="mDone">0</strong></div><div class="metric"><small>Em andamento</small><strong id="mRunning">0</strong></div><div class="metric"><small>Pendentes</small><strong id="mPending">0</strong></div><div class="timeline" id="monitorTimeline"></div></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-recompensas">
+      <div class="benefits-layout" id="benefitsLayout">
+        <div class="card benefit-card" id="rewardsCard">
+          <div class="section-title"><div><div class="crumb">Recompensas</div><h3>🎁 Catálogo e resgates</h3><p>Itens livres criados pelo ADM e adquiridos com pontos.</p></div><button class="primary" id="newRewardBtn">＋ Nova recompensa</button></div>
+          <div class="metrics benefit-metrics"><div class="metric"><small>Ativas</small><strong id="rewardActiveCount">0</strong></div><div class="metric"><small>Pedidos pendentes</small><strong id="rewardPendingCount">0</strong></div></div>
+          <div class="toolbar compact-toolbar"><select id="rewardFilter"><option value="all">Todas</option><option value="active">Ativas</option><option value="inactive">Desativadas</option></select></div>
+          <div class="list" id="rewardList"></div>
+          <div class="request-box"><div class="subhead"><div><h4>Solicitações de resgate</h4><p>Aprovar ou recusar somente pedidos pendentes.</p></div></div><div class="toolbar request-filters"><select id="requestParticipant"><option value="all">Todos</option></select><select id="requestStatus"><option value="all">Todos os status</option><option value="Pendente">Pendentes</option><option value="Aprovado">Aprovados</option><option value="Recusado">Recusados</option></select><input id="requestRefDate" type="date"><select id="requestPeriod"><option value="day">Dia</option><option value="week">Semana</option><option value="month">Mês</option></select></div><div class="list" id="requestList"></div></div>
+        </div>
+
+        <div class="card benefit-card" id="conquestsCard">
+          <div class="section-title"><div><div class="crumb">Conquistas</div><h3>🏆 Metas e ciclos</h3><p>Catálogo de regras definidas pelo sistema. Não funciona como cadastro livre de Recompensas.</p></div><button class="primary" id="newConquestBtn">＋ Nova conquista</button></div>
+          <div class="metrics benefit-metrics"><div class="metric"><small>Ativas</small><strong id="conquestActiveCount">0</strong></div><div class="metric"><small>Aguardando ADM</small><strong id="conquestPendingCount">0</strong></div></div>
+          <div class="toolbar conquest-filters"><select id="conquestParticipant"><option value="all">Todos</option></select><select id="conquestType"><option value="all">Todas as regras</option></select><select id="conquestStatus"><option value="all">Todas as situações</option><option value="active">Ativas</option><option value="pending">Aguardando ADM</option><option value="inactive">Desativadas</option></select></div>
+          <div class="list" id="conquestList"></div>
+          <div class="participant-preview"><div class="subhead"><div><h4>👤 Prévia do participante</h4><p>Encerradas/desativadas deixam de aparecer aqui.</p></div><select id="participantPreview"></select></div><div class="list" id="participantConquestList"></div></div>
+        </div>
+
+        <div class="card history-card" id="historyCard">
+          <div class="section-title"><div><div class="crumb">Movimentações</div><h3>📋 Histórico</h3><p>Resgates de Recompensas e eventos de Conquistas no mesmo histórico, sem misturar as regras.</p></div><div class="history-filters"><select id="historyFilter"><option value="all">Tudo</option><option value="reward">Recompensas</option><option value="conquest">Conquistas</option></select><select id="historyParticipant"><option value="all">Todos</option></select></div></div>
+          <div class="tablewrap history-wrap"><table class="history-table"><thead><tr><th>Data</th><th>Participante</th><th>Evento</th><th>Tipo</th><th>Status</th></tr></thead><tbody id="historyBody"></tbody></table></div>
+          <div class="mobile history-mobile" id="historyMobile"></div>
+        </div>
+      </div>
+      <div class="notice"><b>Etapa atual</b> No web: Recompensas e Conquistas lado a lado, Histórico embaixo. No mobile: Recompensas → Conquistas → Histórico.</div>
+    </section>
+
+    <section class="view" id="view-relatorios"><div class="card"><div class="head"><div><div class="crumb">Fora do escopo atual</div><h2>Relatórios</h2><p>Preservado na navegação, sem mudanças nesta etapa da Sprint 2.</p></div></div></div></section>
+    <section class="view" id="view-master"><div class="card"><div class="head"><div><div class="crumb">Fora do escopo atual</div><h2>Master</h2><p>Preservado na navegação, sem mudanças nesta etapa da Sprint 2.</p></div></div></div></section>
+  </main>
+</div>
+
+<div class="modal" id="participantModal"><div class="modal-card"><h3 id="participantModalTitle">Novo participante</h3><label>Nome<input id="participantName"></label><div class="form-grid"><label>Tema<select id="participantTheme"><option>Feminino</option><option>Masculino</option></select></label><label>PIN (4 a 6 dígitos)<input id="participantPinInput" inputmode="numeric" maxlength="6" type="password"></label></div><div class="modal-actions"><button class="btn" data-close="participantModal">Cancelar</button><button class="primary" id="participantSave">Salvar participante</button></div></div></div>
+
+<div class="modal" id="rewardModal"><div class="modal-card"><h3 id="rewardModalTitle">Nova recompensa</h3><label>Nome<input id="rewardName" maxlength="80"></label><div class="form-grid"><label>Pontos<input id="rewardPoints" type="number" min="1"></label><label>Situação<select id="rewardActive"><option value="1">Ativa</option><option value="0">Desativada</option></select></label></div><div class="modal-actions"><button class="btn" data-close="rewardModal">Cancelar</button><button class="primary" id="rewardSave">Salvar recompensa</button></div></div></div>
+
+<div class="modal" id="conquestModal"><div class="modal-card wide"><h3 id="conquestModalTitle">Nova conquista</h3><p class="modal-note">A regra vem de uma lista fixa. Os campos mudam conforme a regra escolhida.</p><label>Regra da conquista<select id="cqType"></select></label><div class="form-grid"><label>Participante<select id="cqParticipant"></select></label><label>Situação<select id="cqActive"><option value="1">Ativa</option><option value="0">Desativada</option></select></label></div><div class="form-grid"><label id="cqTargetLabel">Meta<input id="cqTarget" type="number" min="1" value="5"></label><label id="cqCountModeField">Contagem<select id="cqCountMode"><option value="consecutive">Consecutivos</option><option value="accumulated">Acumulados</option></select></label></div><label id="cqPercentField" class="hidden">Período de avaliação<select id="cqPercentPeriod"><option value="week">Semana</option><option value="month">Mês</option></select></label><label id="cqDeadlineField" class="hidden">Prazo para pontos<select id="cqDeadline"><option value="none">Sem prazo</option><option value="with">Com prazo</option></select></label><div class="form-grid hidden" id="cqDeadlineDetails"><label>Duração<input id="cqDeadlineValue" type="number" min="1" value="7"></label><label>Unidade<select id="cqDeadlineUnit"><option value="days">Dias</option><option value="weeks">Semanas</option><option value="months">Meses</option></select></label></div><div class="form-grid"><label>Recorrência<select id="cqCycleMode"><option value="unique">Única</option><option value="periodic">Periódica</option><option value="continuous">Contínua</option></select></label><label id="cqRepeatField" class="hidden">Quantidade de ciclos<input id="cqRepeatCount" type="number" min="2" value="3"></label></div><div class="rule-preview" id="cqRulePreview"></div><div class="modal-actions"><button class="btn" data-close="conquestModal">Cancelar</button><button class="primary" id="cqSave">Salvar conquista</button></div></div></div>
+
+<div class="modal" id="simModal"><div class="modal-card"><h3 id="simTitle">Testar conquista</h3><div class="sim-state" id="simState"></div><div class="sim-actions"><button class="btn" id="simPlus">＋ Progresso</button><button class="btn danger" id="simFail">Encerrar sem atingir</button><button class="primary" id="simValidate">Validar recompensa</button></div><div class="modal-actions"><button class="btn" data-close="simModal">Fechar</button></div></div></div>
+
+<div class="toast" id="toast"></div><div class="version">Sprint 2 • teste completo v5</div><div id="selfTestReport" hidden></div>
+<script src="sprint2-teste-core.js"></script>
+<script src="sprint2-teste-participantes.js"></script>
+<script src="sprint2-teste-recompensas.js"></script>
+<script src="sprint2-teste-bootstrap.js"></script>
+</body></html>
