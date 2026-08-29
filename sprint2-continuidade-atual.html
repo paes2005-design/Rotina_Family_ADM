@@ -21,45 +21,42 @@ Sempre divulgar juntos:
 5. ponto atual e próximo passo.
 
 ## MÉTODO DE TRABALHO — ALINHADO AO PERFIL PROFISSIONAL DO USUÁRIO
-O desenvolvimento e a tomada de decisão do Rotina Family devem ser conduzidos com mentalidade de engenharia de produção e gestão operacional, aplicando as ferramentas abaixo quando fizerem sentido:
-- **PDCA:** Planejar requisito e critério de sucesso; Executar somente no ambiente de teste; Checar por testes, auditoria, uso e logs; Agir corrigindo, aprovando e congelando o padrão validado.
-- **Toyotismo / Lean:** eliminar desperdícios, retrabalho, duplicação de regra e complexidade desnecessária; priorizar fluxo simples, qualidade na origem, padronização e melhoria contínua.
-- **Teoria das Restrições:** identificar primeiro o gargalo ou restrição que limita o resultado do módulo; priorizar a restrição antes de otimizações secundárias e reavaliar após a correção.
-- **Scrum:** trabalhar em incrementos pequenos e testáveis dentro da Sprint; manter backlog/ponto atual claros; revisar cada incremento com o usuário; módulos aprovados ficam congelados e só são reabertos por solicitação explícita.
-- **Gestão por indicadores e causa/efeito:** sempre que aplicável, usar métricas objetivas, comparação previsto x realizado e análise de causa raiz antes de alterar regras consolidadas.
+O desenvolvimento e a tomada de decisão do Rotina Family devem ser conduzidos com mentalidade de engenharia de produção e gestão operacional:
+- **PDCA:** Planejar requisito e critério de sucesso; Executar no ambiente de teste; Checar por testes, auditoria, uso e logs; Agir corrigindo, aprovando e congelando o padrão validado.
+- **Toyotismo / Lean:** eliminar desperdícios, retrabalho, duplicação de regra e complexidade desnecessária; priorizar fluxo simples, gestão visual, qualidade na origem, padronização e melhoria contínua.
+- **Teoria das Restrições:** identificar primeiro o gargalo que limita o resultado do módulo; priorizar a restrição antes de otimizações secundárias; reavaliar após a correção.
+- **Scrum:** trabalhar em incrementos pequenos e testáveis; manter backlog/ponto atual claros; revisar cada incremento com o usuário; módulos aprovados ficam congelados.
+- **Gestão por indicadores e causa/efeito:** usar métricas objetivas, previsto x realizado e análise de causa raiz antes de alterar regras consolidadas.
 Regra prática: **desenvolver → testar → discutir → agir**, preservando o que já foi validado.
 
 ## PRINCÍPIOS TÉCNICOS
 - Sprint 2 é separada da produção.
 - Código limpo, modular e leve; sem remendos, iframes, duplicação de regras ou scripts sobre scripts.
 - Web e mobile com paridade funcional.
-- Não alterar `index.html`, `index-ADMIN-v8.html`, Cliente, Service Worker ou Firebase de produção enquanto estivermos validando a Sprint 2.
+- Não alterar `index.html`, `index-ADMIN-v8.html`, Cliente, Service Worker ou Firebase de produção durante a validação.
 - Arquivos de teste usam nomes exclusivos `sprint2-*`.
 - Módulo aprovado = congelado. Só reabrir se o usuário pedir explicitamente.
 
 # STATUS OFICIAL DA SPRINT 2
 ## Parte 1 — Tarefas + Monitor — ✅ APROVADA E CONGELADA
 ## Parte 2 — Participantes — ✅ APROVADA E CONGELADA
-## Parte 3 — Início / Dashboard — 🧪 PREVIEW V1 IMPLEMENTADA; EM TESTE E DISCUSSÃO
+## Parte 3 — Início / Dashboard — 🧪 PREVIEW V2 IMPLEMENTADA; EM TESTE E DISCUSSÃO
 ## Parte 4 — Recompensas + Conquistas + Histórico — ✅ APROVADA E CONGELADA EM 29/08/2026
 
 # TAREFAS — FONTE CONGELADA
 - Agenda por participante; opção Todos cria tarefa coletiva.
 - Nome, ícone, início, término, pontos, tolerância e status na área principal.
-- Ordenação automática pelo horário de início; não existe campo manual Ordenar.
+- Ordenação automática por horário; não existe campo manual Ordenar.
 - Web em tabela; mobile em cartões.
 - Edição web na própria linha; mobile dentro do cartão. Não usar modal.
-- Botão `⋯` no web abre Detalhes logo abaixo da tarefa.
-- Botão Detalhes no mobile abre os mesmos opcionais dentro do cartão.
-- Somente opcionais em Detalhes: Dias da semana, Alarme e Observação.
-- Resumo de dias só usa intervalo quando todos os dias intermediários estão selecionados. Exemplos: `Segunda a sexta`; `Segunda, quarta e sexta`; `Terça e quinta`.
+- Botão `⋯` no web e Detalhes no mobile abrem somente: Dias da semana, Alarme e Observação.
+- Resumo de dias só usa intervalo quando todos os dias intermediários estiverem selecionados.
 - Bloqueio de sobreposição de horários para o mesmo participante em dias coincidentes.
-- Fontes: `sprint2-adm-base-v3.js`, `sprint2-tarefas-preview-v6.html`, commits `f9336ad...`, `6102d3d...`, `d9adfea...`.
+- Fontes históricas: `sprint2-adm-base-v3.js`, `sprint2-tarefas-preview-v6.html`, commits `f9336ad...`, `6102d3d...`, `d9adfea...`.
 
 # PARTICIPANTES — CONGELADO
-- Cadastro/manutenção.
-- Nome, tema e PIN.
-- PIN de 4 a 6 dígitos, nunca exibido em claro.
+- Cadastro/manutenção; nome, tema e PIN.
+- PIN de 4 a 6 dígitos e nunca exibido em claro.
 - Avatar acompanha o tema.
 - Web/mobile no padrão aprovado.
 
@@ -71,102 +68,96 @@ Regra prática: **desenvolver → testar → discutir → agir**, preservando o 
 - Web/mobile responsivos.
 
 # RECOMPENSAS — CONGELADO
-Referência histórica do módulo: `sprint2-recompensas-preview-v4.html`.
 - Cadastro livre do ADM: nome + custo em pontos.
 - Editar, ativar/desativar e excluir preservando histórico.
-- Resgates: Pendente, Aprovado, Recusado.
-- Aprovar/recusar somente pendentes.
+- Resgates: Pendente, Aprovado, Recusado; decidir somente pendentes.
 - Filtros por participante, status, data e Dia/Semana/Mês.
 
 # CONQUISTAS — CONGELADO
-Conquistas não são cadastro livre de Recompensas. Regras fixas:
+Regras fixas:
 1. Dias com todas as tarefas dentro do horário.
 2. Tarefas consecutivas com 100%.
 3. Dias sem necessidade de justificativa.
 4. Pontos atingidos.
 5. Percentual dos pontos possíveis.
 
-Campos condicionais:
-- Dias no horário / sem justificativa: meta + consecutivos/acumulados.
-- Tarefas 100%: meta de tarefas consecutivas.
-- Pontos: alvo + Sem prazo/Com prazo; com prazo define duração e dias/semanas/meses.
-- Percentual: alvo + Semana/Mês.
-
-Recorrência:
-- Única: 1 ciclo e encerra.
-- Periódica: quantidade definida pelo ADM; sucesso ou falha consome ciclo.
-- Contínua: sem limite.
-
-Validação ADM:
-- Meta atingida gera **Aguardando validação do ADM**.
-- Não entrega automaticamente.
-- Próximo ciclo só abre após validação quando houver ciclo válido.
-- Sem ciclos válidos: desativa no ADM e some do participante.
-- Sucesso na última tentativa mantém a pendência no ADM até validação.
+Recorrência: Única, Periódica e Contínua.
+Meta atingida gera **Aguardando validação do ADM**; não entrega automaticamente. Próximo ciclo só abre após validação quando houver ciclo válido; sem ciclos válidos, desativa no ADM e some do participante.
 
 # HISTÓRICO — CONGELADO
 - Reúne movimentações de Recompensas e eventos de Conquistas.
-- Pode filtrar por tipo e participante.
-- Não mistura regras dos módulos; unifica apenas a visualização das movimentações.
+- Filtros por tipo e participante.
+- Unifica a visualização das movimentações sem misturar as regras dos módulos.
 
 # LAYOUT APROVADO DA PARTE 4
-Web:
-- Recompensas à esquerda.
-- Conquistas à direita.
-- Histórico embaixo ocupando a largura total.
-
-Mobile:
-1. Recompensas.
-2. Conquistas.
-3. Histórico.
-
-A ideia de cartões expansíveis não substituiu este layout e permanece apenas como hipótese futura.
+Web: Recompensas à esquerda, Conquistas à direita, Histórico embaixo em largura total.
+Mobile: Recompensas → Conquistas → Histórico.
 
 # AUDITORIA QUE FECHOU A PARTE 4
 - 54/54 verificações estruturais aprovadas.
 - 56/56 testes funcionais em navegador desktop/mobile.
-- Bundle publicado repetiu 56/56 depois da separação modular.
+- Bundle publicado revalidado 56/56.
 - Sem erro JavaScript bloqueador.
-- Tarefas: `⋯`, opcionais, dias consecutivos/alternados, edição inline e conflito de horário.
-- Participantes: renderização e PIN.
-- Monitor: quatro indicadores.
-- Recompensas: criação/filtros/layout.
-- Conquistas: regras fixas, campos condicionais, ciclos, falha, sucesso, Aguardando ADM, validação e encerramento.
-- Telemetria de teste: 43 eventos interceptados, todos com `grupoId=SPRINT2-PREVIEW`, prefixo `operacao.sprint2_test.*` e sem chaves sensíveis nos detalhes.
-- Usuário aprovou a Parte 4 em 29/08/2026 após receber o link auditado.
+- 43 eventos de telemetria isolados como `SPRINT2-PREVIEW`, prefixo `operacao.sprint2_test.*`, sem chaves sensíveis.
 
 # LOGS / DIAGNÓSTICO — REGRA DE TRABALHO
-O sistema de diagnóstico deve permitir ao assistente ler logs, analisar, testar, corrigir a versão de teste quando seguro e testar novamente.
 - Infraestrutura histórica: `ui.acao`, APIs, erros de rede e diagnóstico técnico.
-- Endpoints já discutidos/implantados: `/app-log`, `/diagnostico-tecnico`, `/diagnostico-worker`.
-- A prévia Sprint 2 usa `SPRINT2-PREVIEW` e `operacao.sprint2_test.*`.
+- Endpoints discutidos/implantados: `/app-log`, `/diagnostico-tecnico`, `/diagnostico-worker`.
+- Prévia Sprint 2 usa `SPRINT2-PREVIEW` e `operacao.sprint2_test.*`.
 - Não enviar PIN, nome, e-mail, token, senha ou outros dados sensíveis nos detalhes.
 
-# PARTE 3 — INÍCIO / DASHBOARD — PREVIEW V1
-Objetivo: funcionar como painel de comando e gestão à vista, sem virar um segundo Monitor.
-Perguntas que a tela deve responder rapidamente:
-1. **Como está o dia?**
-2. **O que precisa da minha ação?**
-3. **Para onde eu quero ir agora?**
+# PARTE 3 — INÍCIO / DASHBOARD — PREVIEW V2
+## Decisão de PDCA que originou a V2
+A Preview V1 foi deliberadamente enxuta, mas o **Check** mostrou que a redução removeu informação gerencial útil que já existia no Dashboard atual de produção. A ação correta pelo PDCA foi usar o Dashboard atual como **baseline**, preservar o que agrega valor e eliminar apenas desperdício/duplicação.
 
-Implementado na Preview V1:
-- **Hoje:** previstas, concluídas, em andamento, atrasadas/pendentes e pontos conquistados.
-- Indicador de percentual de tarefas concluídas.
-- **Pendências:** ocorrências atrasadas para revisão, resgates pendentes e conquistas aguardando validação do ADM.
-- **Atalhos:** Nova tarefa, Novo participante, Monitor, Resgates pendentes e Conquistas pendentes.
-- **Resumo do dia por participante:** quantidade concluída/prevista, pontos e acesso direto ao Monitor filtrado.
-- Web em painel horizontal; mobile reorganiza em cartões verticais, preservando a mesma função.
-- Sem gráficos na primeira versão.
-- Sem formulários completos no Dashboard.
-- Os números são derivados do estado do próprio ambiente de teste; não são valores decorativos fixos.
+Regra conceitual da V2:
+- **Dashboard = perceber e decidir.**
+- **Monitor = acompanhar execução detalhada.**
+- **Relatórios = investigar e analisar em profundidade.**
 
-Arquivos exclusivos desta etapa:
-- `sprint2-inicio-v1.css`
-- `sprint2-inicio-v1.js`
-- integração somente em `sprint2-teste-atual.html`
+## Camada 1 — gestão operacional do dia
+Mantida da Preview V1:
+- Previstas, concluídas, em andamento, atrasadas/pendentes e pontos conquistados.
+- Percentual concluído com barra de progresso.
+- Pendências: atrasos para revisão, resgates pendentes e conquistas aguardando ADM.
+- Atalhos: Nova tarefa, Novo participante, Monitor, Resgates pendentes e Conquistas pendentes.
+- Resumo por participante com concluídas/previstas, pontos e acesso ao Monitor filtrado.
+- Sem formulário completo no Dashboard.
+
+## Camada 2 — análise gerencial recuperada do baseline
+A Preview V2 recupera e reorganiza capacidades úteis do Dashboard que já funciona na versão atual:
+- filtros **Dia / Semana / Mês**;
+- data de referência;
+- filtro por participante;
+- KPIs: Líder, Alcançado, Resgatado, % Resgatado, Pendente, Pontualidade e Maior sequência;
+- pódio do período;
+- gráfico de pontos por participante;
+- gráfico de cumprimento das tarefas: no prazo, atrasadas, em andamento e pendentes;
+- evolução dos últimos 7 dias;
+- ranking detalhado com pontos, conclusão, pontualidade e ocorrências que exigem atenção.
+
+## Limitação conhecida do fixture de teste
+O cenário isolado da Sprint 2 possui execuções de tarefas concentradas em **29/08/2026**. Portanto:
+- a evolução de 7 dias mostra zero nos dias sem histórico de execução disponível no fixture;
+- “Maior sequência” fica como **—** nesta Preview, pois não há base diária suficiente para calcular sem inventar dados;
+- na integração oficial futura, a camada gerencial deverá consumir o histórico real do app, como faz o Dashboard atual.
+Essa limitação é proposital e transparente: não fabricar histórico para fazer o gráfico parecer preenchido.
+
+## Arquitetura da Preview V2
+- A integração continua isolada nos arquivos `sprint2-inicio-v1.js` e `sprint2-inicio-v1.css`; o nome legado foi preservado para não criar carregadores ou scripts sobre scripts. Internamente o build é identificado como `inicio-v2`.
+- JavaScript V2: commit `198e1576224fe17686215cbbf5056af7c661bf56`.
+- CSS V2: commit `6a7871381148a7c7993f9aeb7ecdec8f64cf0007`.
+- Nenhum arquivo oficial de produção foi alterado nesta etapa.
+
+## Gate técnico da Preview V2
+- Validação local de sintaxe JavaScript: ✅.
+- `Rotina Family ADM regression audit`: ✅ SUCCESS.
+- `Sprint 2 Tarefas v8 audit` (gate dedicado): ✅ SUCCESS.
+- GitHub Pages build/deployment: ✅ SUCCESS.
+- Workflows históricos de manutenção continuam podendo aparecer como falha separadamente; eles não são o gate específico da Sprint 2 e permanecem registrados como dívida/histórico do repositório.
 
 ## PONTO EXATO DE RETOMADA
 Não mexer em Tarefas, Participantes, Monitor ou Parte 4 sem solicitação explícita.
-Ponto atual: **Parte 3 Preview V1 publicada para teste e discussão com o usuário.**
-Próximo passo: testar web/mobile, discutir utilidade e hierarquia visual e então agir pelo PDCA: corrigir ou aprovar/congelar a Parte 3.
+Ponto atual: **Parte 3 Preview V2 publicada para teste e discussão com o usuário.**
+Próximo passo: testar a V2 em web e mobile, especialmente hierarquia visual, utilidade dos KPIs/gráficos, filtros e legibilidade. Depois aplicar o Act do PDCA: ajustar novamente ou aprovar/congelar a Parte 3.
 </pre></main></body></html>
