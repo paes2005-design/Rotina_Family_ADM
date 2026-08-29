@@ -1,4 +1,4 @@
-const VERSION=1;
+const VERSION=2;
 const SYNC_TIMEOUT_MS=9000;
 let processando=false;
 
@@ -74,26 +74,29 @@ function aguardarSincronizacaoServidor(motivo){
   return new Promise(resolve=>{
     const antes=Number(snapshot()?.ultimaSincronizacaoServidor||0);
     let finalizado=false;
+    let timer=null;
+    const depoisValido=(depois,base)=>base>0?depois>base:depois>0;
     const finalizar=(ok,origem)=>{
       if(finalizado)return;
       finalizado=true;
-      clearTimeout(timer);
+      if(timer)clearTimeout(timer);
       window.removeEventListener('rotina-adm-sync-complete',onSync);
       resolve({ok,origem});
     };
     const onSync=ev=>{
       if(ev?.detail?.servidor!==true)return;
       const depois=Number(snapshot()?.ultimaSincronizacaoServidor||0);
-      finalizar(dpoisValido(depois,antes),'evento-servidor');
+      const novaSincronizacao=depoisValido(depois,antes);
+      const falhas=Number(ev?.detail?.falhas??6);
+      finalizar(novaSincronizacao&&falhas<6,'evento-servidor');
     };
-    const dpoisValido=(depois,base)=>depois>base||depois>0;
     window.addEventListener('rotina-adm-sync-complete',onSync);
-    const timer=setTimeout(()=>finalizar(false,'timeout'),SYNC_TIMEOUT_MS);
+    timer=setTimeout(()=>finalizar(false,'timeout'),SYNC_TIMEOUT_MS);
     try{
       if(typeof window.rotinaSincronizarAdmAgora!=='function')return;
       Promise.resolve(window.rotinaSincronizarAdmAgora(motivo)).then(ok=>{
         const depois=Number(snapshot()?.ultimaSincronizacaoServidor||0);
-        if(ok===true||dpoisValido(depois,antes))finalizar(true,'chamada-direta');
+        if(ok===true&&depoisValido(depois,antes))finalizar(true,'chamada-direta');
       }).catch(()=>{});
     }catch{}
   });
@@ -101,11 +104,11 @@ function aguardarSincronizacaoServidor(motivo){
 
 async function garantirModuloRevisao(){
   if(typeof window.abrirRevisaoJustificativa==='function')return true;
-  await import('./adm-justification-review.js?v=sync-guard-1');
+  await import('./adm-justification-review.js?v=sync-guard-2');
   return typeof window.abrirRevisaoJustificativa==='function';
 }
 
-async function tratarClique(event,flag){
+async function tratarClique(flag){
   if(processando)return;
   processando=true;
   const ctx=contextoDoClique(flag);
@@ -118,6 +121,7 @@ async function tratarClique(event,flag){
       toast('Atualizando a justificativa com o servidor…');
       const resultado=await aguardarSincronizacaoServidor(`justificativa-${necessidade.motivo}`);
       log('justificativa.sync_fallback',{motivo:necessidade.motivo,ok:resultado.ok,origem:resultado.origem,tempoMs:Math.round(performance.now()-inicio)},resultado.ok?'info':'warning');
+      if(!resultado.ok&&navigator.onLine!==false)throw new Error('A atualização do servidor não foi confirmada.');
     }else{
       log('justificativa.cache_hit',{data:ctx.data||'',temId:Boolean(ctx.id)});
     }
@@ -128,7 +132,13 @@ async function tratarClique(event,flag){
     log('justificativa.abertura_encaminhada',{data:ctx.data||'',temId:Boolean(ctx.id),tempoMs:Math.round(performance.now()-inicio)});
   }catch(e){
     console.error('Falha ao abrir justificativa com sincronização:',e);
-    toast('Não foi possível atualizar a justificativa. Tente novamente.');
+    toast(navigator.onLine===false?'Sem internet. A justificativa será aberta com os dados disponíveis neste aparelho.':'Não foi possível atualizar a justificativa. Tente novamente.');
+    if(navigator.onLine===false){
+      try{
+        const moduloOk=await garantirModuloRevisao();
+        if(moduloOk)window.abrirRevisaoJustificativa(ctx);
+      }catch{}
+    }
     setTimeout(esconderToast,3500);
     log('justificativa.abertura_erro',{mensagem:String(e?.message||e).slice(0,140),tempoMs:Math.round(performance.now()-inicio)},'error');
   }finally{
@@ -142,7 +152,7 @@ document.addEventListener('click',event=>{
   event.preventDefault();
   event.stopPropagation();
   event.stopImmediatePropagation();
-  tratarClique(event,flag);
+  tratarClique(flag);
 },true);
 
 log('justificativa.sync_guard_pronto',{versao:VERSION});
