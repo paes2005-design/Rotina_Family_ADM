@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const BUILD='inicio-v2';
+const BUILD='inicio-v3';
 const SCENARIO_DATE='2026-08-29';
 let analysisPeriod='day';
 let analysisRef=SCENARIO_DATE;
@@ -61,7 +61,7 @@ function ensureAnalysisShell(){
   host.insertAdjacentHTML('beforeend',`
     <section class="dash-analysis" id="dashAnalysis">
       <div class="dash-analysis-head">
-        <div><div class="crumb">Análise gerencial • baseline do Dashboard atual</div><h2>Desempenho</h2><p>Tendência, comparação e ranking sem perder a leitura operacional do topo.</p></div>
+        <div><div class="crumb">Análise gerencial • Preview V3</div><h2>Desempenho</h2><p>Classificação geral separada da análise individual.</p></div>
         <div class="dash-period-tabs" id="dashPeriodTabs">
           <button data-period="day" class="active">Dia</button>
           <button data-period="week">Semana</button>
@@ -70,32 +70,49 @@ function ensureAnalysisShell(){
       </div>
       <div class="dash-filterbar">
         <label>Data de referência<input type="date" id="dashAnalysisDate" value="${SCENARIO_DATE}"></label>
-        <label>Integrante<select id="dashAnalysisParticipant"><option value="all">Todos</option></select></label>
+        <label>Analisar integrante<select id="dashAnalysisParticipant"><option value="all">Todos</option></select><small class="dash-filter-help">Este filtro não altera líder, pódio ou ranking geral.</small></label>
         <div class="dash-period-label"><small>Período analisado</small><b id="dashAnalysisPeriodLabel">—</b></div>
       </div>
-      <div class="dash-analysis-kpis" id="dashAnalysisKpis"></div>
-      <div class="dash-analysis-grid">
-        <article class="dash-analysis-panel">
-          <div class="dash-panel-head"><div><h3>🏆 Pódio do período</h3><p>Classificação pela pontuação conquistada.</p></div></div>
-          <div class="dash-podium" id="dashPodium"></div>
-        </article>
-        <article class="dash-analysis-panel">
-          <div class="dash-panel-head"><div><h3>📊 Pontos por participante</h3><p>Comparação direta do período selecionado.</p></div></div>
-          <div class="dash-chart" id="dashPointsChart"></div>
-        </article>
-        <article class="dash-analysis-panel">
-          <div class="dash-panel-head"><div><h3>✅ Cumprimento das tarefas</h3><p>No prazo, atrasadas, em andamento e pendentes.</p></div></div>
-          <div class="dash-chart" id="dashStatusChart"></div>
-        </article>
-        <article class="dash-analysis-panel">
-          <div class="dash-panel-head"><div><h3>📈 Evolução dos últimos 7 dias</h3><p>Pontos disponíveis no cenário até a data de referência.</p></div></div>
-          <div class="dash-chart" id="dashTrendChart"></div>
-        </article>
-        <article class="dash-analysis-panel dash-ranking-panel">
-          <div class="dash-panel-head"><div><h3>Ranking detalhado</h3><p>Pontos, conclusão, pontualidade e ocorrências que pedem atenção.</p></div></div>
-          <div class="dash-ranking" id="dashDetailedRanking"></div>
-        </article>
-      </div>
+
+      <section class="dash-scope dash-scope-general" id="dashGeneralScope">
+        <div class="dash-scope-head">
+          <div><span class="dash-scope-kicker">VISÃO GERAL DO GRUPO</span><h3>Classificação do período</h3><p>Líder, pódio e ranking usam sempre todos os participantes. Só mudam com Dia/Semana/Mês ou data.</p></div>
+          <span class="dash-scope-lock">🔒 Sem filtro individual</span>
+        </div>
+        <div class="dash-general-leader" id="dashGeneralLeader"></div>
+        <div class="dash-analysis-grid dash-general-grid">
+          <article class="dash-analysis-panel">
+            <div class="dash-panel-head"><div><h3>🏆 Pódio do período</h3><p>1º, 2º e 3º lugares do grupo.</p></div></div>
+            <div class="dash-podium" id="dashPodium"></div>
+          </article>
+          <article class="dash-analysis-panel">
+            <div class="dash-panel-head"><div><h3>📊 Pontos por participante</h3><p>Comparação entre todos no período selecionado.</p></div></div>
+            <div class="dash-chart" id="dashPointsChart"></div>
+          </article>
+          <article class="dash-analysis-panel dash-ranking-panel">
+            <div class="dash-panel-head"><div><h3>Ranking geral detalhado</h3><p>Classificação do grupo, independente do integrante escolhido abaixo.</p></div></div>
+            <div class="dash-ranking" id="dashDetailedRanking"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="dash-scope dash-scope-individual" id="dashIndividualScope">
+        <div class="dash-scope-head">
+          <div><span class="dash-scope-kicker">DESEMPENHO FILTRÁVEL</span><h3 id="dashIndividualTitle">Todos os participantes</h3><p>Esta área responde ao filtro “Analisar integrante”.</p></div>
+          <span class="dash-scope-person" id="dashIndividualBadge">Todos</span>
+        </div>
+        <div class="dash-analysis-kpis" id="dashAnalysisKpis"></div>
+        <div class="dash-analysis-grid dash-individual-grid">
+          <article class="dash-analysis-panel">
+            <div class="dash-panel-head"><div><h3>✅ Cumprimento das tarefas</h3><p>No prazo, atrasadas, em andamento e pendentes do recorte escolhido.</p></div></div>
+            <div class="dash-chart" id="dashStatusChart"></div>
+          </article>
+          <article class="dash-analysis-panel">
+            <div class="dash-panel-head"><div><h3>📈 Evolução dos últimos 7 dias</h3><p>Evolução do grupo ou do integrante selecionado.</p></div></div>
+            <div class="dash-chart" id="dashTrendChart"></div>
+          </article>
+        </div>
+      </section>
       <div class="dash-analysis-note">Cenário de teste: as execuções de tarefas disponíveis estão concentradas em <b>29/08/2026</b>. Por isso a evolução de 7 dias mostra zero onde não há histórico de execução no fixture. Na integração oficial, essa área deve consumir o histórico real, como o Dashboard atual.</div>
     </section>`);
   const participant=$('dashAnalysisParticipant');
@@ -107,8 +124,8 @@ function ensureAnalysisShell(){
     $('dashPeriodTabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===btn));
     renderAnalytics();
   }));
-  const tag=document.querySelector('.dash-date');if(tag)tag.textContent='PREVIEW V2';
-  const version=document.querySelector('.version');if(version)version.textContent='Sprint 2 • teste completo v5 • Início v2';
+  const tag=document.querySelector('.dash-date');if(tag)tag.textContent='PREVIEW V3';
+  const version=document.querySelector('.version');if(version)version.textContent='Sprint 2 • teste completo v6 • Início v3';
 }
 
 function svgBars(items){
@@ -117,7 +134,7 @@ function svgBars(items){
   let s=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Pontos por participante">`;
   items.forEach((x,i)=>{
     const y=18+i*48,bar=Math.max(2,(x.points/max)*bw);
-    s+=`<text x="${left-10}" y="${y+18}" text-anchor="end" font-size="12" fill="#626b7e">${esc(x.name.slice(0,17))}</text><rect x="${left}" y="${y+4}" width="${bar}" height="22" rx="8" fill="#6b35df" opacity="${.92-i*.08}"/><text x="${Math.min(w-34,left+bar+8)}" y="${y+20}" font-size="11" font-weight="800" fill="#4b3f73">${x.points} pts</text>`;
+    s+=`<text x="${left-10}" y="${y+18}" text-anchor="end" font-size="12" fill="#626b7e">${esc(x.name.slice(0,17))}</text><rect x="${left}" y="${y+4}" width="${bar}" height="22" rx="8" fill="#6b35df" opacity="${Math.max(.55,.92-i*.08)}"/><text x="${Math.min(w-34,left+bar+8)}" y="${y+20}" font-size="11" font-weight="800" fill="#4b3f73">${x.points} pts</text>`;
   });
   return s+'</svg>';
 }
@@ -151,43 +168,67 @@ function renderRanking(items){
   return `<table><thead><tr><th>#</th><th>Integrante</th><th>Pontos</th><th>Conclusão</th><th>Pontualidade</th><th>Atenção</th></tr></thead><tbody>${items.map((x,i)=>`<tr><td>${i+1}º</td><td><b>${esc(x.name)}</b></td><td>${x.points}</td><td>${x.completion}%</td><td>${x.punctuality}%</td><td>${x.attention}</td></tr>`).join('')}</tbody></table>`;
 }
 
+function peopleMetrics(rows){
+  return state.participants.map(p=>{
+    const mine=rows.filter(r=>r.participantId===p.id);
+    const done=mine.filter(r=>['ok','late'].includes(r.ex.status)).length;
+    const ontime=mine.filter(r=>r.ex.status==='ok').length;
+    const points=mine.reduce((s,r)=>s+pointsFrom(r).done,0);
+    const attention=mine.filter(r=>['late','pending'].includes(r.ex.status)).length;
+    return {id:p.id,name:p.name,points,expected:mine.length,done,completion:mine.length?Math.round(done/mine.length*100):0,punctuality:done?Math.round(ontime/done*100):0,attention};
+  }).sort((a,b)=>b.points-a.points||b.completion-a.completion||a.name.localeCompare(b.name,'pt-BR'));
+}
+
 function renderAnalytics(){
   ensureAnalysisShell();
   const b=bounds(analysisRef,analysisPeriod);setText('dashAnalysisPeriodLabel',b.label);
   const allRows=rowsAll();
-  const periodRows=inBounds(SCENARIO_DATE,b)?participantRows(allRows,analysisParticipant):[];
-  const ids=analysisParticipant==='all'?state.participants.map(p=>p.id):[analysisParticipant];
-  const people=ids.map(id=>{
-    const mine=periodRows.filter(r=>r.participantId===id),done=mine.filter(r=>['ok','late'].includes(r.ex.status)).length,ontime=mine.filter(r=>r.ex.status==='ok').length;
-    const points=mine.reduce((s,r)=>s+pointsFrom(r).done,0),attention=mine.filter(r=>['late','pending'].includes(r.ex.status)).length;
-    return {id,name:participantName(id),points,expected:mine.length,done,completion:mine.length?Math.round(done/mine.length*100):0,punctuality:done?Math.round(ontime/done*100):0,attention};
-  }).sort((a,b)=>b.points-a.points||b.completion-a.completion);
-  const achieved=people.reduce((s,p)=>s+p.points,0),completed=periodRows.filter(r=>['ok','late'].includes(r.ex.status)).length,ontime=periodRows.filter(r=>r.ex.status==='ok').length,punctuality=completed?Math.round(ontime/completed*100):0;
+  const groupRows=inBounds(SCENARIO_DATE,b)?allRows:[];
+  const groupPeople=peopleMetrics(groupRows);
+  const groupLeader=groupPeople.find(p=>p.points>0);
+
+  $('dashGeneralLeader').innerHTML=`<div class="dash-leader-card"><small>🏆 LÍDER GERAL DO PERÍODO</small><strong>${groupLeader?esc(groupLeader.name):'—'}</strong><em>${groupLeader?groupLeader.points+' pts':'Sem pontos no período'}</em><span>Classificação do grupo • não recebe filtro individual</span></div>`;
+  $('dashPodium').innerHTML=renderPodium(groupPeople);
+  $('dashPointsChart').innerHTML=svgBars(groupPeople);
+  $('dashDetailedRanking').innerHTML=renderRanking(groupPeople);
+
+  const filteredRows=participantRows(groupRows,analysisParticipant);
+  const selectedName=analysisParticipant==='all'?'Todos os participantes':participantName(analysisParticipant);
+  setText('dashIndividualTitle',analysisParticipant==='all'?'Desempenho consolidado do grupo':`Desempenho de ${selectedName}`);
+  setText('dashIndividualBadge',analysisParticipant==='all'?'Todos':selectedName);
+
+  const achieved=filteredRows.reduce((s,r)=>s+pointsFrom(r).done,0);
+  const completed=filteredRows.filter(r=>['ok','late'].includes(r.ex.status)).length;
+  const ontime=filteredRows.filter(r=>r.ex.status==='ok').length;
+  const punctuality=completed?Math.round(ontime/completed*100):0;
   const requests=state.requests.filter(r=>inBounds(r.date||'',b)&&(analysisParticipant==='all'||r.participantId===analysisParticipant));
   const redeemed=requests.filter(r=>r.status==='Aprovado').reduce((s,r)=>s+(Number(r.points)||0),0);
   const pendingPoints=requests.filter(r=>r.status==='Pendente').reduce((s,r)=>s+(Number(r.points)||0),0);
-  const redeemedPct=achieved?Math.round(redeemed/achieved*100):0,leader=people.find(p=>p.points>0);
+  const redeemedPct=achieved?Math.round(redeemed/achieved*100):0;
+
   $('dashAnalysisKpis').innerHTML=`
-    <div class="dash-analysis-kpi"><small>🏆 Líder</small><strong>${leader?esc(leader.name):'—'}</strong><em>${leader?leader.points+' pts':'Sem pontos'}</em></div>
-    <div class="dash-analysis-kpi"><small>⭐ Alcançado</small><strong>${achieved} pts</strong><em>Pontos conquistados</em></div>
+    <div class="dash-analysis-kpi"><small>⭐ Alcançado</small><strong>${achieved} pts</strong><em>${analysisParticipant==='all'?'Total do grupo':'Pontos do integrante'}</em></div>
     <div class="dash-analysis-kpi"><small>🎁 Resgatado</small><strong>${redeemed} pts</strong><em>Pedidos aprovados</em></div>
     <div class="dash-analysis-kpi"><small>📉 % resgatado</small><strong>${redeemedPct}%</strong><em>Resgatado ÷ alcançado</em></div>
     <div class="dash-analysis-kpi"><small>⏳ Pendente</small><strong>${pendingPoints} pts</strong><em>Aguardando decisão</em></div>
     <div class="dash-analysis-kpi"><small>✅ Pontualidade</small><strong>${punctuality}%</strong><em>${ontime} de ${completed} concluídas</em></div>
     <div class="dash-analysis-kpi muted-kpi"><small>🔥 Maior sequência</small><strong>—</strong><em>Fixture sem histórico diário suficiente</em></div>`;
-  $('dashPodium').innerHTML=renderPodium(people);
-  $('dashPointsChart').innerHTML=svgBars(people);
+
   $('dashStatusChart').innerHTML=svgStatus({
-    ok:periodRows.filter(r=>r.ex.status==='ok').length,
-    late:periodRows.filter(r=>r.ex.status==='late').length,
-    running:periodRows.filter(r=>r.ex.status==='running').length,
-    pending:periodRows.filter(r=>r.ex.status==='pending').length
+    ok:filteredRows.filter(r=>r.ex.status==='ok').length,
+    late:filteredRows.filter(r=>r.ex.status==='late').length,
+    running:filteredRows.filter(r=>r.ex.status==='running').length,
+    pending:filteredRows.filter(r=>r.ex.status==='pending').length
   });
+
   const ref=dateFromIso(analysisRef),trend=[];
-  for(let i=6;i>=0;i--){const d=new Date(ref);d.setDate(d.getDate()-i);const key=isoDate(d);const dayRows=key===SCENARIO_DATE?participantRows(allRows,analysisParticipant):[];trend.push({label:d.toLocaleDateString('pt-BR',{weekday:'short'}).replace('.',''),value:dayRows.reduce((s,r)=>s+pointsFrom(r).done,0)})}
+  for(let i=6;i>=0;i--){
+    const d=new Date(ref);d.setDate(d.getDate()-i);const key=isoDate(d);
+    const dayRows=key===SCENARIO_DATE?participantRows(allRows,analysisParticipant):[];
+    trend.push({label:d.toLocaleDateString('pt-BR',{weekday:'short'}).replace('.',''),value:dayRows.reduce((s,r)=>s+pointsFrom(r).done,0)});
+  }
   $('dashTrendChart').innerHTML=svgTrend(trend);
-  $('dashDetailedRanking').innerHTML=renderRanking(people);
-  techLog('dashboard_analysis_render',{build:BUILD,periodo:analysisPeriod,linhas:periodRows.length,pontos:achieved,pedidos:requests.length});
+  techLog('dashboard_analysis_render',{build:BUILD,periodo:analysisPeriod,linhasGrupo:groupRows.length,linhasRecorte:filteredRows.length,filtroIndividual:analysisParticipant!=='all',pontos:achieved,pedidos:requests.length});
 }
 
 function renderInicio(){
@@ -233,7 +274,18 @@ function openParticipant(participantId){monitorParticipant=participantId;setRout
 
 function audit(){
   renderInicio();
-  const rows=rowsAll(),checks=[
+  const rows=rowsAll();
+  const b=bounds(analysisRef,analysisPeriod);
+  const groupRows=inBounds(SCENARIO_DATE,b)?rows:[];
+  const groupPeople=peopleMetrics(groupRows);
+  const expectedLeader=groupPeople.find(p=>p.points>0)?.name||'—';
+  const originalParticipant=analysisParticipant;
+  const firstParticipant=state.participants[0]?.id||'all';
+  analysisParticipant=firstParticipant;renderAnalytics();
+  const leaderAfterIndividualFilter=$('dashGeneralLeader')?.querySelector('strong')?.textContent||'—';
+  const rankingRowsAfterFilter=$('dashDetailedRanking')?.querySelectorAll('tbody tr').length||0;
+  analysisParticipant=originalParticipant;renderAnalytics();
+  const checks=[
     ['dashboard operacional montado',!!$('dashboardHome')],
     ['cards Hoje presentes',['dashExpected','dashDone','dashRunning','dashAttention','dashPoints'].every(id=>!!$(id))],
     ['pendencias presentes',!!$('dashPendingList')],
@@ -241,7 +293,10 @@ function audit(){
     ['resumo participantes presente',!!$('dashParticipantList')],
     ['analise gerencial montada',!!$('dashAnalysis')],
     ['filtros Dia/Semana/Mês',document.querySelectorAll('#dashPeriodTabs button').length===3],
-    ['KPIs gerenciais',document.querySelectorAll('.dash-analysis-kpi').length>=7],
+    ['visao geral separada',!!$('dashGeneralScope')&&!!$('dashGeneralLeader')&&!!$('dashPodium')&&!!$('dashDetailedRanking')],
+    ['desempenho filtravel separado',!!$('dashIndividualScope')&&!!$('dashAnalysisKpis')&&!!$('dashStatusChart')&&!!$('dashTrendChart')],
+    ['lider geral nao muda com filtro individual',leaderAfterIndividualFilter===expectedLeader],
+    ['ranking geral mantem todos com filtro individual',rankingRowsAfterFilter===state.participants.length],
     ['podio presente',!!$('dashPodium')],
     ['tres graficos presentes',['dashPointsChart','dashStatusChart','dashTrendChart'].every(id=>!!$(id)?.querySelector('svg'))],
     ['ranking detalhado presente',!!$('dashDetailedRanking')?.querySelector('table')],
