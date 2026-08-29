@@ -1,0 +1,75 @@
+name: Sprint 2 ADM SPA v3 final audit
+
+on:
+  push:
+    paths:
+      - 'sprint2-adm-preview-v3.html'
+      - 'sprint2-adm-v3.css'
+      - 'sprint2-adm-base-v3.js'
+      - 'sprint2-adm-rewards-v3.js'
+      - 'sprint2-recompensas-core-v1.js'
+      - '.github/workflows/sprint2-adm-v3-audit-final.yml'
+  workflow_dispatch:
+
+jobs:
+  final-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and single SPA
+        run: |
+          node --check sprint2-adm-base-v3.js
+          node --check sprint2-adm-rewards-v3.js
+          node --check sprint2-recompensas-core-v1.js
+          python - <<'PY'
+          from pathlib import Path
+          from html.parser import HTMLParser
+          h=Path('sprint2-adm-preview-v3.html').read_text(); css=Path('sprint2-adm-v3.css').read_text(); b=Path('sprint2-adm-base-v3.js').read_text(); r=Path('sprint2-adm-rewards-v3.js').read_text(); c=Path('sprint2-recompensas-core-v1.js').read_text()
+          low=h.lower(); assert '<iframe' not in low and '<object' not in low and '<embed' not in low
+          assert h.count('class="app"')==1 and h.count('id="mainNav"')==1 and h.count('id="mainScroll"')==1
+          for v in ['tarefas','participantes','monitor','recompensas']: assert f'id="view-{v}"' in h
+          assert 'data-route="recompensas"' in h and 'data-route="conquistas"' not in h
+          assert h.index('id="rewardsSection"') < h.index('id="conquestsSection"') < h.index('</main>')
+          assert 'Subproduto de Recompensas' in h
+          assert "ROUTES=new Set(['tarefas','participantes','monitor','recompensas'])" in b
+          assert "STORE_KEY='rotinaFamily.sprint2.clean.v3'" in b
+          assert 'app.registerModule' in r and 'localStorage' not in r and 'fetch(' not in r
+          assert 'overflow-x:hidden' in css and 'max-width:100vw' in css
+          class P(HTMLParser):
+            def __init__(self): super().__init__(); self.ids=[]
+            def handle_starttag(self,t,a): self.ids += [v for k,v in a if k=='id']
+          p=P(); p.feed(h); assert len(p.ids)==len(set(p.ids)), 'duplicate ids'
+          for x in ['validTimeRange','intervalsOverlap','findScheduleConflicts','task_schedule_blocked','participant_save','monitorRows','normalizeTargets','__SPRINT2_TEST__']: assert x in b, x
+          assert "toMinutes(startA)<toMinutes(endB)&&toMinutes(endA)>toMinutes(startB)" in b
+          assert "if(pin&&!/^\\d{4,6}$/.test(pin))" in b
+          for x in ['newRewardBtn','requestParticipant','requestStatus','requestRefDate','requestPeriod','newConquestBtn','conquestParticipant','conquestType','conquestStatus','participantPreview']: assert f'id="{x}"' in h, x
+          for x in ['Aprovado','Recusado',"r.status!=='Pendente'",'historyPreserved:true','no_justification_days','percent_points','on_time_days','tasks_100']: assert x in r+h+c, x
+          for x in ['value="unique"','value="periodic"','value="continuous"']: assert x in h, x
+          for x in ['Ciclo atual','participantVisible','pending_closed','Recompensa aguardando validação']: assert x in c, x
+          print('STRUCTURE AND CONTRACTS OK')
+          PY
+      - name: Conquistas lifecycle
+        run: |
+          node - <<'NODE'
+          const assert=require('assert'), core=require('./sprint2-recompensas-core-v1.js');
+          const base=(m,n=3)=>({active:true,cycleMode:m,repeatCount:n,target:2,runtime:{progress:0,attemptsUsed:0,rewardsValidated:0,pendingValidation:false,closed:false,lastResult:''}});
+          let c=core.finishAttempt(base('unique'),false); assert.equal(c.active,false); assert.equal(core.participantVisible(c),false);
+          c=core.addProgress(base('unique'),2); assert.equal(core.status(c).key,'pending_closed'); assert.equal(core.participantVisible(c),false); c=core.validateReward(c); assert.equal(c.active,false);
+          c=core.finishAttempt(base('periodic',3),false); c=core.addProgress(c,2); assert.equal(c.runtime.attemptsUsed,2); assert.equal(c.runtime.pendingValidation,true); c=core.validateReward(c); assert.equal(c.active,true); c=core.finishAttempt(c,false); assert.equal(c.runtime.attemptsUsed,3); assert.equal(c.active,false); assert.equal(core.participantVisible(c),false);
+          c=core.finishAttempt(base('continuous'),false); assert.equal(core.attemptLabel(c),'Ciclo atual 2 · 1 concluído(s)'); c=core.addProgress(c,2); c=core.validateReward(c); assert.equal(c.active,true); assert.equal(core.participantVisible(c),true); assert.equal(core.attemptLabel(c),'Ciclo atual 3 · 2 concluído(s)');
+          c=base('periodic',3); c.runtime.closed=true; c.active=true; assert.equal(core.participantVisible(c),false);
+          console.log('LIFECYCLE OK');
+          NODE
+      - name: Lightweight budget
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          files=['sprint2-adm-preview-v3.html','sprint2-adm-v3.css','sprint2-adm-base-v3.js','sprint2-adm-rewards-v3.js','sprint2-recompensas-core-v1.js']
+          sizes={f:Path(f).stat().st_size for f in files}; total=sum(sizes.values()); print(sizes); print('TOTAL',total)
+          assert sizes['sprint2-adm-preview-v3.html']<30000
+          assert sizes['sprint2-adm-base-v3.js']<40000
+          assert sizes['sprint2-adm-rewards-v3.js']<30000
+          assert sizes['sprint2-recompensas-core-v1.js']<10000
+          assert total<110000
+          print('LIGHTWEIGHT BUDGET OK')
+          PY
