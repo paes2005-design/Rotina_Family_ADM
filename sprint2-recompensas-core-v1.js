@@ -12,7 +12,7 @@
     if(c.cycleMode==='periodic') return Math.max(2,int(c.repeatCount,2));
     return 1;
   }
-  function participantVisible(c){return !!(c&&c.active&&!c.closed);}
+  function participantVisible(c){return !!(c&&c.active&&!(c.runtime&&c.runtime.closed));}
   function cycleLabel(c){
     if(c.cycleMode==='continuous') return 'Contínua';
     if(c.cycleMode==='periodic') return `Periódica · ${maxAttempts(c)} ciclos`;
@@ -21,7 +21,7 @@
   function attemptLabel(c){
     const used=int(c?.runtime?.attemptsUsed,0), lim=maxAttempts(c);
     if(lim===Infinity) return `Ciclo atual ${used+1} · ${used} concluído(s)`;
-    if(c.closed) return `${used}/${lim} ciclo(s) concluído(s)`;
+    if(c?.runtime?.closed) return `${used}/${lim} ciclo(s) concluído(s)`;
     return `Ciclo ${Math.min(used+1,lim)} de ${lim} · ${used} concluído(s)`;
   }
   function resetProgress(c){
