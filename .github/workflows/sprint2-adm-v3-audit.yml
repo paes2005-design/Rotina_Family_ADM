@@ -96,8 +96,9 @@ jobs:
           h=Path('sprint2-adm-preview-v3.html').read_text(); r=Path('sprint2-adm-rewards-v3.js').read_text(); c=Path('sprint2-recompensas-core-v1.js').read_text()
           for x in ['newRewardBtn','rewardFilter','requestParticipant','requestStatus','requestRefDate','requestPeriod','newConquestBtn','conquestParticipant','conquestType','conquestStatus','participantPreview']:
               assert f'id="{x}"' in h, x
-          for x in ['Aprovado','Recusado',"r.status!=='Pendente'",'historyPreserved:true','Recompensa aguardando validação','no_justification_days','percent_points','on_time_days','tasks_100','points']:
-              assert x in r+h, x
+          for x in ['Aprovado','Recusado',"r.status!=='Pendente'",'historyPreserved:true','no_justification_days','percent_points','on_time_days','tasks_100','points']:
+              assert x in r+h+c, x
+          assert 'Recompensa aguardando validação' in h+r+c
           for x in ['unique','periodic','continuous','Ciclo atual','participantVisible','pending_closed']:
               assert x in c, x
           print('REWARDS + CONQUISTAS CONTRACTS OK')
