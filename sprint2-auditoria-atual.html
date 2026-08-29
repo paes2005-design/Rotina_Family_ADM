@@ -24,21 +24,17 @@ Módulos preservados: Tarefas + Monitor, Participantes e Parte 4 continuam conge
 - Não houve alteração do ADM oficial, Cliente oficial, Firebase ou Service Worker de produção.
 
 ## Check adicional do Dashboard
-- `sprint2-inicio-v1.js` validado sem erro de sintaxe JavaScript.
-- Fórmulas reexecutadas com o estado atual do cenário de teste.
-- Resultado esperado/obtido: 9 previstas; 6 concluídas; 1 em andamento; 2 pendentes; 1 atrasada; 3 em atenção; 25/45 pontos; 67% de conclusão.
-- Resumo calculado por participante: Lara 4/5 e 15 pts; Maria 1/2 e 5 pts; Pedro 1/2 e 5 pts.
-- Os números são derivados de tarefas/execuções do estado; resgates e conquistas pendentes também são derivados dos respectivos estados.
-- Auditoria interna do módulo verifica montagem do Dashboard, cards Hoje, Pendências, cinco atalhos, Resumo por participante, vínculo dos dados ao estado e ausência de duplicação da timeline do Monitor.
+- ✅ `sprint2-inicio-v1.js` validado sem erro de sintaxe JavaScript.
+- ✅ Fórmulas reexecutadas com o estado atual do cenário de teste.
+- Resultado: 9 previstas; 6 concluídas; 1 em andamento; 2 pendentes; 1 atrasada; 3 em atenção; 25/45 pontos; 67% de conclusão.
+- Resumo: Lara 4/5 e 15 pts; Maria 1/2 e 5 pts; Pedro 1/2 e 5 pts.
+- Os números são derivados de tarefas/execuções; resgates e conquistas pendentes são derivados dos respectivos estados.
+- Auditoria interna do módulo verifica montagem, cards Hoje, Pendências, cinco atalhos, Resumo por participante, vínculo dos dados ao estado e ausência de duplicação da timeline do Monitor.
 
-## GitHub Actions / regression audit
-Run concluído com **SUCCESS** para o commit de continuidade da Parte 3.
-Etapas aprovadas:
-- Syntax and JSON.
-- Sprint 2 tarefas v9 audit.
-- Sprint 2 remote telemetry smoke test.
-- Legacy ADM regression audit (não bloqueante).
-- Historical monitor and service worker isolation.
+## GitHub Actions — leitura correta
+No commit que integrou o Dashboard (`381f60c...`), o workflow dedicado **Sprint 2 Tarefas v8 audit** concluiu com **SUCCESS**.
+Outros workflows gerais/históricos do repositório também são disparados em pushes e alguns aparecem como falha. Eles não são tratados como evidência de aprovação da Parte 3 e não substituem o gate específico da Sprint 2.
+Portanto, o estado correto é: **gate dedicado da Sprint 2 aprovado; conjunto global de workflows do repositório não está integralmente verde**.
 
 ## Auditoria anterior preservada
 A Parte 4 permanece oficialmente aprovada e congelada, com o fechamento anterior de:
@@ -55,7 +51,7 @@ Aplicar **Teoria das Restrições**: encontrar primeiro o gargalo da experiênci
 Aplicar **Scrum**: tratar a Preview V1 como incremento pequeno e testável; somente congelar depois da revisão do usuário.
 
 ## Gate atual
-A validação técnica automatizada está verde, mas a **Parte 3 ainda NÃO está aprovada**.
+A validação técnica específica está aprovada, mas a **Parte 3 ainda NÃO está aprovada**.
 Falta a validação funcional/visual do usuário em web e mobile: utilidade, hierarquia, leitura rápida e qualidade dos atalhos.
 
 ## Próximo passo
