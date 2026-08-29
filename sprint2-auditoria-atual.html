@@ -1,73 +1,73 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Auditoria Sprint 2</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f7fb;color:#20243d;margin:0;padding:24px}main{max-width:1100px;margin:auto;background:#fff;border:1px solid #e6e8f0;border-radius:18px;padding:24px}pre{white-space:pre-wrap;font:14px/1.55 Inter,system-ui,sans-serif}</style></head><body><main><pre># AUDITORIA SPRINT 2 — PARTE 3 PREVIEW V4
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Auditoria Sprint 2</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f7fb;color:#20243d;margin:0;padding:24px}main{max-width:1100px;margin:auto;background:#fff;border:1px solid #e6e8f0;border-radius:18px;padding:24px}pre{white-space:pre-wrap;font:14px/1.55 Inter,system-ui,sans-serif}</style></head><body><main><pre># AUDITORIA SPRINT 2 — PARTE 3 PREVIEW V5
 
 Data: 29/08/2026
 Estado: 🧪 EM TESTE E DISCUSSÃO
-Escopo: proximidade entre filtro individual e o conteúdo efetivamente filtrado, preservando a separação lógica geral x individual.
+Escopo: remover navegação redundante do Dashboard e manter somente ações contextuais ligadas a situações reais.
 Módulos preservados: Partes 1, 2 e 4 permanecem congeladas.
 
-## Problema de uso identificado na Preview V3
-A Preview V3 corrigiu a matemática do ranking, porém o seletor de participante continuava localizado no topo da análise. Entre o seletor e os dados que ele realmente alterava apareciam Líder, Pódio, Pontos por participante e Ranking geral, que propositalmente não recebem esse filtro.
+## Histórico preservado
+- **Preview V3:** separou classificação geral do grupo do filtro individual.
+- **Preview V4:** aproximou o filtro individual dos indicadores que ele realmente altera.
+- **Preview V5:** remove a seção permanente de Atalhos e substitui navegação duplicada por ações contextuais dentro das próprias pendências.
 
-Consequência: a interface comunicava visualmente uma relação que não existia. O usuário escolhia uma pessoa, atravessava conteúdo geral inalterado e só depois encontrava o resultado filtrado.
+## Problema identificado no Check da V4
+A seção “Atalhos” repetia destinos que já existem no menu lateral da web e na navegação do mobile: Nova tarefa, Novo participante, Monitor, Resgates pendentes e Conquistas pendentes.
 
-## Causa raiz de interface
-O controle tinha sido separado da lógica geral, mas não da hierarquia visual. O filtro individual estava fora da seção individual.
+Consequências:
+- aumentava o comprimento da tela;
+- criava uma terceira forma de navegação;
+- repetia comandos já disponíveis em componentes próprios;
+- contrariava o objetivo de manter o aplicativo enxuto e sem repetições.
 
-Princípio aplicado na V4: **o filtro deve ficar próximo daquilo que filtra**.
+## Causa raiz
+O Dashboard misturava dois conceitos diferentes:
+1. **navegação genérica**, que pertence ao menu;
+2. **ação contextual**, que só faz sentido quando existe uma situação concreta pedindo intervenção.
 
-## Correção estrutural V4
-A análise passou a seguir esta ordem:
-1. controles de contexto global: Dia/Semana/Mês + data/período;
-2. Visão Geral do Grupo;
-3. seção Desempenho Individual;
-4. seletor de integrante dentro dessa seção;
-5. Resultado Filtrado imediatamente abaixo do seletor.
+Princípio aplicado na V5: **eliminar navegação duplicada e manter a ação junto da informação que a justifica**.
 
-Os controles de período/data permanecem no topo porque afetam tanto a visão geral quanto a individual. O seletor de integrante foi removido desse topo porque não afeta a visão geral.
+## Correção estrutural V5
+A seção estática “Atalhos” foi removida do HTML do teste, não apenas ocultada.
 
-## Visão Geral do Grupo — invariável ao filtro individual
-Continua alimentada por `groupRows` + `groupPeople` e contém:
-- Líder geral;
-- Pódio / 1º, 2º e 3º;
-- gráfico de pontos por participante;
-- Ranking geral detalhado.
+A área “Pendências que exigem ação” passou a renderizar somente ocorrências acionáveis:
+- tarefa atrasada → mostra participante + tarefa e abre o Monitor já filtrado naquele participante;
+- resgate Pendente → abre Recompensas com solicitações filtradas em Pendente;
+- conquista aguardando ADM → abre Conquistas filtrando validações pendentes;
+- nenhuma situação acionável → mostra mensagem neutra, sem botão artificial.
 
-## Resultado Filtrado
-Continua alimentado por `filteredRows` depois de a classificação geral estar definida e contém:
-- Alcançado;
-- Resgatado;
-- % resgatado;
-- Pendente;
-- Pontualidade;
-- cumprimento das tarefas;
-- evolução de 7 dias.
+Itens com contagem zero não são mais renderizados como botões de navegação.
 
-## Acabamento visual/responsivo
-Foram adicionados estilos próprios para:
-- separação das seções geral e individual;
-- cabeçalhos de escopo;
-- selo “Sem filtro individual”;
-- cartão do líder geral;
-- indicação do integrante/escopo selecionado;
-- texto de ajuda junto ao seletor;
-- fundo próprio da barra de filtro individual.
+## Estrutura geral x individual preservada
+A V5 não reabre a lógica consolidada na V3/V4:
+- Líder, Pódio, Pontos por participante e Ranking continuam usando o grupo completo do período.
+- O filtro de integrante continua dentro de Desempenho Individual.
+- Alcançado, Resgatado, % resgatado, Pendente, Pontualidade, Cumprimento e Evolução continuam respondendo ao filtro individual.
 
-No mobile, as barras de contexto e filtro passam para leitura vertical. O filtro individual permanece junto dos resultados que controla, evitando deslocamento conceitual e horizontal.
+## Auditoria interna V5
+`RFInicio.audit()` contém 23 verificações. Além das verificações anteriores, valida explicitamente:
+- atalhos redundantes removidos;
+- número de ações contextuais coerente com as pendências reais do fixture;
+- ocorrências de atraso identificam o participante;
+- resgate pendente possui ação contextual;
+- conquista pendente possui ação contextual.
 
-## Auditoria interna V4
-`RFInicio.audit()` agora executa 19 verificações e acrescenta explicitamente:
-- filtro individual está contido na seção `dashIndividualScope`;
-- `dashGeneralScope` aparece antes do filtro individual;
-- líder geral não muda após aplicar filtro individual;
-- ranking geral mantém todos os participantes após aplicar filtro individual.
-Mantêm-se também verificações de montagem do Dashboard, pódio, gráficos, ranking, dados Hoje, ausência de iframe e ausência de duplicação da timeline do Monitor.
+Mantêm-se verificações de:
+- montagem operacional;
+- indicadores Hoje;
+- análise gerencial;
+- Dia/Semana/Mês;
+- separação geral x individual;
+- posição do filtro individual;
+- invariância de líder/ranking ao filtro;
+- pódio e gráficos;
+- ausência de iframe;
+- ausência de duplicação da timeline do Monitor.
 
 ## Isolamento técnico
-- JavaScript: `sprint2-inicio-v1.js`, build interno `inicio-v4`.
-- Commit estrutural V4: `ee6acc712cf77e63741b9bbff01c60640072a33e`.
-- CSS: `sprint2-inicio-v1.css`.
-- Commit visual/responsivo V4: `b6f289e1739649c96fe083e8ff71a2456e3bf90e`.
-- Integração continua em `sprint2-teste-atual.html`.
+- JavaScript: `sprint2-inicio-v1.js`, build interno `inicio-v5`.
+- Commit da lógica contextual: `625d5d783f320845dfa38a05185752b30db30ac0`.
+- HTML de teste: commit `7d5554755a1260ea7811ad7b4c387ab8aa4c449a`.
+- Cache-busting aplicado no teste: `sprint2-inicio-v1.css?v=5` e `sprint2-inicio-v1.js?v=5`.
 - Nenhuma alteração em `index.html`, `index-ADMIN-v8.html`, Cliente, Firebase ou Service Worker de produção.
 - Nenhuma alteração funcional nas Partes 1, 2 ou 4.
 
@@ -79,29 +79,29 @@ Com o fixture atual:
 A classificação geral permanece Lara / Maria / Pedro ao alternar Todos/Lara/Maria/Pedro. Somente o resultado individual muda.
 
 ## Gates automáticos
-A publicação de código da V4 dispara novamente:
-- **Rotina Family ADM regression audit**;
-- **Sprint 2 Tarefas v8 audit**;
-- **pages build and deployment**.
-Workflows históricos de manutenção também podem disparar e falhar paralelamente; eles não substituem os gates específicos acima.
+Para o commit de publicação V5 `7d5554755a1260ea7811ad7b4c387ab8aa4c449a`:
+- **Sprint 2 Tarefas v8 audit:** SUCCESS;
+- **Rotina Family ADM regression audit:** SUCCESS;
+- **pages build and deployment:** verificação final registrada após a publicação.
+Workflows históricos de manutenção podem falhar paralelamente e não substituem os gates específicos acima.
+
+## Limite desta auditoria
+Nesta rodada não foi executada uma nova automação de navegador pelo assistente. `RFInicio.audit()` está disponível no runtime do teste, mas a existência da função não deve ser confundida com uma execução independente em navegador. Os checks confirmados nesta rodada são os gates do repositório/publicação e a inspeção estrutural do código.
 
 ## Telemetria / logs
-A V4 mantém `dashboard_render`, `dashboard_analysis_render` e `dashboard_audit` em `SPRINT2-PREVIEW`, sem nome, PIN, e-mail, token ou senha nos detalhes. A mudança desta etapa é predominantemente estrutural/visual; não cria nova coleta sensível.
+A V5 mantém `dashboard_render`, `dashboard_analysis_render` e `dashboard_audit` em `SPRINT2-PREVIEW`. `dashboard_render` inclui `acoesContextuais` como contagem técnica, sem registrar nome, PIN, e-mail, token, senha ou outros dados sensíveis nos detalhes.
 
 ## Leitura PDCA
-- **Plan:** aproximar controle e resultado sem voltar a contaminar classificação geral.
-- **Do:** mover o seletor para a seção individual e reforçar a separação visual.
-- **Check técnico:** sintaxe, invariância geral x individual, gates regressivos e Pages.
-- **Check de uso:** avaliar web/mobile e confirmar que a ordem visual agora comunica corretamente o que é geral e o que é filtrado.
+- **Plan:** reduzir comprimento e repetição sem perder velocidade de resposta às pendências.
+- **Do:** remover Atalhos e inserir navegação contextual nas ocorrências reais.
+- **Check técnico:** inspeção estrutural + gates de Sprint/regressão/Pages.
+- **Check de uso:** testar web/mobile e confirmar que os cliques levam ao contexto correto e que a tela ficou mais enxuta.
 - **Act:** ajustar novamente ou aprovar/congelar a Parte 3.
 
 ## Gate atual
-A **Parte 3 continua não congelada**. A Preview V4 deve ser validada pelo usuário principalmente pela hierarquia visual: contexto → visão geral → filtro individual → resultado filtrado.
-
-## Próximo passo de teste
-Abrir o Dashboard em web e mobile e confirmar:
-1. o filtro individual aparece depois de toda a Visão Geral;
-2. os indicadores que mudam ficam imediatamente abaixo dele;
-3. líder, pódio e ranking geral não se movem ao trocar participante;
-4. a leitura no celular permanece linear e sem afastamento entre filtro e resultado.
+A **Parte 3 continua não congelada**. A Preview V5 deve ser validada principalmente em quatro pontos:
+1. a seção Atalhos não aparece mais;
+2. clicar numa ocorrência atrasada abre o Monitor no participante correto;
+3. clicar em resgate/conquista pendente abre a área correspondente já filtrada;
+4. a tela ficou mais curta e sem sensação de navegação repetida no web e no mobile.
 </pre></main></body></html>
