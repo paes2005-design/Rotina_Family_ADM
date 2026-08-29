@@ -31,7 +31,7 @@ Regra prática: **desenvolver → testar → discutir → agir**.
 # STATUS OFICIAL
 - Parte 1 — Tarefas + Monitor: ✅ APROVADA / CONGELADA
 - Parte 2 — Participantes: ✅ APROVADA / CONGELADA
-- Parte 3 — Início / Dashboard: 🧪 PREVIEW V3 EM TESTE
+- Parte 3 — Início / Dashboard: 🧪 PREVIEW V4 EM TESTE
 - Parte 4 — Recompensas + Conquistas + Histórico: ✅ APROVADA / CONGELADA
 
 # MÓDULOS CONGELADOS — RESUMO
@@ -44,67 +44,83 @@ Nome, tema e PIN de 4 a 6 dígitos; PIN nunca exibido em claro; avatar conforme 
 ## Recompensas + Conquistas + Histórico
 Recompensas livres com custo em pontos e resgates Pendente/Aprovado/Recusado. Conquistas usam regras fixas e validação ADM. Histórico reúne movimentações sem misturar regras. Layout web aprovado: Recompensas à esquerda, Conquistas à direita e Histórico abaixo; mobile em sequência vertical.
 
-# PARTE 3 — INÍCIO / DASHBOARD — PREVIEW V3
+# PARTE 3 — INÍCIO / DASHBOARD — PREVIEW V4
 ## Estrutura mantida
 O Dashboard continua híbrido:
 1. **Gestão operacional do dia:** previstas, concluídas, em andamento, atrasadas/pendentes, pontos, percentual, Pendências, Atalhos e Resumo por participante.
 2. **Análise gerencial:** período Dia/Semana/Mês, data, classificação do grupo, indicadores, gráficos e análise por integrante.
 
-## REGRA NOVA E OBRIGATÓRIA — GERAL x INDIVIDUAL
-O feedback do usuário na Preview V2 identificou que o filtro de participante estava contaminando a classificação geral: ao selecionar uma pessoa, ela passava artificialmente a aparecer como líder/1º lugar.
-
-A partir da Preview V3 existem dois recortes independentes:
+## REGRA CONSOLIDADA — GERAL x INDIVIDUAL
+A Preview V3 corrigiu a contaminação do ranking pelo filtro individual. A partir daí existem dois recortes independentes:
 
 ### A. VISÃO GERAL DO GRUPO — NÃO RECEBE FILTRO INDIVIDUAL
-Estas informações usam **todos os participantes** e só respondem ao período/data:
+Usa todos os participantes do período/data e contém:
 - Líder geral do período;
 - 1º, 2º e 3º lugares;
 - Pódio;
 - gráfico de pontos por participante;
 - ranking geral detalhado.
 
-**Regra:** selecionar Lara, Maria, Pedro ou qualquer outro participante NÃO pode mudar quem é 1º/2º/3º nem reduzir o ranking. A classificação só muda quando mudarem os dados reais ou o período/data analisado.
+**Regra:** selecionar um integrante não pode mudar 1º/2º/3º nem reduzir o ranking. A classificação muda somente por alteração dos dados reais ou do período/data.
 
-### B. DESEMPENHO FILTRÁVEL — RECEBE FILTRO INDIVIDUAL
-O seletor “Analisar integrante” altera somente:
+### B. DESEMPENHO INDIVIDUAL — RECEBE FILTRO INDIVIDUAL
+O seletor de integrante altera somente:
 - pontos alcançados;
 - pontos resgatados;
 - % resgatado;
 - pontos pendentes;
 - pontualidade;
 - cumprimento das tarefas;
-- evolução do recorte individual.
-
+- evolução do recorte escolhido.
 Quando “Todos” estiver selecionado, essa área apresenta o consolidado do grupo.
 
-## Teste lógico da regra com o fixture atual
-Com os dados atuais do cenário de teste, a classificação geral é:
+## CORREÇÃO DE CONCEITO VISUAL — PREVIEW V4
+O Check de uso da Preview V3 mostrou um problema de proximidade entre controle e resultado: o seletor de integrante ficava no topo, depois apareciam todas as informações gerais do grupo e somente mais abaixo apareciam os dados filtrados. Embora a regra matemática estivesse correta, a hierarquia visual induzia uma relação errada entre filtro e ranking.
+
+A Preview V4 aplica a seguinte hierarquia obrigatória:
+1. **Contexto da análise:** Dia/Semana/Mês + data/período, pois estes controles afetam toda a análise;
+2. **Visão geral do grupo:** líder, pódio, comparação e ranking, sem filtro individual;
+3. **Desempenho individual:** título próprio;
+4. **Filtro de integrante:** posicionado dentro da seção individual e imediatamente antes do resultado que altera;
+5. **Resultado filtrado:** KPIs pessoais/consolidados, cumprimento e evolução.
+
+Princípio de interface adotado: **o filtro deve ficar próximo daquilo que filtra**. Controle individual não deve aparecer antes de conteúdo geral que ele não altera.
+
+## Comportamento visual V4
+- A área geral e a área individual têm separação visual clara.
+- A Visão Geral mostra aviso “Sem filtro individual”.
+- A área individual informa que o seletor altera somente o conteúdo abaixo.
+- O nome/escopo selecionado aparece no cabeçalho do resultado filtrado.
+- No mobile, filtro e conteúdo individual empilham na mesma seção para manter proximidade e leitura linear.
+
+## Teste lógico com o fixture atual
+Classificação geral do cenário:
 1. Lara Vitória — 15 pts;
 2. Maria Eduarda — 5 pts;
 3. Pedro — 5 pts.
+A classificação permanece igual ao alternar o filtro individual. Somente o desempenho individual muda.
 
-A classificação acima permanece a mesma ao alternar o filtro individual entre Lara, Maria e Pedro. Somente os indicadores da área “Desempenho filtrável” mudam.
-
-## Arquitetura da V3
-- Arquivo JS legado preservado: `sprint2-inicio-v1.js`.
-- Build interno: `inicio-v3`.
-- Commit principal da correção: `7cf5ac4c93b59129c8caff6613116ff6ab1ee745`.
-- Integração continua apenas em `sprint2-teste-atual.html`.
+## Arquitetura da V4
+- JS: `sprint2-inicio-v1.js`, build interno `inicio-v4`.
+- Commit de reposicionamento lógico/estrutural: `ee6acc712cf77e63741b9bbff01c60640072a33e`.
+- CSS: `sprint2-inicio-v1.css`.
+- Commit de acabamento visual/responsivo: `b6f289e1739649c96fe083e8ff71a2456e3bf90e`.
+- Integração continua somente em `sprint2-teste-atual.html`.
 - Nenhum arquivo oficial de produção foi alterado.
 
-## Gate técnico da V3
-- Teste lógico da invariância líder/pódio/ranking: ✅.
-- Auditoria interna ganhou verificações explícitas de que líder e ranking geral não mudam com filtro individual.
-- `Rotina Family ADM regression audit`: ✅ SUCCESS.
-- `Sprint 2 Tarefas v8 audit`: ✅ SUCCESS.
-- GitHub Pages: ✅ SUCCESS.
-- Workflows históricos de manutenção podem continuar aparecendo como falha separada; não são o gate desta Sprint.
+## Auditoria interna V4
+`RFInicio.audit()` agora também verifica explicitamente:
+- filtro individual está dentro da seção de desempenho individual;
+- Visão Geral aparece antes do filtro individual;
+- líder geral permanece invariável ao filtro;
+- ranking geral continua com todos os participantes.
+Total atual da auditoria interna: 19 verificações.
 
 ## LOGS / TELEMETRIA
-Eventos da V3 continuam isolados como `SPRINT2-PREVIEW`. O evento gerencial registra somente build, período, contagens, existência de filtro individual, pontos e quantidade de pedidos; não envia nome, PIN, e-mail, token ou senha.
+Eventos continuam isolados como `SPRINT2-PREVIEW`: `dashboard_render`, `dashboard_analysis_render` e `dashboard_audit`. Não enviar nome, PIN, e-mail, token, senha ou outros dados sensíveis nos detalhes.
 
 ## PONTO EXATO DE RETOMADA
 Não mexer nas Partes 1, 2 ou 4 sem solicitação explícita.
-Ponto atual: **Parte 3 Preview V3 publicada para teste do comportamento geral x individual.**
-Próximo Check: alternar Todos/Lara/Maria/Pedro em web e mobile. O bloco **Visão geral do grupo** deve permanecer intacto; somente **Desempenho filtrável** deve mudar. Depois aplicar o Act do PDCA: ajustar ou aprovar/congelar a Parte 3.
+Ponto atual: **Parte 3 Preview V4 publicada para revisão visual e funcional.**
+Próximo Check: abrir web e mobile e validar a leitura na ordem **contexto → visão geral → filtro individual → resultado filtrado**. Confirmar também que trocar o integrante não altera líder/pódio/ranking. Depois aplicar o Act do PDCA: ajustar ou aprovar/congelar a Parte 3.
 </pre></main></body></html>
