@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rotina Family — Sprint 2 SPA v3</title>
+<link rel="stylesheet" href="sprint2-adm-v3.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><div class="logo">⌂</div><div>Rotina <span style="color:#b678ff">Family</span><small>Painel Administrador</small></div></div>
+    <div class="navlabel">Menu</div>
+    <nav class="nav" id="mainNav">
+      <button data-route="inicio"><span class="ico">⌂</span>Início</button>
+      <button data-route="tarefas"><span class="ico">📝</span>Tarefas</button>
+      <button data-route="participantes"><span class="ico">👥</span>Participantes</button>
+      <button data-route="monitor"><span class="ico">👁️</span>Monitor</button>
+      <button data-route="recompensas"><span class="ico">🎁</span>Recompensas</button>
+      <button data-route="relatorios"><span class="ico">📊</span>Relatórios</button>
+      <button data-route="master"><span class="ico">🔐</span>Master</button>
+    </nav>
+    <div class="bottom"><nav class="nav"><button style="color:#ff6978"><span class="ico">↪</span>Sair</button></nav></div>
+  </aside>
+
+  <main class="main" id="mainScroll">
+    <div class="top">
+      <div><h1>Rotina Family</h1><p>Sprint 2 • estrutura única • paridade web/mobile</p></div>
+      <div class="user"><div class="user-avatar">👤</div><span><b>Administrador</b><br><small style="color:#777d91">Grupo Família</small></span></div>
+    </div>
+
+    <section class="view" id="view-tarefas">
+      <div class="card">
+        <div class="head"><div><div class="crumb">Tarefas</div><h2>Agenda de tarefas</h2><p>Monte a rotina de um participante por vez. A ordem permanece automática pelo horário de início.</p><div class="auto-note">↕ Sem campo “Ordenar”: ao salvar, a agenda se reorganiza automaticamente.</div></div><button class="primary" id="newTaskBtn">＋ Nova tarefa</button></div>
+        <div class="agenda-bar"><div class="agenda-field"><label>Participante da agenda</label><select id="taskParticipant"></select></div><div class="agenda-info" id="agendaInfo"></div><div class="all-note" id="allNote" hidden><b>Todos os participantes:</b> uma tarefa criada aqui pertence ao coletivo e aparece uma única vez nesta visão.</div></div>
+        <div class="conflict" id="taskConflict" hidden></div>
+        <div class="toolbar"><input id="taskSearch" placeholder="Buscar tarefa"><select id="taskFilter"><option value="all">Todas</option><option value="active">Ativas</option><option value="inactive">Inativas</option></select><div class="count" id="taskCount"></div></div>
+        <div class="tablewrap"><table class="tbl"><thead><tr><th>Tarefa</th><th>Início</th><th>Término</th><th>Pontos</th><th>Tolerância</th><th>Status</th><th>Ações</th></tr></thead><tbody id="taskBody"></tbody></table></div>
+        <div class="mobile" id="taskMobile"></div>
+        <div class="notice"><b>Prévia</b> Dias, alarme e observação ficam em Detalhes no web e no mobile. Nenhuma gravação é feita no Firebase.</div>
+      </div>
+    </section>
+
+    <section class="view" id="view-participantes">
+      <div class="card">
+        <div class="head"><div><div class="crumb">Participantes</div><h2>Cadastro de participantes</h2><p>Cadastre e mantenha os integrantes do grupo sem sair do padrão visual aprovado.</p></div><button class="primary" id="newParticipantBtn">＋ Novo participante</button></div>
+        <div class="metrics"><div class="metric"><small>Participantes</small><strong id="participantTotal">0</strong></div><div class="metric"><small>Com PIN</small><strong id="participantPin">0</strong></div><div class="metric"><small>Sem PIN</small><strong id="participantNoPin">0</strong></div></div>
+        <div class="notice">Nome, tema e PIN de 4 a 6 dígitos. O avatar acompanha o tema imediatamente e o PIN nunca é exibido.</div>
+        <div class="tablewrap"><table class="tbl compact"><thead><tr><th>Participante</th><th>Tema</th><th>PIN</th><th>ID</th><th>Ações</th></tr></thead><tbody id="participantBody"></tbody></table></div>
+        <div class="mobile" id="participantMobile"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-monitor">
+      <div class="card">
+        <div class="head"><div><div class="crumb">Monitor</div><h2>Acompanhamento da rotina</h2><p>Horário sugerido, cliques reais, situação e pontos ficam separados da configuração.</p></div></div>
+        <div class="monitor-bar"><div class="agenda-field"><label>Participante no monitor</label><select id="monitorParticipant"></select></div><div class="agenda-info" id="monitorInfo"></div></div>
+        <div class="monitorgrid"><div class="metric"><small>Previstas hoje</small><strong id="mExpected">0</strong></div><div class="metric"><small>Concluídas</small><strong id="mDone">0</strong></div><div class="metric"><small>Em andamento</small><strong id="mRunning">0</strong></div><div class="metric"><small>Pendentes</small><strong id="mPending">0</strong></div><div class="timeline" id="monitorTimeline"></div></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-recompensas">
+      <div class="card" id="rewardsSection">
+        <div class="head"><div><div class="crumb">Recompensas</div><h2>🎁 Catálogo e resgates</h2><p>Recompensas normais são adquiridas com pontos. Conquistas ficam nesta mesma página, logo abaixo.</p></div><button class="primary" id="newRewardBtn">＋ Nova recompensa</button></div>
+        <div class="metrics reward-metrics"><div class="metric"><small>Ativas</small><strong id="rmActive">0</strong></div><div class="metric"><small>Desativadas</small><strong id="rmInactive">0</strong></div><div class="metric"><small>Pedidos pendentes</small><strong id="rmPending">0</strong></div><div class="metric"><small>Histórico de resgates</small><strong id="rmHistory">0</strong></div></div>
+        <div class="reward-grid">
+          <section class="reward-panel"><div class="reward-panel-head"><div><h3>Catálogo</h3><p>Editar, ativar/desativar ou excluir sem apagar o histórico.</p></div><select id="rewardFilter"><option value="all">Todas</option><option value="active">Ativas</option><option value="inactive">Desativadas</option></select></div><div id="rewardList" class="reward-list"></div></section>
+          <section class="reward-panel"><div class="reward-panel-head"><div><h3>Solicitações de resgate</h3><p>Participante, status, data e período.</p></div></div><div class="reward-filters" style="padding:10px;border-bottom:1px solid var(--line)"><select id="requestParticipant"><option value="all">Todos os participantes</option></select><select id="requestStatus"><option value="all">Todos os status</option><option value="Pendente">Pendentes</option><option value="Aprovado">Aprovados</option><option value="Recusado">Recusados</option></select><input id="requestRefDate" type="date"><select id="requestPeriod"><option value="day">Dia</option><option value="week">Semana</option><option value="month">Mês</option></select></div><div id="requestList" class="request-list"></div></section>
+        </div>
+        <div class="notice"><b>Prévia</b> Nenhuma gravação é feita no Firebase. Aprovar/recusar aparece apenas para pedidos pendentes.</div>
+      </div>
+
+      <div class="card conquest-block" id="conquestsSection">
+        <div class="head"><div><div class="crumb">Subproduto de Recompensas</div><h2>🏆 Conquistas</h2><p>Metas configuradas pelo ADM. Ao atingir, a recompensa sempre aguarda validação do ADM.</p></div><button class="primary" id="newConquestBtn">＋ Nova conquista</button></div>
+        <div class="metrics reward-metrics"><div class="metric"><small>Ativas</small><strong id="cmActive">0</strong></div><div class="metric"><small>Aguardando validação</small><strong id="cmPending">0</strong></div><div class="metric"><small>Desativadas</small><strong id="cmInactive">0</strong></div><div class="metric"><small>Visíveis participante</small><strong id="cmVisible">0</strong></div></div>
+        <div class="conquest-toolbar"><div class="reward-filters"><select id="conquestParticipant"><option value="all">Todos os participantes</option></select><select id="conquestType"><option value="all">Todos os tipos</option><option value="on_time_days">Dias no horário</option><option value="tasks_100">Tarefas com 100%</option><option value="points">Pontos atingidos</option><option value="percent_points">% dos pontos possíveis</option><option value="no_justification_days">Sem necessidade de justificativa</option></select><select id="conquestStatus"><option value="all">Todas as situações</option><option value="active">Ativas</option><option value="pending">Aguardando validação</option><option value="inactive">Desativadas</option></select></div><button class="btn" id="resetConquestDemo">↺ Reiniciar testes</button></div>
+        <div id="conquestList" class="conquest-list"></div>
+        <div class="participant-preview"><div class="participant-preview-head"><div><h3>👤 Prévia da tela do participante</h3><div class="item-desc">Conquistas sem validade deixam de aparecer aqui e permanecem desativadas no ADM.</div></div><select id="participantPreview"></select></div><div id="participantConquestList" class="preview-list"></div></div>
+        <div class="notice"><b>Recorrência</b> Única = um ciclo. Periódica = quantidade definida pelo ADM, sucesso ou falha consome um ciclo. Contínua = sem limite; exibe ciclo atual e ciclos concluídos.</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal" id="rewardModal"><div class="modal-card"><h3 id="rewardModalTitle">Nova recompensa</h3><p>Recompensa normal do catálogo.</p><div class="form-field"><label>Nome</label><input id="rewardName" maxlength="90"></div><div class="form-grid"><div class="form-field"><label>Pontos</label><input id="rewardPoints" type="number" min="1" step="1"></div><div class="form-field"><label>Situação</label><select id="rewardActive"><option value="1">Ativa</option><option value="0">Desativada</option></select></div></div><div class="modal-actions"><button class="btn" id="rewardCancel">Cancelar</button><button class="primary" id="rewardSave">Salvar recompensa</button></div></div></div>
+
+<div class="modal" id="conquestModal"><div class="modal-card"><h3 id="conquestModalTitle">Nova conquista</h3><p>Configure a meta e sua recorrência.</p><div class="form-field"><label>Nome da conquista / recompensa</label><input id="cqName" maxlength="90" placeholder="Ex: Cinema no fim de semana"></div><div class="form-grid"><div class="form-field"><label>Participante</label><select id="cqParticipant"></select><small>Todos = cada participante acompanha o próprio progresso.</small></div><div class="form-field"><label>Situação</label><select id="cqActive"><option value="1">Ativa</option><option value="0">Desativada</option></select></div></div><div class="form-field"><label>Tipo de meta</label><select id="cqType"><option value="on_time_days">Dias com todas as tarefas dentro do horário</option><option value="tasks_100">Tarefas consecutivas com 100%</option><option value="points">Pontos atingidos</option><option value="percent_points">Percentual dos pontos possíveis</option><option value="no_justification_days">Dias sem necessidade de justificativa</option></select></div><div class="form-grid"><div class="form-field"><label id="cqTargetLabel">Quantidade de dias</label><input id="cqTarget" type="number" min="1" value="5"></div><div class="form-field" id="cqCountModeField"><label>Contagem</label><select id="cqCountMode"><option value="consecutive">Consecutivos</option><option value="accumulated">Acumulados</option></select></div></div><div class="form-field hidden" id="cqPercentField"><label>Período de avaliação</label><select id="cqPercentPeriod"><option value="week">Semana</option><option value="month">Mês</option></select></div><div class="form-field hidden" id="cqDeadlineField"><label>Prazo para pontos</label><select id="cqDeadline"><option value="none">Sem prazo</option><option value="with">Com prazo</option></select></div><div class="form-grid hidden" id="cqDeadlineDetails"><div class="form-field"><label>Duração</label><input id="cqDeadlineValue" type="number" min="1" value="7"></div><div class="form-field"><label>Unidade</label><select id="cqDeadlineUnit"><option value="days">Dias</option><option value="weeks">Semanas</option><option value="months">Meses</option></select></div></div><div class="form-grid"><div class="form-field"><label>Recorrência</label><select id="cqCycleMode"><option value="unique">Única</option><option value="periodic">Periódica</option><option value="continuous">Contínua</option></select></div><div class="form-field hidden" id="cqRepeatField"><label>Quantidade de ciclos</label><input id="cqRepeatCount" type="number" min="2" value="3"><small>Sucesso ou falha consome um ciclo.</small></div></div><div class="rule-preview" id="cqRulePreview"></div><div class="hint">Atingiu a meta: recompensa aguardando validação do ADM. Sem novos ciclos válidos: sai da tela do participante e permanece desativada no ADM.</div><div class="modal-actions"><button class="btn" id="cqCancel">Cancelar</button><button class="primary" id="cqSave">Salvar conquista</button></div></div></div>
+
+<div class="modal" id="simModal"><div class="modal-card"><h3 id="simTitle">Testar conquista</h3><p id="simGoal"></p><div class="sim-state" id="simState"></div><div class="sim-actions"><button class="btn" id="simPlus">＋ Progresso</button><button class="btn" id="simFail">Encerrar ciclo sem atingir</button><button class="primary" id="simValidate">Validar recompensa</button></div><div class="hint">Simulador local para validar ciclos, encerramento, validação e visibilidade. Não grava tarefas ou pontos reais.</div><div class="modal-actions"><button class="btn" id="simClose">Fechar</button></div></div></div>
+
+<div class="toast" id="toast"></div><div class="version">Sprint 2 • clean v3</div>
+<script src="sprint2-recompensas-core-v1.js"></script>
+<script src="sprint2-adm-base-v3.js"></script>
+<script src="sprint2-adm-rewards-v3.js"></script>
+<script>window.RF_APP.init();</script>
+</body>
+</html>
