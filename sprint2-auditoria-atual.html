@@ -1,99 +1,107 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Auditoria Sprint 2</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f7fb;color:#20243d;margin:0;padding:24px}main{max-width:1100px;margin:auto;background:#fff;border:1px solid #e6e8f0;border-radius:18px;padding:24px}pre{white-space:pre-wrap;font:14px/1.55 Inter,system-ui,sans-serif}</style></head><body><main><pre># AUDITORIA SPRINT 2 — PARTE 3 PREVIEW V3
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Auditoria Sprint 2</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f7fb;color:#20243d;margin:0;padding:24px}main{max-width:1100px;margin:auto;background:#fff;border:1px solid #e6e8f0;border-radius:18px;padding:24px}pre{white-space:pre-wrap;font:14px/1.55 Inter,system-ui,sans-serif}</style></head><body><main><pre># AUDITORIA SPRINT 2 — PARTE 3 PREVIEW V4
 
 Data: 29/08/2026
 Estado: 🧪 EM TESTE E DISCUSSÃO
-Escopo: correção da separação entre **classificação geral do grupo** e **desempenho individual**.
+Escopo: proximidade entre filtro individual e o conteúdo efetivamente filtrado, preservando a separação lógica geral x individual.
 Módulos preservados: Partes 1, 2 e 4 permanecem congeladas.
 
-## Problema reproduzido na Preview V2
-Ao trocar o filtro de participante de “Todos” para uma pessoa específica, o Dashboard recalculava a coleção usada por Líder, Pódio e Ranking somente com aquela pessoa. Consequência: qualquer participante selecionado virava artificialmente o 1º colocado.
+## Problema de uso identificado na Preview V3
+A Preview V3 corrigiu a matemática do ranking, porém o seletor de participante continuava localizado no topo da análise. Entre o seletor e os dados que ele realmente alterava apareciam Líder, Pódio, Pontos por participante e Ranking geral, que propositalmente não recebem esse filtro.
 
-## Causa raiz
-A mesma coleção já filtrada por `analysisParticipant` alimentava simultaneamente:
-- KPIs individuais;
-- Líder;
-- Pódio;
-- gráfico comparativo de pontos;
-- Ranking detalhado.
-Isso misturava duas perguntas diferentes: “quem lidera o grupo?” e “como está este participante?”.
+Consequência: a interface comunicava visualmente uma relação que não existia. O usuário escolhia uma pessoa, atravessava conteúdo geral inalterado e só depois encontrava o resultado filtrado.
 
-## Correção V3
-Foram criados dois fluxos lógicos independentes:
+## Causa raiz de interface
+O controle tinha sido separado da lógica geral, mas não da hierarquia visual. O filtro individual estava fora da seção individual.
 
-### Visão geral do grupo
-`groupRows` + `groupPeople` usam sempre todos os participantes do período/data. Alimentam:
+Princípio aplicado na V4: **o filtro deve ficar próximo daquilo que filtra**.
+
+## Correção estrutural V4
+A análise passou a seguir esta ordem:
+1. controles de contexto global: Dia/Semana/Mês + data/período;
+2. Visão Geral do Grupo;
+3. seção Desempenho Individual;
+4. seletor de integrante dentro dessa seção;
+5. Resultado Filtrado imediatamente abaixo do seletor.
+
+Os controles de período/data permanecem no topo porque afetam tanto a visão geral quanto a individual. O seletor de integrante foi removido desse topo porque não afeta a visão geral.
+
+## Visão Geral do Grupo — invariável ao filtro individual
+Continua alimentada por `groupRows` + `groupPeople` e contém:
 - Líder geral;
 - Pódio / 1º, 2º e 3º;
-- Pontos por participante;
+- gráfico de pontos por participante;
 - Ranking geral detalhado.
-O filtro individual não participa desses cálculos.
 
-### Desempenho filtrável
-`filteredRows` é derivado de `groupRows` somente depois da classificação geral estar definida. Alimenta:
+## Resultado Filtrado
+Continua alimentado por `filteredRows` depois de a classificação geral estar definida e contém:
 - Alcançado;
 - Resgatado;
 - % resgatado;
 - Pendente;
 - Pontualidade;
-- gráfico de cumprimento;
+- cumprimento das tarefas;
 - evolução de 7 dias.
 
-## Teste lógico com o fixture atual
-Dados atuais:
-- Lara Vitória: 15 pts;
-- Maria Eduarda: 5 pts;
-- Pedro: 5 pts.
+## Acabamento visual/responsivo
+Foram adicionados estilos próprios para:
+- separação das seções geral e individual;
+- cabeçalhos de escopo;
+- selo “Sem filtro individual”;
+- cartão do líder geral;
+- indicação do integrante/escopo selecionado;
+- texto de ajuda junto ao seletor;
+- fundo próprio da barra de filtro individual.
 
-Resultado esperado e obtido em teste lógico:
-- filtro Todos → líder Lara Vitória; top 3 Lara Vitória / Maria Eduarda / Pedro;
-- filtro Lara → líder geral continua Lara Vitória; top 3 inalterado;
-- filtro Maria → líder geral continua Lara Vitória; top 3 inalterado;
-- filtro Pedro → líder geral continua Lara Vitória; top 3 inalterado.
-Somente o bloco de desempenho filtrável muda conforme a pessoa selecionada.
+No mobile, as barras de contexto e filtro passam para leitura vertical. O filtro individual permanece junto dos resultados que controla, evitando deslocamento conceitual e horizontal.
 
-## Auditoria interna V3
-`RFInicio.audit()` passou a testar explicitamente:
-- existência de área geral separada;
-- existência de área filtrável separada;
-- líder geral permanece igual após aplicar filtro individual;
-- ranking geral continua contendo todos os participantes após aplicar filtro individual;
-- pódio, gráficos e ranking continuam montados;
-- dados “Hoje” continuam vinculados ao estado;
-- ausência de iframe e de duplicação da timeline do Monitor.
+## Auditoria interna V4
+`RFInicio.audit()` agora executa 19 verificações e acrescenta explicitamente:
+- filtro individual está contido na seção `dashIndividualScope`;
+- `dashGeneralScope` aparece antes do filtro individual;
+- líder geral não muda após aplicar filtro individual;
+- ranking geral mantém todos os participantes após aplicar filtro individual.
+Mantêm-se também verificações de montagem do Dashboard, pódio, gráficos, ranking, dados Hoje, ausência de iframe e ausência de duplicação da timeline do Monitor.
 
 ## Isolamento técnico
-- JavaScript: `sprint2-inicio-v1.js`, build interno `inicio-v3`.
-- Commit da correção: `7cf5ac4c93b59129c8caff6613116ff6ab1ee745`.
+- JavaScript: `sprint2-inicio-v1.js`, build interno `inicio-v4`.
+- Commit estrutural V4: `ee6acc712cf77e63741b9bbff01c60640072a33e`.
+- CSS: `sprint2-inicio-v1.css`.
+- Commit visual/responsivo V4: `b6f289e1739649c96fe083e8ff71a2456e3bf90e`.
 - Integração continua em `sprint2-teste-atual.html`.
 - Nenhuma alteração em `index.html`, `index-ADMIN-v8.html`, Cliente, Firebase ou Service Worker de produção.
 - Nenhuma alteração funcional nas Partes 1, 2 ou 4.
 
-## Gates automáticos da publicação V3
-No commit `7cf5ac4...`:
-- ✅ **Rotina Family ADM regression audit** — SUCCESS.
-- ✅ **Sprint 2 Tarefas v8 audit** — SUCCESS.
-- ✅ **pages build and deployment** — SUCCESS.
+## Teste lógico preservado
+Com o fixture atual:
+- Lara Vitória: 15 pts;
+- Maria Eduarda: 5 pts;
+- Pedro: 5 pts.
+A classificação geral permanece Lara / Maria / Pedro ao alternar Todos/Lara/Maria/Pedro. Somente o resultado individual muda.
 
-Workflows históricos de manutenção do repositório continuam podendo falhar paralelamente. Eles permanecem registrados como dívida/histórico e não substituem os gates regressivo, Sprint 2 e Pages acima.
+## Gates automáticos
+A publicação de código da V4 dispara novamente:
+- **Rotina Family ADM regression audit**;
+- **Sprint 2 Tarefas v8 audit**;
+- **pages build and deployment**.
+Workflows históricos de manutenção também podem disparar e falhar paralelamente; eles não substituem os gates específicos acima.
 
 ## Telemetria / logs
-A V3 mantém os eventos `dashboard_render`, `dashboard_analysis_render` e `dashboard_audit` no ambiente `SPRINT2-PREVIEW`. O evento de análise foi ajustado para registrar apenas build, período, contagem de linhas gerais/filtradas, existência de filtro individual, pontos e quantidade de pedidos. Nenhum nome de participante é colocado nos detalhes da telemetria.
-Não foi executada nesta sessão automação de navegador real para produzir um novo lote de logs runtime; a validação visual/interativa final desta alteração será feita pelo usuário no teste publicado.
+A V4 mantém `dashboard_render`, `dashboard_analysis_render` e `dashboard_audit` em `SPRINT2-PREVIEW`, sem nome, PIN, e-mail, token ou senha nos detalhes. A mudança desta etapa é predominantemente estrutural/visual; não cria nova coleta sensível.
 
 ## Leitura PDCA
-- **Plan:** separar informação comparativa geral de informação individual.
-- **Do:** implementar `groupRows/groupPeople` e `filteredRows` independentes.
-- **Check técnico:** teste lógico + auditorias regressivas + Pages aprovados.
-- **Check de uso:** usuário deve alternar Todos/Lara/Maria/Pedro e confirmar que classificação geral não se move.
-- **Act:** após o teste de uso, ajustar eventual questão visual ou aprovar/congelar a Parte 3.
+- **Plan:** aproximar controle e resultado sem voltar a contaminar classificação geral.
+- **Do:** mover o seletor para a seção individual e reforçar a separação visual.
+- **Check técnico:** sintaxe, invariância geral x individual, gates regressivos e Pages.
+- **Check de uso:** avaliar web/mobile e confirmar que a ordem visual agora comunica corretamente o que é geral e o que é filtrado.
+- **Act:** ajustar novamente ou aprovar/congelar a Parte 3.
 
 ## Gate atual
-A correção técnica está publicada e os gates específicos passaram. A **Parte 3 continua não congelada**, aguardando validação do usuário em web e mobile.
+A **Parte 3 continua não congelada**. A Preview V4 deve ser validada pelo usuário principalmente pela hierarquia visual: contexto → visão geral → filtro individual → resultado filtrado.
 
 ## Próximo passo de teste
-No Dashboard, alternar o seletor “Analisar integrante”. Confirmar:
-1. Líder geral não muda por causa do filtro;
-2. 1º, 2º e 3º lugares não mudam por causa do filtro;
-3. ranking geral continua com todos;
-4. somente os indicadores e gráficos da área “Desempenho filtrável” mudam.
+Abrir o Dashboard em web e mobile e confirmar:
+1. o filtro individual aparece depois de toda a Visão Geral;
+2. os indicadores que mudam ficam imediatamente abaixo dele;
+3. líder, pódio e ranking geral não se movem ao trocar participante;
+4. a leitura no celular permanece linear e sem afastamento entre filtro e resultado.
 </pre></main></body></html>
