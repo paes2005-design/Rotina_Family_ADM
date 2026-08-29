@@ -1,0 +1,40 @@
+name: Sprint 2 Conquistas v2 audit
+on:
+  push:
+    paths:
+      - 'sprint2-conquistas-preview-v2.html'
+      - '.github/workflows/sprint2-conquistas-v2-audit.yml'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate conquest preview
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const h=fs.readFileSync('sprint2-conquistas-preview-v2.html','utf8');
+          const scripts=[...h.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
+          if(!scripts.length) throw new Error('script not found');
+          new Function(scripts.join('\n'));
+          const checks=[
+            ['function dayEvent','day rule simulator'],
+            ['function noTasks','no-task day ignored'],
+            ['function taskEvent','100% task simulator'],
+            ['function addPoints','points simulator'],
+            ['function deadlineExpired','deadline simulator'],
+            ['function closePeriod','percent simulator'],
+            ["restart==='auto'",'automatic restart'],
+            ["release==='auto'",'automatic release'],
+            ['sprint2.conquistas.','telemetry prefix'],
+            ['firstRenderMs','first-render timing'],
+            ['▶ Testar regra','visible test action']
+          ];
+          for(const [needle,msg] of checks){
+            if(!h.includes(needle)) throw new Error(msg+' missing');
+            console.log('OK - '+msg);
+          }
+          if(/<iframe/i.test(h)) throw new Error('iframe forbidden');
+          console.log('OK - no iframe');
+          console.log('ALL CONQUISTAS V2 CHECKS PASSED');
+          NODE
