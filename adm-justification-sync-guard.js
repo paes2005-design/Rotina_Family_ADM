@@ -1,5 +1,6 @@
-const VERSION=2;
+const VERSION=3;
 const SYNC_TIMEOUT_MS=9000;
+const SYNC_RETRY_MS=140;
 let processando=false;
 
 const log=(evento,detalhes={},nivel='info')=>{
@@ -69,42 +70,39 @@ function toast(texto){
   return el;
 }
 function esconderToast(){const el=document.getElementById('rfJustificationSyncToast');if(el)el.style.display='none';}
+const esperar=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
-function aguardarSincronizacaoServidor(motivo){
-  return new Promise(resolve=>{
-    const antes=Number(snapshot()?.ultimaSincronizacaoServidor||0);
-    let finalizado=false;
-    let timer=null;
-    const depoisValido=(depois,base)=>base>0?depois>base:depois>0;
-    const finalizar=(ok,origem)=>{
-      if(finalizado)return;
-      finalizado=true;
-      if(timer)clearTimeout(timer);
-      window.removeEventListener('rotina-adm-sync-complete',onSync);
-      resolve({ok,origem});
-    };
-    const onSync=ev=>{
-      if(ev?.detail?.servidor!==true)return;
-      const depois=Number(snapshot()?.ultimaSincronizacaoServidor||0);
-      const novaSincronizacao=depoisValido(depois,antes);
-      const falhas=Number(ev?.detail?.falhas??6);
-      finalizar(novaSincronizacao&&falhas<6,'evento-servidor');
-    };
-    window.addEventListener('rotina-adm-sync-complete',onSync);
-    timer=setTimeout(()=>finalizar(false,'timeout'),SYNC_TIMEOUT_MS);
+async function aguardarSincronizacaoServidor(motivo){
+  const antes=Number(snapshot()?.ultimaSincronizacaoServidor||0);
+  const inicio=performance.now();
+  const depoisValido=depois=>antes>0?depois>antes:depois>0;
+  let tentativas=0;
+  while(performance.now()-inicio<SYNC_TIMEOUT_MS){
+    const registrado=Number(snapshot()?.ultimaSincronizacaoServidor||0);
+    if(depoisValido(registrado))return {ok:true,origem:'sync-concorrente-concluida',tentativas};
+    if(typeof window.rotinaSincronizarAdmAgora!=='function'){
+      await esperar(SYNC_RETRY_MS);
+      continue;
+    }
+    tentativas+=1;
+    const restante=Math.max(1,SYNC_TIMEOUT_MS-(performance.now()-inicio));
+    let resultado=false;
     try{
-      if(typeof window.rotinaSincronizarAdmAgora!=='function')return;
-      Promise.resolve(window.rotinaSincronizarAdmAgora(motivo)).then(ok=>{
-        const depois=Number(snapshot()?.ultimaSincronizacaoServidor||0);
-        if(ok===true&&depoisValido(depois,antes))finalizar(true,'chamada-direta');
-      }).catch(()=>{});
+      resultado=await Promise.race([
+        Promise.resolve(window.rotinaSincronizarAdmAgora(`${motivo}-${tentativas}`)),
+        esperar(restante).then(()=>false)
+      ]);
     }catch{}
-  });
+    const depois=Number(snapshot()?.ultimaSincronizacaoServidor||0);
+    if(depoisValido(depois))return {ok:true,origem:resultado===true?'chamada-direta':'sync-concorrente-concluida',tentativas};
+    if(performance.now()-inicio<SYNC_TIMEOUT_MS)await esperar(SYNC_RETRY_MS);
+  }
+  return {ok:false,origem:'timeout',tentativas};
 }
 
 async function garantirModuloRevisao(){
   if(typeof window.abrirRevisaoJustificativa==='function')return true;
-  await import('./adm-justification-review.js?v=sync-guard-2');
+  await import('./adm-justification-review.js?v=sync-guard-3');
   return typeof window.abrirRevisaoJustificativa==='function';
 }
 
@@ -120,7 +118,7 @@ async function tratarClique(flag){
       log('justificativa.cache_miss',{motivo:necessidade.motivo,data:ctx.data||'',temId:Boolean(ctx.id)},'warning');
       toast('Atualizando a justificativa com o servidor…');
       const resultado=await aguardarSincronizacaoServidor(`justificativa-${necessidade.motivo}`);
-      log('justificativa.sync_fallback',{motivo:necessidade.motivo,ok:resultado.ok,origem:resultado.origem,tempoMs:Math.round(performance.now()-inicio)},resultado.ok?'info':'warning');
+      log('justificativa.sync_fallback',{motivo:necessidade.motivo,ok:resultado.ok,origem:resultado.origem,tentativas:resultado.tentativas,tempoMs:Math.round(performance.now()-inicio)},resultado.ok?'info':'warning');
       if(!resultado.ok&&navigator.onLine!==false)throw new Error('A atualização do servidor não foi confirmada.');
     }else{
       log('justificativa.cache_hit',{data:ctx.data||'',temId:Boolean(ctx.id)});
