@@ -1,59 +1,112 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Auditoria Sprint 2</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f7fb;color:#20243d;margin:0;padding:24px}main{max-width:1100px;margin:auto;background:#fff;border:1px solid #e6e8f0;border-radius:18px;padding:24px}pre{white-space:pre-wrap;font:14px/1.55 Inter,system-ui,sans-serif}</style></head><body><main><pre># AUDITORIA SPRINT 2 — PARTE 3 PREVIEW V1
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Auditoria Sprint 2</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f7fb;color:#20243d;margin:0;padding:24px}main{max-width:1100px;margin:auto;background:#fff;border:1px solid #e6e8f0;border-radius:18px;padding:24px}pre{white-space:pre-wrap;font:14px/1.55 Inter,system-ui,sans-serif}</style></head><body><main><pre># AUDITORIA SPRINT 2 — PARTE 3 PREVIEW V2
 
 Data: 29/08/2026
 Estado: 🧪 EM TESTE E DISCUSSÃO
-Escopo atual: **Início / Dashboard Preview V1**
+Escopo atual: **Início / Dashboard híbrido Preview V2**
 Módulos preservados: Tarefas + Monitor, Participantes e Parte 4 continuam congelados.
 
-## Implementação verificada
-- Início deixou de ser marcador e passou a funcionar como painel de comando / gestão à vista.
+## Motivo da revisão V1 → V2
+O Check do PDCA identificou que a Preview V1 simplificou além do necessário e removeu informação gerencial útil existente no Dashboard atual do aplicativo. A V2 adota o Dashboard atual como baseline e combina duas camadas:
+1. gestão operacional rápida do dia;
+2. análise gerencial com indicadores, filtros e gráficos.
+
+## Implementação verificada — camada operacional
 - Hoje: previstas, concluídas, em andamento, atrasadas/pendentes e pontos conquistados.
 - Percentual concluído com barra de progresso.
-- Pendências: ocorrências atrasadas para revisão, resgates pendentes e conquistas aguardando validação do ADM.
+- Pendências: ocorrências atrasadas, resgates pendentes e conquistas aguardando validação do ADM.
 - Atalhos: Nova tarefa, Novo participante, Monitor, Resgates pendentes e Conquistas pendentes.
 - Resumo por participante com concluídas/previstas, pontos e acesso ao Monitor filtrado.
-- Sem gráficos e sem formulário completo no Dashboard.
-- Web horizontal; mobile reorganizado em cartões.
-- Dados derivados do estado do próprio cenário de teste.
+- Sem formulário completo no Dashboard.
+
+## Implementação verificada — camada gerencial
+Recuperada e reorganizada a partir da capacidade já existente no Dashboard atual:
+- filtros Dia / Semana / Mês;
+- data de referência;
+- filtro por integrante;
+- 7 KPIs: Líder, Alcançado, Resgatado, % Resgatado, Pendente, Pontualidade e Maior sequência;
+- pódio do período;
+- gráfico SVG de pontos por participante;
+- gráfico SVG de cumprimento das tarefas;
+- gráfico SVG de evolução dos últimos 7 dias;
+- ranking detalhado: pontos, conclusão, pontualidade e atenção.
+
+## Limitação de dados do cenário isolado
+O fixture da Sprint 2 concentra execuções de tarefas em **29/08/2026**. Para não fabricar histórico:
+- evolução de 7 dias mostra zero nos dias sem execução disponível;
+- Maior sequência aparece como `—` enquanto o fixture não tiver base diária suficiente;
+- os pedidos de recompensa respeitam as datas reais presentes no estado de teste.
+Na integração oficial futura, os gráficos devem consumir o histórico real do app.
 
 ## Isolamento técnico
-- CSS exclusivo: `sprint2-inicio-v1.css`.
-- JavaScript exclusivo: `sprint2-inicio-v1.js`.
-- Integração apenas em `sprint2-teste-atual.html`.
+- JavaScript: `sprint2-inicio-v1.js`, build interno `inicio-v2`.
+- CSS: `sprint2-inicio-v1.css`.
+- Nome legado dos arquivos mantido para evitar carregadores extras/scripts sobre scripts.
+- Integração continua somente no ambiente `sprint2-teste-atual.html`.
 - Nenhum iframe.
-- Não houve alteração do ADM oficial, Cliente oficial, Firebase ou Service Worker de produção.
+- Nenhuma alteração em `index.html`, `index-ADMIN-v8.html`, Cliente, Firebase ou Service Worker de produção.
+- Nenhuma alteração funcional nas Partes 1, 2 e 4.
 
-## Check adicional do Dashboard
-- ✅ `sprint2-inicio-v1.js` validado sem erro de sintaxe JavaScript.
-- ✅ Fórmulas reexecutadas com o estado atual do cenário de teste.
-- Resultado: 9 previstas; 6 concluídas; 1 em andamento; 2 pendentes; 1 atrasada; 3 em atenção; 25/45 pontos; 67% de conclusão.
-- Resumo: Lara 4/5 e 15 pts; Maria 1/2 e 5 pts; Pedro 1/2 e 5 pts.
-- Os números são derivados de tarefas/execuções; resgates e conquistas pendentes são derivados dos respectivos estados.
-- Auditoria interna do módulo verifica montagem, cards Hoje, Pendências, cinco atalhos, Resumo por participante, vínculo dos dados ao estado e ausência de duplicação da timeline do Monitor.
+## Commits da V2
+- Lógica V2: `198e1576224fe17686215cbbf5056af7c661bf56`.
+- Estilos V2: `6a7871381148a7c7993f9aeb7ecdec8f64cf0007`.
 
-## GitHub Actions — leitura correta
-No commit que integrou o Dashboard (`381f60c...`), o workflow dedicado **Sprint 2 Tarefas v8 audit** concluiu com **SUCCESS**.
-Outros workflows gerais/históricos do repositório também são disparados em pushes e alguns aparecem como falha. Eles não são tratados como evidência de aprovação da Parte 3 e não substituem o gate específico da Sprint 2.
-Portanto, o estado correto é: **gate dedicado da Sprint 2 aprovado; conjunto global de workflows do repositório não está integralmente verde**.
+## Validação técnica
+### Sintaxe
+- ✅ `sprint2-inicio-v1.js` / Preview V2 passou em `node --check` antes da publicação.
 
-## Auditoria anterior preservada
+### Auditorias GitHub Actions no commit V2 final
+- ✅ **Rotina Family ADM regression audit** — SUCCESS, run `33275957714`.
+- ✅ **Sprint 2 Tarefas v8 audit** — SUCCESS, run `33275957757`. Este permanece o gate dedicado da Sprint 2.
+- ✅ **pages build and deployment** — SUCCESS, run `33275953455`.
+
+### Workflows gerais/históricos
+Existem workflows antigos de manutenção que também disparam a cada push e alguns encerram como `failure`. Exemplos observados nesta publicação incluem rotinas antigas de tolerância, startup e observabilidade. Eles são registrados como ruído/dívida histórica do repositório e **não substituem nem invalidam o gate específico da Sprint 2**, que passou.
+Estado correto: gates regressivo + Sprint 2 + Pages aprovados; conjunto global de workflows históricos não está integralmente verde.
+
+## Auditoria interna prevista no módulo V2
+`RFInicio.audit()` contém 14 verificações para:
+- montagem do Dashboard operacional;
+- cards Hoje;
+- Pendências;
+- pelo menos cinco Atalhos;
+- Resumo por participante;
+- montagem da análise gerencial;
+- três filtros de período;
+- sete KPIs;
+- pódio;
+- três gráficos SVG;
+- ranking detalhado;
+- vínculo dos indicadores Hoje ao estado real;
+- ausência de iframe;
+- ausência de duplicação da timeline do Monitor.
+Esta função é uma checagem interna disponível no módulo; o CI atual continua sendo o gate regressivo existente e não deve ser confundido com execução automatizada dessa função em navegador real.
+
+## Telemetria / logs
+A V2 mantém a telemetria técnica isolada já prevista na Sprint 2 e acrescenta eventos seguros:
+- `dashboard_render`;
+- `dashboard_analysis_render`;
+- `dashboard_audit`.
+Eles passam por `techLog`, portanto usam o prefixo `operacao.sprint2_test.*` e `grupoId=SPRINT2-PREVIEW`, seguindo a regra de não incluir PIN, nome, e-mail, token, senha ou outros dados sensíveis nos detalhes.
+Não foi executada nesta sessão uma automação de navegador real para gerar novo lote de telemetria da V2; a validação runtime/visual agora depende do teste do usuário no link publicado.
+
+## Auditoria anterior preservada — Parte 4
 A Parte 4 permanece oficialmente aprovada e congelada, com o fechamento anterior de:
 - 54/54 verificações estruturais.
 - 56/56 testes funcionais em navegador desktop/mobile.
-- Bundle publicado revalidado com 56/56.
+- Bundle publicado revalidado 56/56.
 - Sem erro JavaScript bloqueador.
 - 43 eventos de telemetria isolados como SPRINT2-PREVIEW e sem chaves sensíveis.
 
 ## Método de trabalho desta etapa
-Aplicar **PDCA**: implementar → testar → discutir com o usuário → agir.
-Aplicar **Toyotismo/Lean**: evitar desperdício, duplicação e complexidade; manter fluxo simples e gestão à vista.
-Aplicar **Teoria das Restrições**: encontrar primeiro o gargalo da experiência/gestão antes de otimizar detalhes secundários.
-Aplicar **Scrum**: tratar a Preview V1 como incremento pequeno e testável; somente congelar depois da revisão do usuário.
+- **PDCA:** a V1 foi o Do; o feedback do usuário foi parte do Check; a V2 é o Act que restaura valor gerencial sem abandonar a gestão rápida.
+- **Toyotismo / Lean:** eliminar desperdício não significa eliminar informação útil; os gráficos mantidos devem apoiar decisão ou identificação de anomalia.
+- **Teoria das Restrições:** o Dashboard deve ajudar a encontrar rapidamente onde está a restrição do dia/participante antes de aprofundar no Monitor/Relatórios.
+- **Scrum:** V2 é novo incremento testável; ainda não é padrão congelado.
 
 ## Gate atual
-A validação técnica específica está aprovada, mas a **Parte 3 ainda NÃO está aprovada**.
-Falta a validação funcional/visual do usuário em web e mobile: utilidade, hierarquia, leitura rápida e qualidade dos atalhos.
+A validação técnica disponível está aprovada e o Pages publicou a V2, mas a **Parte 3 ainda NÃO está aprovada nem congelada**.
+Falta o Check funcional/visual do usuário em web e mobile: hierarquia, densidade de informação, utilidade dos KPIs, leitura dos gráficos, filtros e navegação.
 
 ## Próximo passo
-Abrir o teste atual, usar o Dashboard em web e mobile, discutir o que funciona e o que incomoda e então agir pelo PDCA: corrigir a Preview V1 ou aprovar/congelar a Parte 3.
+Abrir o teste publicado em web e mobile, comparar a V2 com a necessidade gerencial real e então aplicar o próximo Act: ajustar o que gerar desperdício/confusão ou aprovar e congelar a Parte 3.
 </pre></main></body></html>
