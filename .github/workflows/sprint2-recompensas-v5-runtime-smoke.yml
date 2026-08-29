@@ -1,0 +1,59 @@
+name: Sprint 2 Recompensas v5 runtime smoke
+
+on:
+  push:
+    paths:
+      - '.github/workflows/sprint2-recompensas-v5-runtime-smoke.yml'
+  workflow_dispatch:
+
+jobs:
+  runtime-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify public GitHub Pages assets
+        run: |
+          set -euo pipefail
+          PAGE='https://paes2005-design.github.io/Rotina_Family_ADM/sprint2-recompensas-preview-v5.html'
+          CORE='https://paes2005-design.github.io/Rotina_Family_ADM/sprint2-recompensas-core-v1.js'
+          curl -fsS --retry 3 --retry-delay 2 "$PAGE" -o /tmp/page.html
+          curl -fsS --retry 3 --retry-delay 2 "$CORE" -o /tmp/core.js
+          grep -q 'id="rewardsSection"' /tmp/page.html
+          grep -q 'id="conquestsSection"' /tmp/page.html
+          grep -q 'Subproduto de Recompensas' /tmp/page.html
+          grep -q 'Ciclo atual' /tmp/core.js
+          grep -q 'runtime.closed' /tmp/core.js
+          echo "PUBLIC ASSETS OK"
+          wc -c /tmp/page.html /tmp/core.js
+
+      - name: Verify Worker telemetry and diagnostic endpoints
+        run: |
+          set -euo pipefail
+          LOG='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/app-log'
+          DIAG='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/diagnostico-tecnico'
+          MARKER="sprint2-rewards-v5-ci-${GITHUB_RUN_ID}"
+          cat >/tmp/payload.json <<JSON
+          {"evento":"operacao.sprint2_rewards_v5.audit_smoke","pagina":"sprint2-recompensas-preview-v5.html","versaoMonitor":5,"ts":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","dados":{"marker":"$MARKER","source":"github_actions"}}
+          JSON
+          POST_CODE=$(curl -sS -o /tmp/post.out -w '%{http_code}' -X POST -H 'content-type: application/json' --data-binary @/tmp/payload.json "$LOG")
+          case "$POST_CODE" in 2*) ;; *) echo "Telemetry POST failed: $POST_CODE"; cat /tmp/post.out; exit 1;; esac
+          sleep 2
+          DIAG_CODE=$(curl -sS -o /tmp/diag.out -w '%{http_code}' "$DIAG")
+          case "$DIAG_CODE" in 2*) ;; *) echo "Diagnostic GET failed: $DIAG_CODE"; exit 1;; esac
+          export MARKER POST_CODE DIAG_CODE
+          python - <<'PY'
+          import json, os, pathlib
+          text=pathlib.Path('/tmp/diag.out').read_text(errors='replace')
+          marker=os.environ['MARKER']
+          print('TELEMETRY POST HTTP', os.environ['POST_CODE'])
+          print('DIAGNOSTIC GET HTTP', os.environ['DIAG_CODE'])
+          print('DIAGNOSTIC BYTES', len(text.encode()))
+          print('SYNTHETIC EVENT VISIBLE IN DIAGNOSTIC', marker in text)
+          try:
+              obj=json.loads(text)
+              if isinstance(obj,dict):
+                  allowed={k:obj[k] for k in obj if k.lower() in {'status','estado','saudavel','healthy','ok','versao','version'}}
+                  if allowed: print('DIAGNOSTIC SUMMARY', json.dumps(allowed,ensure_ascii=False))
+          except Exception:
+              pass
+          PY
+          echo "WORKER ENDPOINTS OK"
