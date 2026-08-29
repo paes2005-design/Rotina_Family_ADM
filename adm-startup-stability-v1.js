@@ -1,6 +1,6 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import './adm-justification-sync-guard.js?v=1';
+import './adm-justification-sync-guard.js?v=2';
 
 const VERSION = 5;
 const MAX_RETRIES = 1;
