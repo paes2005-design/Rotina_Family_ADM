@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-const BUILD='inicio-v4';
+const BUILD='inicio-v5';
 const SCENARIO_DATE='2026-08-29';
 let analysisPeriod='day';
 let analysisRef=SCENARIO_DATE;
@@ -42,9 +42,14 @@ function inBounds(date,b){return date>=b.start&&date<=b.end}
 function participantName(id){return state.participants.find(p=>p.id===id)?.name||id}
 function participantRows(rows,id){return id==='all'?rows:rows.filter(r=>r.participantId===id)}
 
-function actionCard(icon,title,count,text,route,target){
-  const disabled=count===0?' is-clear':'';
-  return `<button class="dash-pending-item${disabled}" onclick="RFInicio.go('${route}','${target||''}')"><span class="dash-pending-icon">${icon}</span><span><b>${count} ${esc(title)}</b><small>${esc(text)}</small></span><span class="dash-arrow">›</span></button>`;
+function actionCard(icon,title,count,text,route,target,action){
+  return `<button class="dash-pending-item" data-action="${esc(action||route)}" onclick="RFInicio.go('${route}','${target||''}')"><span class="dash-pending-icon">${icon}</span><span><b>${count} ${esc(title)}</b><small>${esc(text)}</small></span><span class="dash-arrow">›</span></button>`;
+}
+
+function lateActionCard(row){
+  const name=participantName(row.participantId);
+  const taskName=row.task.name||row.task.title||'Tarefa';
+  return `<button class="dash-pending-item" data-action="late" data-participant="${esc(row.participantId)}" onclick="RFInicio.openParticipant('${row.participantId}')"><span class="dash-pending-icon">⚠️</span><span><b>${esc(name)} está atrasado(a)</b><small>${esc(taskName)} • Abrir Monitor já filtrado neste participante.</small></span><span class="dash-arrow">›</span></button>`;
 }
 
 function participantLine(participant,rows){
@@ -61,7 +66,7 @@ function ensureAnalysisShell(){
   host.insertAdjacentHTML('beforeend',`
     <section class="dash-analysis" id="dashAnalysis">
       <div class="dash-analysis-head">
-        <div><div class="crumb">Análise gerencial • Preview V4</div><h2>Desempenho</h2><p>Primeiro a leitura geral do grupo; depois a análise filtrada do participante.</p></div>
+        <div><div class="crumb">Análise gerencial • Preview V5</div><h2>Desempenho</h2><p>Primeiro a leitura geral do grupo; depois a análise filtrada do participante.</p></div>
         <div class="dash-period-tabs" id="dashPeriodTabs">
           <button data-period="day" class="active">Dia</button>
           <button data-period="week">Semana</button>
@@ -134,8 +139,8 @@ function ensureAnalysisShell(){
     $('dashPeriodTabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===btn));
     renderAnalytics();
   }));
-  const tag=document.querySelector('.dash-date');if(tag)tag.textContent='PREVIEW V4';
-  const version=document.querySelector('.version');if(version)version.textContent='Sprint 2 • teste completo v7 • Início v4';
+  const tag=document.querySelector('.dash-date');if(tag)tag.textContent='PREVIEW V5';
+  const version=document.querySelector('.version');if(version)version.textContent='Sprint 2 • teste completo v8 • Início v5';
 }
 
 function svgBars(items){
@@ -248,7 +253,8 @@ function renderInicio(){
   const done=rows.filter(x=>['ok','late'].includes(x.ex.status)).length;
   const running=rows.filter(x=>x.ex.status==='running').length;
   const pending=rows.filter(x=>x.ex.status==='pending').length;
-  const late=rows.filter(x=>x.ex.status==='late').length;
+  const lateRows=rows.filter(x=>x.ex.status==='late');
+  const late=lateRows.length;
   const attention=late+pending;
   const points=rows.reduce((sum,row)=>sum+pointsFrom(row).done,0);
   const possible=rows.reduce((sum,row)=>sum+pointsFrom(row).possible,0);
@@ -259,13 +265,15 @@ function renderInicio(){
   const bar=$('dashCompletionBar');if(bar)bar.style.width=Math.max(0,Math.min(100,completion))+'%';
   const headline=$('dashHeadline');if(headline)headline.textContent=`${done} de ${rows.length} tarefas concluídas`;
   const pendingBox=$('dashPendingList');
-  if(pendingBox)pendingBox.innerHTML=
-    actionCard('⚠️','ocorrência(s) para revisar',late,late?'Execuções atrasadas sinalizadas no Monitor.':'Nenhum atraso sinalizado.','monitor','')+
-    actionCard('🎁','resgate(s) pendente(s)',rewardPending,rewardPending?'Pedidos aguardando decisão do ADM.':'Nenhum resgate aguardando decisão.','recompensas','rewardsCard')+
-    actionCard('🏆','conquista(s) aguardando ADM',conquestPending,conquestPending?'Metas atingidas aguardando validação.':'Nenhuma conquista aguardando validação.','recompensas','conquestsCard');
+  if(pendingBox){
+    const actions=lateRows.map(lateActionCard);
+    if(rewardPending)actions.push(actionCard('🎁',rewardPending===1?'resgate aguardando aprovação':'resgates aguardando aprovação',rewardPending,'Abrir Recompensas já filtrando solicitações pendentes.','recompensas','rewardsCard','reward_pending'));
+    if(conquestPending)actions.push(actionCard('🏆',conquestPending===1?'conquista aguardando ADM':'conquistas aguardando ADM',conquestPending,'Abrir Conquistas já filtrando validações pendentes.','recompensas','conquestsCard','conquest_pending'));
+    pendingBox.innerHTML=actions.length?actions.join(''):'<div class="dash-note">Nenhuma pendência exige ação do administrador neste momento.</div>';
+  }
   const summary=$('dashParticipantList');if(summary)summary.innerHTML=state.participants.length?state.participants.map(p=>participantLine(p,rows)).join(''):'<div class="empty">Nenhum participante cadastrado.</div>';
   renderAnalytics();
-  techLog('dashboard_render',{build:BUILD,previstas:rows.length,concluidas:done,emAndamento:running,atencao:attention,resgatesPendentes:rewardPending,conquistasPendentes:conquestPending});
+  techLog('dashboard_render',{build:BUILD,previstas:rows.length,concluidas:done,emAndamento:running,atencao:attention,acoesContextuais:(late+Number(rewardPending>0)+Number(conquestPending>0)),resgatesPendentes:rewardPending,conquistasPendentes:conquestPending});
 }
 
 function go(routeName,targetId){
@@ -285,6 +293,10 @@ function openParticipant(participantId){monitorParticipant=participantId;setRout
 function audit(){
   renderInicio();
   const rows=rowsAll();
+  const lateRows=rows.filter(r=>r.ex.status==='late');
+  const rewardPending=state.requests.filter(x=>x.status==='Pendente').length;
+  const conquestPending=state.conquests.filter(x=>x.rt&&x.rt.pending).length;
+  const expectedActionCards=lateRows.length+Number(rewardPending>0)+Number(conquestPending>0);
   const b=bounds(analysisRef,analysisPeriod);
   const groupRows=inBounds(SCENARIO_DATE,b)?rows:[];
   const groupPeople=peopleMetrics(groupRows);
@@ -302,7 +314,11 @@ function audit(){
     ['dashboard operacional montado',!!$('dashboardHome')],
     ['cards Hoje presentes',['dashExpected','dashDone','dashRunning','dashAttention','dashPoints'].every(id=>!!$(id))],
     ['pendencias presentes',!!$('dashPendingList')],
-    ['atalhos presentes',document.querySelectorAll('.dash-shortcut').length>=5],
+    ['atalhos redundantes removidos',document.querySelectorAll('.dash-shortcut').length===0&&!Array.from(document.querySelectorAll('.dash-section h3')).some(x=>x.textContent.trim()==='Atalhos')],
+    ['acoes contextuais apenas quando necessarias',document.querySelectorAll('#dashPendingList .dash-pending-item').length===expectedActionCards],
+    ['atrasos identificam participante',lateRows.length===document.querySelectorAll('#dashPendingList [data-action="late"][data-participant]').length],
+    ['resgate pendente tem acao contextual',!rewardPending||!!document.querySelector('#dashPendingList [data-action="reward_pending"]')],
+    ['conquista pendente tem acao contextual',!conquestPending||!!document.querySelector('#dashPendingList [data-action="conquest_pending"]')],
     ['resumo participantes presente',!!$('dashParticipantList')],
     ['analise gerencial montada',!!$('dashAnalysis')],
     ['filtros Dia/Semana/Mês',document.querySelectorAll('#dashPeriodTabs button').length===3],
