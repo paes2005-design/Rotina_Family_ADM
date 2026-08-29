@@ -1,56 +1,55 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Auditoria Sprint 2</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f7fb;color:#20243d;margin:0;padding:24px}main{max-width:1100px;margin:auto;background:#fff;border:1px solid #e6e8f0;border-radius:18px;padding:24px}pre{white-space:pre-wrap;font:14px/1.55 Inter,system-ui,sans-serif}</style></head><body><main><pre># AUDITORIA SPRINT 2 — FECHAMENTO DA PARTE 4
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Auditoria Sprint 2</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f7fb;color:#20243d;margin:0;padding:24px}main{max-width:1100px;margin:auto;background:#fff;border:1px solid #e6e8f0;border-radius:18px;padding:24px}pre{white-space:pre-wrap;font:14px/1.55 Inter,system-ui,sans-serif}</style></head><body><main><pre># AUDITORIA SPRINT 2 — PARTE 3 PREVIEW V1
 
 Data: 29/08/2026
-Resultado final: ✅ APROVADA PELO USUÁRIO
-Escopo aprovado: **Recompensas + Conquistas + Histórico**
-Início/Dashboard: ainda não desenvolvido e fora deste fechamento.
+Estado: 🧪 EM TESTE E DISCUSSÃO
+Escopo atual: **Início / Dashboard Preview V1**
+Módulos preservados: Tarefas + Monitor, Participantes e Parte 4 continuam congelados.
 
-## Gate técnico anterior à aprovação
-### Estrutura/código
-- 54/54 verificações aprovadas.
-- Sem iframe.
-- Sem Firebase funcional na prévia.
-- Arquitetura modular e separada.
-- Sem `taskModal` residual.
-- Sem função `toMin` duplicada.
-- Início marcado corretamente como planejado.
+## Implementação verificada
+- Início deixou de ser marcador e passou a funcionar como painel de comando / gestão à vista.
+- Hoje: previstas, concluídas, em andamento, atrasadas/pendentes e pontos conquistados.
+- Percentual concluído com barra de progresso.
+- Pendências: ocorrências atrasadas para revisão, resgates pendentes e conquistas aguardando validação do ADM.
+- Atalhos: Nova tarefa, Novo participante, Monitor, Resgates pendentes e Conquistas pendentes.
+- Resumo por participante com concluídas/previstas, pontos e acesso ao Monitor filtrado.
+- Sem gráficos e sem formulário completo no Dashboard.
+- Web horizontal; mobile reorganizado em cartões.
+- Dados derivados do estado do próprio cenário de teste.
 
-### Navegador real
-- 56/56 testes funcionais aprovados.
-- Desktop 1440×1000 e mobile 390×844.
+## Isolamento técnico
+- CSS exclusivo: `sprint2-inicio-v1.css`.
+- JavaScript exclusivo: `sprint2-inicio-v1.js`.
+- Integração apenas em `sprint2-teste-atual.html`.
+- Nenhum iframe.
+- Não houve alteração do ADM oficial, Cliente oficial, Firebase ou Service Worker de produção.
+
+## GitHub Actions / regression audit
+Run concluído com **SUCCESS** para o commit de continuidade da Parte 3.
+Etapas aprovadas:
+- Syntax and JSON.
+- Sprint 2 tarefas v9 audit.
+- Sprint 2 remote telemetry smoke test.
+- Legacy ADM regression audit (não bloqueante).
+- Historical monitor and service worker isolation.
+
+## Auditoria anterior preservada
+A Parte 4 permanece oficialmente aprovada e congelada, com o fechamento anterior de:
+- 54/54 verificações estruturais.
+- 56/56 testes funcionais em navegador desktop/mobile.
+- Bundle publicado revalidado com 56/56.
 - Sem erro JavaScript bloqueador.
-- Tarefas: `⋯`, opcionais, dias consecutivos/alternados, edição inline e conflito de horário.
-- Participantes: renderização e validação de PIN.
-- Monitor: indicadores e filtro.
-- Recompensas: criação, filtros e solicitações.
-- Conquistas: 5 regras fixas, campos condicionais, recorrência Única/Periódica/Contínua, falha consumindo ciclo, sucesso aguardando ADM, validação e encerramento.
-- Layout web: Recompensas + Conquistas lado a lado; Histórico abaixo.
-- Layout mobile: Recompensas → Conquistas → Histórico.
+- 43 eventos de telemetria isolados como SPRINT2-PREVIEW e sem chaves sensíveis.
 
-### Bundle publicado
-Após modularizar o código publicado em HTML + CSS + JavaScript, o bundle publicado repetiu o resultado 56/56, eliminando diferença entre a versão auditada e a versão servida pelo teste.
+## Método de trabalho desta etapa
+Aplicar **PDCA**: implementar → testar → discutir com o usuário → agir.
+Aplicar **Toyotismo/Lean**: evitar desperdício, duplicação e complexidade; manter fluxo simples e gestão à vista.
+Aplicar **Teoria das Restrições**: encontrar primeiro o gargalo da experiência/gestão antes de otimizar detalhes secundários.
+Aplicar **Scrum**: tratar a Preview V1 como incremento pequeno e testável; somente congelar depois da revisão do usuário.
 
-## Telemetria da versão
-- 43 POSTs de telemetria interceptados no teste automatizado.
-- Todos com `grupoId=SPRINT2-PREVIEW`.
-- Prefixo `operacao.sprint2_test.*`.
-- Nenhuma chave sensível nos detalhes.
-
-## Logs históricos
-Foi analisado lote de 500 logs do sistema oficial anterior:
-- 496 info, 3 warning, 1 error.
-- 348 Cliente, 152 ADM.
-- 2 `rede.http_erro` status 400.
-- 1 `rede.http_lento`.
-- 1 `auth.adm_promocao_erro` 429.
-- 69 registros extras em grupos duplicados quando ignorado o ID.
-Esses eventos não pertencem à nova Sprint 2 e não foram tratados como falha deste teste.
-
-## Deliberação do usuário
-Após receber o link web real do teste auditado, o usuário respondeu **“Aprovado”**.
-
-Portanto, a Parte 4 fica oficialmente **ENCERRADA E CONGELADA** na Sprint 2.
+## Gate atual
+A validação técnica automatizada está verde, mas a **Parte 3 ainda NÃO está aprovada**.
+Falta a validação funcional/visual do usuário em web e mobile: utilidade, hierarquia, leitura rápida e qualidade dos atalhos.
 
 ## Próximo passo
-Desenvolver a **Parte 3 — Início/Dashboard**, que segue apenas planejada. Não reabrir Tarefas, Participantes, Monitor, Recompensas, Conquistas ou Histórico sem solicitação explícita.
+Abrir o teste atual, usar o Dashboard em web e mobile, discutir o que funciona e o que incomoda e então agir pelo PDCA: corrigir a Preview V1 ou aprovar/congelar a Parte 3.
 </pre></main></body></html>
