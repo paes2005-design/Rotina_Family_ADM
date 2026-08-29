@@ -1,0 +1,149 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Auditoria Sprint 2</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f7fb;color:#20243d;margin:0;padding:24px}main{max-width:1100px;margin:auto;background:#fff;border:1px solid #e6e8f0;border-radius:18px;padding:24px}pre{white-space:pre-wrap;font:14px/1.55 Inter,system-ui,sans-serif}</style></head><body><main><pre># AUDITORIA SPRINT 2 — 29/08/2026
+
+## Parecer
+A versão de teste está tecnicamente consistente para deliberação da Parte 4 (Recompensas + Conquistas + Histórico). O Início não foi incluído como módulo aprovado; permanece planejado.
+
+## Testes estáticos
+AUDITORIA ESTÁTICA SPRINT 2 — TESTE V5
+Resultado: 54/54 verificações aprovadas
+
+OK  IDs HTML sem duplicidade
+OK  Rota inicio existe
+OK  Rota tarefas existe
+OK  Rota participantes existe
+OK  Rota monitor existe
+OK  Rota recompensas existe
+OK  Rota relatorios existe
+OK  Rota master existe
+OK  Elemento benefitsLayout
+OK  Elemento rewardsCard
+OK  Elemento conquestsCard
+OK  Elemento historyCard
+OK  Elemento taskBody
+OK  Elemento participantBody
+OK  Elemento monitorTimeline
+OK  Elemento rewardList
+OK  Elemento requestList
+OK  Elemento conquestList
+OK  Elemento historyBody
+OK  Sem iframe
+OK  Sem conexão Firebase funcional
+OK  Sem bibliotecas JS externas
+OK  Arquitetura separada
+OK  Início marcado como planejado
+OK  Planejamento Início preservado
+OK  Web: 2 colunas benefícios
+OK  Histórico largura total
+OK  Mobile empilha benefícios
+OK  Cinco regras fixas
+OK  Conquista sem nome livre
+OK  Prazo pontos sem/com prazo
+OK  Percentual semana/mês
+OK  Recorrência única/periódica/contínua
+OK  Validação ADM
+OK  Encerrada some participante
+OK  Falha consome ciclo
+OK  Bloqueio sobreposição
+OK  Ordenação automática
+OK  PIN 4-6
+OK  Tarefas: três pontos abre Detalhes
+OK  Tarefas: opcionais em Detalhes
+OK  Tarefas: dias só viram intervalo se contíguos
+OK  Tarefas: dias alternados listados individualmente
+OK  Tarefas: edição inline web/mobile
+OK  Sem função toMin duplicada
+OK  Telemetria exclusiva da Sprint 2
+OK  Telemetria sem PIN/nome nos detalhes
+OK  Captura erro JS
+OK  Continuidade linkada
+OK  Regra Única: sucesso fecha e aguarda ADM
+OK  Regra Única: validação final encerra
+OK  Periódica: falha consome tentativas
+OK  Periódica: última meta aguarda ADM e fecha
+OK  Contínua: permanece válida
+
+## Testes funcionais em navegador
+AUDITORIA FUNCIONAL DE NAVEGADOR — 56/56
+Eventos de telemetria interceptados: desktop=22, mobile=21
+
+OK  Desktop: sem erro JS inicial
+OK  Desktop: Início é planejamento
+OK  Desktop: rota tarefas
+OK  Desktop: rota participantes
+OK  Desktop: rota monitor
+OK  Desktop: rota recompensas
+OK  Desktop: tabela tarefas renderizada
+OK  Desktop: botão três pontinhos
+OK  Desktop: dias consecutivos resumidos — Segunda a sexta
+OK  Desktop: dias alternados não viram intervalo — ['Segunda, quarta e sexta']
+OK  Desktop: edição web inline
+OK  Desktop: conflito de horário bloqueado
+OK  Desktop: participantes renderizados
+OK  Desktop: modal participante permitido
+OK  Desktop: PIN inválido bloqueado
+OK  Desktop: monitor com 4 indicadores
+OK  Desktop: Recompensas e Conquistas lado a lado
+OK  Desktop: Histórico abaixo largura total
+OK  Desktop: criar recompensa
+OK  Desktop: pontos mostra prazo
+OK  Desktop: prazo mostra duração/unidade
+OK  Desktop: periódica mostra ciclos
+OK  Desktop: criar conquista
+OK  Desktop: meta aguarda ADM
+OK  Desktop: validação encerra última tentativa
+OK  Desktop: selftest interno completo 15/15
+OK  Desktop: telemetria gerada — 22 eventos
+OK  Desktop: telemetria isolada
+OK  Desktop: telemetria sem chaves sensíveis
+OK  Desktop: sem erros JS ao final
+OK  Mobile: sem erro JS inicial
+OK  Mobile: Início é planejamento
+OK  Mobile: rota tarefas
+OK  Mobile: rota participantes
+OK  Mobile: rota monitor
+OK  Mobile: rota recompensas
+OK  Mobile: cartões tarefas renderizados
+OK  Mobile: detalhes mobile abrem opcionais
+OK  Mobile: edição mobile no cartão
+OK  Mobile: participantes renderizados
+OK  Mobile: modal participante permitido
+OK  Mobile: PIN inválido bloqueado
+OK  Mobile: monitor com 4 indicadores
+OK  Mobile: mobile empilha benefícios
+OK  Mobile: criar recompensa
+OK  Mobile: pontos mostra prazo
+OK  Mobile: prazo mostra duração/unidade
+OK  Mobile: periódica mostra ciclos
+OK  Mobile: criar conquista
+OK  Mobile: meta aguarda ADM
+OK  Mobile: validação encerra última tentativa
+OK  Mobile: selftest interno completo 15/15
+OK  Mobile: telemetria gerada — 21 eventos
+OK  Mobile: telemetria isolada
+OK  Mobile: telemetria sem chaves sensíveis
+OK  Mobile: sem erros JS ao final
+
+## Validação do bundle publicado
+O mesmo pacote modular publicado (HTML + CSS + 4 arquivos JavaScript) foi carregado em navegador após a separação dos arquivos e repetiu o resultado 56/56, eliminando diferença entre a versão auditada e o bundle publicado.
+
+## Análise dos logs históricos
+- Lote analisado: 500 logs do sistema oficial exportados em 27/08/2026.
+- Níveis: 496 info, 3 warning, 1 error.
+- Aplicativos: 348 Cliente, 152 ADM.
+- Erros HTTP: `/app-log` 400 e `Write/channel` 400.
+- Lentidão: `Write/channel` 200 em 1859 ms.
+- Erro ADM: `auth.adm_promocao_erro` 429.
+- Duplicidade: 69 registros extras em 37 grupos de duplicados quando ignorado o ID.
+- Maior duplicação: `startup.adm_auth_resolvido`, 11 cópias idênticas, `ms=1838757`.
+
+Esses eventos pertencem ao ADM/Cliente oficiais anteriores e não são evidência de falha na prévia Sprint 2. A nova prévia usa `SPRINT2-PREVIEW` e `operacao.sprint2_test.*`.
+
+## Telemetria desta versão
+No teste automatizado do navegador foram interceptados 43 POSTs para `/app-log` (22 desktop, 21 mobile). Todos tinham `grupoId=SPRINT2-PREVIEW`, prefixo correto e nenhuma chave sensível nos detalhes.
+
+## Limitação
+O ambiente de execução não conseguiu resolver DNS para os endpoints Cloudflare nesta auditoria. Por isso `/diagnostico-tecnico` e `/diagnostico-worker` não foram lidos ao vivo nesta rodada. A falha é de resolução de rede do ambiente de auditoria, não um resultado negativo do Worker.
+
+## Conclusão
+Não encontrei falha funcional bloqueadora no teste atual. Está apto para avaliação do usuário e deliberação de encerramento da Parte 4.
+</pre></main></body></html>
