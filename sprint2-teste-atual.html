@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Rotina Family — Sprint 2 • Teste completo</title>
 <link rel="stylesheet" href="sprint2-teste-atual.css">
-<link rel="stylesheet" href="sprint2-inicio-v1.css">
+<link rel="stylesheet" href="sprint2-inicio-v1.css?v=5">
 </head>
 <body>
 <div class="app">
@@ -35,7 +35,7 @@
         <div class="dash-hero">
           <div class="dash-hero-head">
             <div><div class="crumb">Início • Parte 3 • em teste</div><h2>Hoje</h2><p>Como está o dia, o que exige ação e para onde ir agora.</p></div>
-            <span class="dash-date">PREVIEW V1</span>
+            <span class="dash-date">PREVIEW V5</span>
           </div>
           <div class="dash-metrics">
             <div class="dash-metric"><small>Previstas</small><strong id="dashExpected">0</strong></div>
@@ -52,20 +52,9 @@
         </div>
 
         <div class="dash-grid">
-          <section class="dash-section">
-            <div class="dash-section-head"><h3>Pendências que exigem ação</h3><p>Somente sinais que merecem atenção do administrador.</p></div>
+          <section class="dash-section" style="grid-column:1/-1">
+            <div class="dash-section-head"><h3>Pendências que exigem ação</h3><p>Somente situações reais que pedem decisão ou acompanhamento. Clique na própria ocorrência para ir ao ponto certo.</p></div>
             <div class="dash-pending-list" id="dashPendingList"></div>
-          </section>
-
-          <section class="dash-section">
-            <div class="dash-section-head"><h3>Atalhos</h3><p>Ações frequentes sem transformar o Início em formulário.</p></div>
-            <div class="dash-shortcuts">
-              <button class="dash-shortcut" onclick="RFInicio.go('tarefas','newTaskBtn')"><span>＋</span>Nova tarefa<small>Abre a agenda e inicia o cadastro.</small></button>
-              <button class="dash-shortcut" onclick="RFInicio.go('participantes','newParticipantBtn')"><span>👥</span>Novo participante<small>Abre o cadastro de participante.</small></button>
-              <button class="dash-shortcut" onclick="RFInicio.go('monitor','')"><span>👁️</span>Monitor<small>Vai para o acompanhamento detalhado.</small></button>
-              <button class="dash-shortcut" onclick="RFInicio.go('recompensas','rewardsCard')"><span>🎁</span>Resgates pendentes<small>Abre Recompensas filtrando pedidos.</small></button>
-              <button class="dash-shortcut" onclick="RFInicio.go('recompensas','conquestsCard')"><span>🏆</span>Conquistas pendentes<small>Abre validações aguardando o ADM.</small></button>
-            </div>
           </section>
 
           <section class="dash-section dash-summary">
@@ -147,10 +136,10 @@
 
 <div class="modal" id="simModal"><div class="modal-card"><h3 id="simTitle">Testar conquista</h3><div class="sim-state" id="simState"></div><div class="sim-actions"><button class="btn" id="simPlus">＋ Progresso</button><button class="btn danger" id="simFail">Encerrar sem atingir</button><button class="primary" id="simValidate">Validar recompensa</button></div><div class="modal-actions"><button class="btn" data-close="simModal">Fechar</button></div></div></div>
 
-<div class="toast" id="toast"></div><div class="version">Sprint 2 • teste completo v5 • Início v1</div><div id="selfTestReport" hidden></div>
+<div class="toast" id="toast"></div><div class="version">Sprint 2 • teste completo v8 • Início v5</div><div id="selfTestReport" hidden></div>
 <script src="sprint2-teste-core.js"></script>
 <script src="sprint2-teste-participantes.js"></script>
 <script src="sprint2-teste-recompensas.js"></script>
-<script src="sprint2-inicio-v1.js"></script>
+<script src="sprint2-inicio-v1.js?v=5"></script>
 <script src="sprint2-teste-bootstrap.js"></script>
 </body></html>
