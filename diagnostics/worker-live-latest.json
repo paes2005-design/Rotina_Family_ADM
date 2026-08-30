@@ -1,0 +1,2410 @@
+{
+  "capturadoEm": "2026-08-30T00:20:08.227941+00:00",
+  "monitoramento": {
+    "http": "200",
+    "body": {
+      "service": "rotina-family-onesignal-scheduler",
+      "status": "SAUDAVEL",
+      "lastRunAt": "2026-08-30T00:19:26.000Z",
+      "lastRun": {
+        "em": "2026-08-30T00:19:26.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 1,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 1,
+        "alarmAudits": 1,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 1
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-08-30T00:19:27.797Z"
+      },
+      "recentCycles": [
+        {
+          "em": "2026-08-29T23:20:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": true,
+          "processed": 48,
+          "alarms": 47,
+          "alarmWritesSkipped": 47,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGENDADO": 38,
+            "SEM_OCORRENCIA_FUTURA": 9,
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:20:27.867Z"
+        },
+        {
+          "em": "2026-08-29T23:21:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:21:27.640Z"
+        },
+        {
+          "em": "2026-08-29T23:22:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:22:27.791Z"
+        },
+        {
+          "em": "2026-08-29T23:23:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:23:27.635Z"
+        },
+        {
+          "em": "2026-08-29T23:24:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:24:27.782Z"
+        },
+        {
+          "em": "2026-08-29T23:25:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": true,
+          "processed": 48,
+          "alarms": 47,
+          "alarmWritesSkipped": 47,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGENDADO": 38,
+            "SEM_OCORRENCIA_FUTURA": 9,
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:25:28.272Z"
+        },
+        {
+          "em": "2026-08-29T23:26:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:26:27.638Z"
+        },
+        {
+          "em": "2026-08-29T23:27:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:27:27.780Z"
+        },
+        {
+          "em": "2026-08-29T23:28:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:28:27.783Z"
+        },
+        {
+          "em": "2026-08-29T23:29:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:29:27.789Z"
+        },
+        {
+          "em": "2026-08-29T23:30:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": true,
+          "processed": 48,
+          "alarms": 47,
+          "alarmWritesSkipped": 47,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGENDADO": 38,
+            "SEM_OCORRENCIA_FUTURA": 9,
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:30:28.852Z"
+        },
+        {
+          "em": "2026-08-29T23:31:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:31:27.782Z"
+        },
+        {
+          "em": "2026-08-29T23:32:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:32:27.796Z"
+        },
+        {
+          "em": "2026-08-29T23:33:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:33:27.784Z"
+        },
+        {
+          "em": "2026-08-29T23:34:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:34:27.786Z"
+        },
+        {
+          "em": "2026-08-29T23:35:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": true,
+          "processed": 48,
+          "alarms": 47,
+          "alarmWritesSkipped": 47,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGENDADO": 38,
+            "SEM_OCORRENCIA_FUTURA": 9,
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:35:27.893Z"
+        },
+        {
+          "em": "2026-08-29T23:36:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:36:27.788Z"
+        },
+        {
+          "em": "2026-08-29T23:37:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:37:27.639Z"
+        },
+        {
+          "em": "2026-08-29T23:38:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:38:27.674Z"
+        },
+        {
+          "em": "2026-08-29T23:39:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:39:27.791Z"
+        },
+        {
+          "em": "2026-08-29T23:40:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": true,
+          "processed": 48,
+          "alarms": 47,
+          "alarmWritesSkipped": 47,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGENDADO": 38,
+            "SEM_OCORRENCIA_FUTURA": 9,
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:40:28.104Z"
+        },
+        {
+          "em": "2026-08-29T23:41:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:41:27.636Z"
+        },
+        {
+          "em": "2026-08-29T23:42:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:42:27.722Z"
+        },
+        {
+          "em": "2026-08-29T23:43:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:43:27.617Z"
+        },
+        {
+          "em": "2026-08-29T23:44:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:44:27.833Z"
+        },
+        {
+          "em": "2026-08-29T23:45:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": true,
+          "processed": 48,
+          "alarms": 47,
+          "alarmWritesSkipped": 47,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGENDADO": 38,
+            "SEM_OCORRENCIA_FUTURA": 9,
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:45:28.270Z"
+        },
+        {
+          "em": "2026-08-29T23:46:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:46:27.761Z"
+        },
+        {
+          "em": "2026-08-29T23:47:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:47:27.801Z"
+        },
+        {
+          "em": "2026-08-29T23:48:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:48:27.663Z"
+        },
+        {
+          "em": "2026-08-29T23:49:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:49:27.627Z"
+        },
+        {
+          "em": "2026-08-29T23:50:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": true,
+          "processed": 48,
+          "alarms": 47,
+          "alarmWritesSkipped": 47,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGENDADO": 38,
+            "SEM_OCORRENCIA_FUTURA": 9,
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:50:28.063Z"
+        },
+        {
+          "em": "2026-08-29T23:51:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:51:27.611Z"
+        },
+        {
+          "em": "2026-08-29T23:52:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:52:27.744Z"
+        },
+        {
+          "em": "2026-08-29T23:53:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:53:27.971Z"
+        },
+        {
+          "em": "2026-08-29T23:54:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:54:27.780Z"
+        },
+        {
+          "em": "2026-08-29T23:55:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": true,
+          "processed": 48,
+          "alarms": 47,
+          "alarmWritesSkipped": 47,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGENDADO": 38,
+            "SEM_OCORRENCIA_FUTURA": 9,
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:55:27.737Z"
+        },
+        {
+          "em": "2026-08-29T23:56:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:56:27.791Z"
+        },
+        {
+          "em": "2026-08-29T23:57:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:57:27.770Z"
+        },
+        {
+          "em": "2026-08-29T23:58:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:58:27.765Z"
+        },
+        {
+          "em": "2026-08-29T23:59:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-29T23:59:27.813Z"
+        },
+        {
+          "em": "2026-08-30T00:00:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": true,
+          "processed": 48,
+          "alarms": 47,
+          "alarmWritesSkipped": 47,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGENDADO": 38,
+            "SEM_OCORRENCIA_FUTURA": 9,
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:00:32.730Z"
+        },
+        {
+          "em": "2026-08-30T00:01:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:01:27.600Z"
+        },
+        {
+          "em": "2026-08-30T00:02:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:02:27.811Z"
+        },
+        {
+          "em": "2026-08-30T00:03:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:03:27.781Z"
+        },
+        {
+          "em": "2026-08-30T00:04:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:04:27.809Z"
+        },
+        {
+          "em": "2026-08-30T00:05:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": true,
+          "processed": 48,
+          "alarms": 47,
+          "alarmWritesSkipped": 47,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGENDADO": 38,
+            "SEM_OCORRENCIA_FUTURA": 9,
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:05:27.910Z"
+        },
+        {
+          "em": "2026-08-30T00:06:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:06:27.645Z"
+        },
+        {
+          "em": "2026-08-30T00:07:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:07:27.658Z"
+        },
+        {
+          "em": "2026-08-30T00:08:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:08:27.853Z"
+        },
+        {
+          "em": "2026-08-30T00:09:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:09:27.656Z"
+        },
+        {
+          "em": "2026-08-30T00:10:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": true,
+          "processed": 48,
+          "alarms": 47,
+          "alarmWritesSkipped": 47,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGENDADO": 38,
+            "SEM_OCORRENCIA_FUTURA": 9,
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:10:28.008Z"
+        },
+        {
+          "em": "2026-08-30T00:11:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:11:27.787Z"
+        },
+        {
+          "em": "2026-08-30T00:12:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:12:28.221Z"
+        },
+        {
+          "em": "2026-08-30T00:13:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:13:28.269Z"
+        },
+        {
+          "em": "2026-08-30T00:14:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:14:27.616Z"
+        },
+        {
+          "em": "2026-08-30T00:15:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": true,
+          "processed": 48,
+          "alarms": 47,
+          "alarmWritesSkipped": 47,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGENDADO": 38,
+            "SEM_OCORRENCIA_FUTURA": 9,
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:15:28.586Z"
+        },
+        {
+          "em": "2026-08-30T00:16:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:16:27.759Z"
+        },
+        {
+          "em": "2026-08-30T00:17:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:17:27.775Z"
+        },
+        {
+          "em": "2026-08-30T00:18:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:18:27.712Z"
+        },
+        {
+          "em": "2026-08-30T00:19:26.000Z",
+          "status": "SAUDAVEL",
+          "fullScan": false,
+          "processed": 1,
+          "alarms": 0,
+          "alarmWritesSkipped": 0,
+          "rewards": 0,
+          "audits": 1,
+          "alarmAudits": 1,
+          "rewardAudits": 0,
+          "logsDeleted": 0,
+          "logsMigrated": 0,
+          "states": {
+            "AGUARDANDO_ENVIO": 1
+          },
+          "versions": {
+            "scheduler": 1,
+            "rewardPush": 1,
+            "deliveryAudit": 1,
+            "appLogs": 3,
+            "masterAdmin": 2,
+            "technicalStore": 1
+          },
+          "storedAt": "2026-08-30T00:19:27.797Z"
+        }
+      ],
+      "healthReasons": {
+        "hard": [],
+        "attention": []
+      },
+      "baseStatus": "SAUDAVEL",
+      "diagnosticsVersion": 2,
+      "storage": "cloudflare-do",
+      "technicalStoreVersion": 1
+    }
+  },
+  "diagnosticoTecnico": {
+    "http": "200",
+    "body": {
+      "service": "rotina-family-onesignal-scheduler",
+      "diagnosticsVersion": 2,
+      "generatedAt": "2026-08-30T00:20:07.556Z",
+      "storage": "cloudflare-do",
+      "technicalStoreVersion": 1,
+      "lastLogAt": "2026-08-30T00:19:37.989Z",
+      "status": "SAUDAVEL",
+      "healthReasons": {
+        "hard": [],
+        "attention": []
+      },
+      "lastRunAt": "2026-08-30T00:19:26.000Z",
+      "lastRun": {
+        "em": "2026-08-30T00:19:26.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 1,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 1,
+        "alarmAudits": 1,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 1
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-08-30T00:19:27.797Z"
+      },
+      "summary": {
+        "technicalLogs": 43,
+        "errors": 0,
+        "warnings": 3,
+        "slowOperations": 0,
+        "http400": 0,
+        "http429": 0,
+        "ignoredClicks": 0
+      },
+      "logs": [
+        {
+          "aplicativo": "adm",
+          "evento": "startup.adm_sessao_pronta",
+          "nivel": "info",
+          "detalhes": {
+            "ms": 887,
+            "startupStabilityVersion": 5
+          },
+          "clienteEm": "2026-08-30T00:04:17.549Z",
+          "pagina": "index-ADMIN-v8.html",
+          "navegador": "Chrome",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "adm",
+          "evento": "startup.adm_tela_protegida",
+          "nivel": "warning",
+          "detalhes": {
+            "motivo": "auth-com-usuario",
+            "autenticado": true,
+            "startupStabilityVersion": 5
+          },
+          "clienteEm": "2026-08-30T00:04:17.066Z",
+          "pagina": "index-ADMIN-v8.html",
+          "navegador": "Chrome",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "adm",
+          "evento": "startup.adm_auth_resolvido",
+          "nivel": "info",
+          "detalhes": {
+            "autenticado": true,
+            "ms": 0,
+            "startupStabilityVersion": 5
+          },
+          "clienteEm": "2026-08-30T00:04:16.662Z",
+          "pagina": "index-ADMIN-v8.html",
+          "navegador": "Chrome",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "adm",
+          "evento": "startup.adm_sessao_pronta",
+          "nivel": "info",
+          "detalhes": {
+            "ms": 1694,
+            "startupStabilityVersion": 5
+          },
+          "clienteEm": "2026-08-29T23:15:34.188Z",
+          "pagina": "index-ADMIN-v8.html",
+          "navegador": "Chrome",
+          "online": true,
+          "visibilidade": "hidden",
+          "instalado": false
+        },
+        {
+          "aplicativo": "adm",
+          "evento": "startup.adm_auth_resolvido",
+          "nivel": "info",
+          "detalhes": {
+            "autenticado": true,
+            "ms": 0,
+            "startupStabilityVersion": 5
+          },
+          "clienteEm": "2026-08-29T23:15:32.494Z",
+          "pagina": "index-ADMIN-v8.html",
+          "navegador": "Chrome",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": false
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "mascote.visual_snapshot",
+          "nivel": "warning",
+          "detalhes": {
+            "monitorExtra": 3
+          },
+          "clienteEm": "2026-08-29T22:56:25.669Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 855,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.237Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 839,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.227Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 825,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.218Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 812,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.209Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 791,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.194Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 775,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.182Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 761,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.172Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 747,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.163Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 734,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.155Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 722,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.147Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 705,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.136Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 694,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.129Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 680,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.120Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 668,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.113Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 654,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.104Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 640,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.094Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.inicio",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:22.382Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 278,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.900Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 267,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.900Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 257,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.899Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 240,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.899Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 223,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.899Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 207,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.899Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 184,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.899Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 150,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.899Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 128,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.899Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 119,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.899Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 104,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.898Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 90,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.898Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 67,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.898Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 52,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.898Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 31,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.898Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 8,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.897Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.inicio",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.623Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "adm",
+          "evento": "startup.adm_sessao_pronta",
+          "nivel": "info",
+          "detalhes": {
+            "ms": 2523,
+            "startupStabilityVersion": 5
+          },
+          "clienteEm": "2026-08-29T22:55:46.001Z",
+          "pagina": "index-ADMIN-v8.html",
+          "navegador": "Chrome",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "adm",
+          "evento": "startup.adm_tela_protegida",
+          "nivel": "warning",
+          "detalhes": {
+            "motivo": "auth-com-usuario",
+            "autenticado": true,
+            "startupStabilityVersion": 5
+          },
+          "clienteEm": "2026-08-29T22:55:43.881Z",
+          "pagina": "index-ADMIN-v8.html",
+          "navegador": "Chrome",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "adm",
+          "evento": "startup.adm_auth_resolvido",
+          "nivel": "info",
+          "detalhes": {
+            "autenticado": true,
+            "ms": 0,
+            "startupStabilityVersion": 5
+          },
+          "clienteEm": "2026-08-29T22:55:43.478Z",
+          "pagina": "index-ADMIN-v8.html",
+          "navegador": "Chrome",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        }
+      ]
+    }
+  },
+  "diagnosticoWorker": {
+    "http": "200",
+    "body": {
+      "service": "rotina-family-onesignal-scheduler",
+      "diagnosticsVersion": 1,
+      "generatedAt": "2026-08-30T00:20:08.088Z",
+      "alarms": {
+        "pending": 1,
+        "withError": 0,
+        "issues": [
+          {
+            "state": "AGUARDANDO_ENVIO",
+            "kind": "OUTRO",
+            "status": 0,
+            "hint": "",
+            "count": 1
+          }
+        ]
+      },
+      "rewardAdmin": {
+        "pending": 0,
+        "withError": 0,
+        "issues": []
+      },
+      "rewardClient": {
+        "pending": 0,
+        "withError": 0,
+        "issues": []
+      }
+    }
+  },
+  "logsPrivadosSemToken": {
+    "http": "200",
+    "body": {
+      "service": "rotina-family-onesignal-scheduler",
+      "status": "ok",
+      "schedulerVersion": 1,
+      "rewardPushVersion": 1,
+      "deliveryAuditVersion": 1,
+      "masterAdminVersion": 2,
+      "secureLogsVersion": 1,
+      "monitoringUrl": "https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/monitoramento"
+    }
+  }
+}
