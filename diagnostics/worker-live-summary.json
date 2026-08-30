@@ -1,0 +1,806 @@
+{
+  "capturadoEm": "2026-08-30T00:21:14.724568+00:00",
+  "monitoramento": {
+    "http": "200",
+    "status": "SAUDAVEL",
+    "lastRunAt": "2026-08-30T00:20:26.000Z",
+    "states": {
+      "AGENDADO": 38,
+      "SEM_OCORRENCIA_FUTURA": 9,
+      "AGUARDANDO_ENVIO": 1
+    },
+    "versions": {
+      "scheduler": 1,
+      "rewardPush": 1,
+      "deliveryAudit": 1,
+      "appLogs": 3,
+      "masterAdmin": 2,
+      "technicalStore": 1
+    },
+    "healthReasons": {
+      "hard": [],
+      "attention": []
+    }
+  },
+  "diagnosticoTecnico": {
+    "http": "200",
+    "body": {
+      "service": "rotina-family-onesignal-scheduler",
+      "diagnosticsVersion": 2,
+      "generatedAt": "2026-08-30T00:21:14.109Z",
+      "storage": "cloudflare-do",
+      "technicalStoreVersion": 1,
+      "lastLogAt": "2026-08-30T00:19:37.989Z",
+      "status": "SAUDAVEL",
+      "healthReasons": {
+        "hard": [],
+        "attention": []
+      },
+      "lastRunAt": "2026-08-30T00:20:26.000Z",
+      "lastRun": {
+        "em": "2026-08-30T00:20:26.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": true,
+        "processed": 48,
+        "alarms": 47,
+        "alarmWritesSkipped": 47,
+        "rewards": 0,
+        "audits": 1,
+        "alarmAudits": 1,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGENDADO": 38,
+          "SEM_OCORRENCIA_FUTURA": 9,
+          "AGUARDANDO_ENVIO": 1
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-08-30T00:20:27.991Z"
+      },
+      "summary": {
+        "technicalLogs": 43,
+        "errors": 0,
+        "warnings": 3,
+        "slowOperations": 0,
+        "http400": 0,
+        "http429": 0,
+        "ignoredClicks": 0
+      },
+      "logs": [
+        {
+          "aplicativo": "adm",
+          "evento": "startup.adm_sessao_pronta",
+          "nivel": "info",
+          "detalhes": {
+            "ms": 887,
+            "startupStabilityVersion": 5
+          },
+          "clienteEm": "2026-08-30T00:04:17.549Z",
+          "pagina": "index-ADMIN-v8.html",
+          "navegador": "Chrome",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "adm",
+          "evento": "startup.adm_tela_protegida",
+          "nivel": "warning",
+          "detalhes": {
+            "motivo": "auth-com-usuario",
+            "autenticado": true,
+            "startupStabilityVersion": 5
+          },
+          "clienteEm": "2026-08-30T00:04:17.066Z",
+          "pagina": "index-ADMIN-v8.html",
+          "navegador": "Chrome",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "adm",
+          "evento": "startup.adm_auth_resolvido",
+          "nivel": "info",
+          "detalhes": {
+            "autenticado": true,
+            "ms": 0,
+            "startupStabilityVersion": 5
+          },
+          "clienteEm": "2026-08-30T00:04:16.662Z",
+          "pagina": "index-ADMIN-v8.html",
+          "navegador": "Chrome",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "adm",
+          "evento": "startup.adm_sessao_pronta",
+          "nivel": "info",
+          "detalhes": {
+            "ms": 1694,
+            "startupStabilityVersion": 5
+          },
+          "clienteEm": "2026-08-29T23:15:34.188Z",
+          "pagina": "index-ADMIN-v8.html",
+          "navegador": "Chrome",
+          "online": true,
+          "visibilidade": "hidden",
+          "instalado": false
+        },
+        {
+          "aplicativo": "adm",
+          "evento": "startup.adm_auth_resolvido",
+          "nivel": "info",
+          "detalhes": {
+            "autenticado": true,
+            "ms": 0,
+            "startupStabilityVersion": 5
+          },
+          "clienteEm": "2026-08-29T23:15:32.494Z",
+          "pagina": "index-ADMIN-v8.html",
+          "navegador": "Chrome",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": false
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "mascote.visual_snapshot",
+          "nivel": "warning",
+          "detalhes": {
+            "monitorExtra": 3
+          },
+          "clienteEm": "2026-08-29T22:56:25.669Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 855,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.237Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 839,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.227Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 825,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.218Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 812,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.209Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 791,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.194Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 775,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.182Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 761,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.172Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 747,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.163Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 734,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.155Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 722,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.147Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 705,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.136Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 694,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.129Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 680,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.120Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 668,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.113Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 654,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.104Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "duracaoMs": 640,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:23.094Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.inicio",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "finalizarTarefa",
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:22.382Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 278,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.900Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 267,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.900Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 257,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.899Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 240,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.899Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 223,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.899Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 207,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.899Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 184,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.899Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 150,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.899Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 128,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.899Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 119,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.899Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 104,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.898Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 90,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.898Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 67,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.898Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 52,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.898Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 31,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.898Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.sucesso",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "duracaoMs": 8,
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.897Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "participante",
+          "evento": "operacao.inicio",
+          "nivel": "info",
+          "detalhes": {
+            "operacao": "iniciarTarefa",
+            "actionGuardVersion": 1
+          },
+          "clienteEm": "2026-08-29T22:56:19.623Z",
+          "pagina": "index-CLIENTE-v6.html",
+          "navegador": "Edge",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "adm",
+          "evento": "startup.adm_sessao_pronta",
+          "nivel": "info",
+          "detalhes": {
+            "ms": 2523,
+            "startupStabilityVersion": 5
+          },
+          "clienteEm": "2026-08-29T22:55:46.001Z",
+          "pagina": "index-ADMIN-v8.html",
+          "navegador": "Chrome",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "adm",
+          "evento": "startup.adm_tela_protegida",
+          "nivel": "warning",
+          "detalhes": {
+            "motivo": "auth-com-usuario",
+            "autenticado": true,
+            "startupStabilityVersion": 5
+          },
+          "clienteEm": "2026-08-29T22:55:43.881Z",
+          "pagina": "index-ADMIN-v8.html",
+          "navegador": "Chrome",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        },
+        {
+          "aplicativo": "adm",
+          "evento": "startup.adm_auth_resolvido",
+          "nivel": "info",
+          "detalhes": {
+            "autenticado": true,
+            "ms": 0,
+            "startupStabilityVersion": 5
+          },
+          "clienteEm": "2026-08-29T22:55:43.478Z",
+          "pagina": "index-ADMIN-v8.html",
+          "navegador": "Chrome",
+          "online": true,
+          "visibilidade": "visible",
+          "instalado": true
+        }
+      ]
+    }
+  },
+  "diagnosticoWorker": {
+    "http": "200",
+    "body": {
+      "service": "rotina-family-onesignal-scheduler",
+      "diagnosticsVersion": 1,
+      "generatedAt": "2026-08-30T00:21:14.619Z",
+      "alarms": {
+        "pending": 1,
+        "withError": 0,
+        "issues": [
+          {
+            "state": "AGUARDANDO_ENVIO",
+            "kind": "OUTRO",
+            "status": 0,
+            "hint": "",
+            "count": 1
+          }
+        ]
+      },
+      "rewardAdmin": {
+        "pending": 0,
+        "withError": 0,
+        "issues": []
+      },
+      "rewardClient": {
+        "pending": 0,
+        "withError": 0,
+        "issues": []
+      }
+    }
+  },
+  "logsPrivadosSemToken": {
+    "http": "200",
+    "body": {
+      "service": "rotina-family-onesignal-scheduler",
+      "status": "ok",
+      "schedulerVersion": 1,
+      "rewardPushVersion": 1,
+      "deliveryAuditVersion": 1,
+      "masterAdminVersion": 2,
+      "secureLogsVersion": 1,
+      "monitoringUrl": "https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/monitoramento"
+    }
+  }
+}
