@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>QA Justificativas Mobile</title>
+  <link rel="stylesheet" href="../mobile-app-ui.css">
+  <style>
+    body{font-family:Segoe UI,Tahoma,sans-serif;margin:0;padding:12px;background:#f4f7f6}
+    #sistemaPrincipal{display:block}
+    #monitor{display:block!important;background:#fff;border-radius:14px;padding:12px}
+    #monitor .monitor-scroll-pro{display:block}
+    table{width:100%;border-collapse:collapse}td{padding:8px;border:1px solid #ddd}
+    .badge{display:inline-block;padding:4px 7px;border-radius:999px;background:#ffedd5;color:#9a3412}
+    #qaStatus{position:fixed;left:8px;top:8px;z-index:99999;background:#111;color:#fff;padding:5px 8px;border-radius:6px;font:12px monospace}
+  </style>
+</head>
+<body>
+<div id="qaStatus">QA_BOOT</div>
+<div id="telaAcesso" style="display:none"></div>
+<div id="sistemaPrincipal">
+  <span id="displayCodigoCliente">CLI-QA</span>
+  <input id="filtroData" value="2026-08-30" type="date">
+  <section id="monitor" class="tab-content active">
+    <div class="monitor-scroll-pro">
+      <table>
+        <tbody id="tbodyMonitor">
+          <tr data-history-source="historico" data-history-date="2026-08-30" data-family-task-id="task-qa-1" data-family-task-name="Arrumar o quarto" data-family-task-day="Domingo" data-family-task-time="18:00" data-family-task-end="18:30" data-family-profile-id="perfil-qa-1" data-family-profile-name="Teste Mobile">
+            <td><strong>18:00 - 18:30</strong><div>Real: 18:06:00 até 18:35:00 | Tol: 5:00 | Consumido: 5:00 <button type="button" class="mon-just-flag" data-task-id="task-qa-1" data-history-id="hist-qa-1" data-profile-id="perfil-qa-1" data-task-name="Arrumar o quarto" data-user="Teste Mobile" data-day="Domingo" data-schedule="18:00 - 18:30" data-justification="O ônibus atrasou." data-date="2026-08-30">🚩 texto</button></div></td>
+            <td><strong>Arrumar o quarto</strong></td>
+            <td>Teste Mobile</td>
+            <td>Domingo</td>
+            <td><span class="badge">75% atraso leve</span></td>
+            <td>7 / 10 pts</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+<script type="module">
+  import {initializeApp,getApps} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  if(!getApps().length) initializeApp({apiKey:'qa',projectId:'rotina-family-qa',appId:'1:1:web:qa'});
+  window.__qaLogs=[];
+  window.rotinaLog=(evento,detalhes={},nivel='info')=>window.__qaLogs.push({evento,detalhes,nivel});
+  window.rotinaAdmCacheSnapshot=()=>({
+    grupoId:'CLI-QA',
+    tarefas:[{id:'task-qa-1',grupoId:'CLI-QA',perfilId:'perfil-qa-1',perfilNome:'Teste Mobile',nome:'Arrumar o quarto',diaSemana:'Domingo',horaSugeridaInicio:'18:00',horaSugeridaFim:'18:30',pontosMaximos:10}],
+    historico:[{id:'hist-qa-1',grupoId:'CLI-QA',tarefaId:'task-qa-1',perfilId:'perfil-qa-1',perfilNome:'Teste Mobile',nomeTarefa:'Arrumar o quarto',diaSemana:'Domingo',dataExecucao:'2026-08-30',horaSugeridaInicio:'18:00',horaSugeridaFim:'18:30',status:'75% atraso leve',pontosMaximos:10,pontosGanhos:7,percentualAplicado:75,justificativaAtraso:'O ônibus atrasou.'}],
+    recompensas:[],resgates:[]
+  });
+  await import('../mobile-app-ui.js?qa=20260830.7');
+  document.getElementById('qaStatus').textContent='QA_READY';
+  window.__qaReady=true;
+</script>
+</body>
+</html>
