@@ -4,8 +4,9 @@ import './runtime-build-info.js?v=20260830.7';
 import './adm-justification-review.js?v=9';
 import './adm-monitor-history-fix.js?v=4';
 import './mobile-app-ui.js';
+import './adm-justification-live-resolver.js?v=1';
 
-const VERSION = 8;
+const VERSION = 9;
 const MAX_RETRIES = 1;
 let flowStartedAt = performance.now();
 const flowElapsed = () => Math.max(0, Math.round(performance.now() - flowStartedAt));
