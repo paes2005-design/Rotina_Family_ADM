@@ -1,4 +1,4 @@
-name: Corrigir correspondencia de data da justificativa
+name: Corrigir travamento e captura da justificativa
 on:
   push:
     paths:
@@ -12,44 +12,106 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Alinhar Monitor e Justificativas ao mesmo historico
+      - name: Corrigir guardiao e captura do clique
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
 
-          p=Path('adm-justification-review.js')
+          def replace_once(text, old, new, label):
+              if new in text:
+                  return text
+              if old not in text:
+                  raise SystemExit(f'{label}: trecho esperado nao encontrado')
+              return text.replace(old, new, 1)
+
+          # 1) Depois de sessao_pronta, o guardiao nao pode mais cobrir o painel.
+          p=Path('adm-startup-stability-v1.js')
           s=p.read_text()
-          old="const candidatos=historico.filter(h=>String(h.tarefaId||'')===String(t.id||'')&&String(h.data||'')===data&&(!t.perfilId||!h.perfilId||String(h.perfilId)===String(t.perfilId)));"
-          new="const candidatos=historico.filter(h=>String(h.tarefaId||'')===String(t.id||'')&&String(h.data||h.dataExecucao||'')===data&&(!t.perfilId||!h.perfilId||String(h.perfilId)===String(t.perfilId)));"
-          if old not in s: raise SystemExit('Filtro de data esperado nao encontrado')
-          s=s.replace(old,new,1)
-          old_try="  try{\n    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(data))throw new Error('Selecione a data da ocorrência no Monitor antes de revisar.');"
-          new_try="  try{\n    window.rotinaLog?.('justificativa.abertura_inicio',{data,temId:Boolean(ctx.id)},'info');\n    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(data))throw new Error('Selecione a data da ocorrência no Monitor antes de revisar.');"
-          if old_try not in s: raise SystemExit('Inicio de abertura esperado nao encontrado')
-          s=s.replace(old_try,new_try,1)
-          old_catch="  }catch(e){console.error('Revisão de justificativa:',e);msg.textContent=e.message||'Não foi possível carregar a justificativa.';}"
-          new_catch="  }catch(e){console.error('Revisão de justificativa:',e);window.rotinaLog?.('justificativa.abertura_erro',{data,temId:Boolean(ctx.id),mensagem:String(e?.message||e).slice(0,140)},'error');msg.textContent=e.message||'Não foi possível carregar a justificativa.';}"
-          if old_catch not in s: raise SystemExit('Catch de abertura esperado nao encontrado')
-          s=s.replace(old_catch,new_catch,1)
+          s=replace_once(s, 'const VERSION = 6;', 'const VERSION = 7;', 'versao startup')
+          s=replace_once(
+              s,
+              "import './adm-justification-review.js?v=7';",
+              "import './adm-justification-review.js?v=8';",
+              'versao justificativa importada'
+          )
+          s=replace_once(
+              s,
+              "function show(text = 'Carregando painel...') {\n  const el = shield();",
+              "function show(text = 'Carregando painel...') {\n  if(sessionReady && authenticated){hide();return;}\n  const el = shield();",
+              'bloqueio do shield apos sessao pronta'
+          )
+          old_guard="""  const accessVisible = visible(access);\n  const mainVisible = visible(main);\n\n  if (accessVisible || mainVisible) {"""
+          new_guard="""  const accessVisible = visible(access);\n  const mainVisible = visible(main);\n\n  if (sessionReady && authenticated) {\n    if (!mainVisible && main) {\n      main.style.display = 'block';\n      if (access) access.style.display = 'none';\n      log('startup.adm_painel_restaurado_pos_sessao', { motivo: reason }, 'warning');\n    }\n    blankSince = 0;\n    hide();\n    return;\n  }\n\n  if (accessVisible || mainVisible) {"""
+          s=replace_once(s, old_guard, new_guard, 'restauracao do painel apos sessao pronta')
           p.write_text(s)
 
-          p=Path('adm-startup-stability-v1.js'); s=p.read_text(); s=s.replace("./adm-justification-review.js?v=6","./adm-justification-review.js?v=7"); p.write_text(s)
-          p=Path('sw.js'); s=p.read_text(); s=s.replace("rotina-family-adm-v71","rotina-family-adm-v72").replace("ROTINA_SW_VERSION='71'","ROTINA_SW_VERSION='72'").replace("20260830.1","20260830.2").replace("adm-justification-review.js?v=6","adm-justification-review.js?v=7"); p.write_text(s)
-          p=Path('runtime-build-info.js'); s=p.read_text(); s=s.replace("20260830.1","20260830.2").replace("expectedServiceWorkerVersion:'71'","expectedServiceWorkerVersion:'72'"); p.write_text(s)
-          p=Path('index.html'); s=p.read_text(); s=s.replace("20260830.1","20260830.2"); p.write_text(s)
+          # 2) Capturar a bandeira antes de listeners antigos poderem interromper o clique.
+          p=Path('adm-justification-review.js')
+          s=p.read_text()
+          s=replace_once(
+              s,
+              "if(mobile){e.preventDefault();const r=mobile.closest('tr');",
+              "if(mobile){window.rotinaLog?.('justificativa.clique_capturado',{origem:'mobile'},'info');e.preventDefault();const r=mobile.closest('tr');",
+              'telemetria clique mobile'
+          )
+          s=replace_once(
+              s,
+              "  if(flag){\n    e.preventDefault();",
+              "  if(flag){\n    window.rotinaLog?.('justificativa.clique_capturado',{origem:'desktop'},'info');\n    e.preventDefault();",
+              'telemetria clique desktop'
+          )
+          marker="document.addEventListener('click',e=>{"
+          pos=s.rfind(marker)
+          if pos < 0:
+              raise SystemExit('listener da justificativa nao encontrado')
+          tail=s[pos:].rstrip()
+          if tail.endswith('});'):
+              end=s.rfind('\n});')
+              if end < pos:
+                  raise SystemExit('fim do listener da justificativa nao encontrado')
+              s=s[:end]+'\n},true);'+s[end+4:]
+          elif not tail.endswith('},true);'):
+              raise SystemExit('formato inesperado do listener da justificativa')
+          p.write_text(s)
+
+          # 3) Forcar atualizacao do PWA e deixar a versao auditavel.
+          p=Path('index-ADMIN-v8.html')
+          s=p.read_text()
+          s=replace_once(s, './adm-startup-stability-v1.js?v=5', './adm-startup-stability-v1.js?v=6', 'versao startup no html')
+          p.write_text(s)
+
+          p=Path('sw.js')
+          s=p.read_text()
+          s=s.replace("rotina-family-adm-v72","rotina-family-adm-v73")
+          s=s.replace("ROTINA_SW_VERSION='72'","ROTINA_SW_VERSION='73'")
+          s=s.replace('20260830.2','20260830.3')
+          s=s.replace('adm-justification-review.js?v=7','adm-justification-review.js?v=8')
+          p.write_text(s)
+
+          p=Path('runtime-build-info.js')
+          s=p.read_text().replace('20260830.2','20260830.3').replace("expectedServiceWorkerVersion:'72'","expectedServiceWorkerVersion:'73'")
+          p.write_text(s)
+
+          p=Path('index.html')
+          s=p.read_text().replace('20260830.2','20260830.3')
+          p.write_text(s)
           PY
-          node --check adm-justification-review.js
           node --check adm-startup-stability-v1.js
+          node --check adm-justification-review.js
           node --check sw.js
-          grep -F "h.data||h.dataExecucao" adm-justification-review.js
-          grep -F "justificativa.abertura_inicio" adm-justification-review.js
-          grep -F "rotina-family-adm-v72" sw.js
+          grep -F "const VERSION = 7" adm-startup-stability-v1.js
+          grep -F "sessionReady && authenticated" adm-startup-stability-v1.js
+          grep -F "justificativa.clique_capturado" adm-justification-review.js
+          grep -F "},true);" adm-justification-review.js
+          grep -F "rotina-family-adm-v73" sw.js
+          grep -F "20260830.3" runtime-build-info.js
       - name: Publicar correção
         shell: bash
         run: |
           git config user.name 'rotina-family-fix-bot'
           git config user.email 'actions@users.noreply.github.com'
-          git add adm-justification-review.js adm-startup-stability-v1.js sw.js runtime-build-info.js index.html
-          git commit -m 'Alinhar data do historico entre Monitor e Justificativas'
+          git add adm-startup-stability-v1.js adm-justification-review.js index-ADMIN-v8.html sw.js runtime-build-info.js index.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Impedir retravamento do ADM e capturar clique da justificativa'
           git push
