@@ -1,7 +1,10 @@
-const VERSION=3;
-const SYNC_TIMEOUT_MS=9000;
-const SYNC_RETRY_MS=140;
+import {getApps,getApp} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import {getFirestore,doc,collection,query,where,getDocFromServer,getDocsFromServer} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+const VERSION=4;
+const DIRECT_TIMEOUT_MS=5500;
 let processando=false;
+let toastTimer=null;
 
 const log=(evento,detalhes={},nivel='info')=>{
   try{window.rotinaLog?.(evento,{...detalhes,justificationSyncGuardVersion:VERSION},nivel);}catch{}
@@ -10,24 +13,22 @@ const log=(evento,detalhes={},nivel='info')=>{
 function snapshot(){
   try{return typeof window.rotinaAdmCacheSnapshot==='function'?window.rotinaAdmCacheSnapshot():null;}catch{return null;}
 }
-
-function dataSelecionada(){
-  return document.getElementById('filtroData')?.value||document.getElementById('monitorData')?.value||'';
-}
+function grupoAtual(){return String(document.getElementById('displayCodigoCliente')?.textContent||'').trim();}
+function dataSelecionada(){return document.getElementById('filtroData')?.value||document.getElementById('monitorData')?.value||'';}
+function norm(v=''){return String(v||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
 
 function contextoDoClique(flag){
   const row=flag.closest?.('tr');
   const c=row?.children||[];
   const inicio=row?.dataset?.familyTaskTime||'';
   const fim=row?.dataset?.familyTaskEnd||'';
-  const schedule=flag.dataset?.schedule||(inicio&&fim?`${inicio} - ${fim}`:(c[0]?.querySelector('strong')?.textContent.trim()||''));
   return {
     id:flag.dataset?.taskId||row?.dataset?.familyTaskId||'',
     perfilId:flag.dataset?.profileId||row?.dataset?.familyProfileId||'',
     tarefa:flag.dataset?.taskName||row?.dataset?.familyTaskName||c[1]?.querySelector('strong')?.textContent.trim()||c[1]?.textContent.trim()||'',
     usuario:flag.dataset?.user||row?.dataset?.familyProfileName||c[2]?.textContent.trim()||'',
     dia:flag.dataset?.day||row?.dataset?.familyTaskDay||c[3]?.textContent.trim()||'',
-    horario:schedule,
+    horario:flag.dataset?.schedule||(inicio&&fim?`${inicio} - ${fim}`:(c[0]?.querySelector('strong')?.textContent.trim()||'')),
     justificativa:flag.dataset?.justification||flag.querySelector?.('.tooltip-texto')?.textContent.trim()||'',
     data:flag.dataset?.date||row?.dataset?.historyDate||dataSelecionada()
   };
@@ -35,10 +36,8 @@ function contextoDoClique(flag){
 
 function localizarNoCache(ctx){
   const snap=snapshot();
-  if(!snap)return {snap:null,tarefa:null,historico:null};
-  const tarefas=Array.isArray(snap.tarefas)?snap.tarefas:[];
-  const historico=Array.isArray(snap.historico)?snap.historico:[];
-  const norm=v=>String(v||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const tarefas=Array.isArray(snap?.tarefas)?snap.tarefas:[];
+  const historico=Array.isArray(snap?.historico)?snap.historico:[];
   let tarefa=null;
   if(ctx.id)tarefa=tarefas.find(t=>String(t.id||'')===String(ctx.id))||null;
   if(!tarefa)tarefa=tarefas.find(t=>(!ctx.tarefa||norm(t.nome)===norm(ctx.tarefa))&&(!ctx.usuario||norm(t.perfilNome)===norm(ctx.usuario)))||null;
@@ -48,16 +47,7 @@ function localizarNoCache(ctx){
   return {snap,tarefa,historico:h};
 }
 
-function precisaSincronizar(ctx){
-  const {snap,tarefa,historico}=localizarNoCache(ctx);
-  if(!snap)return {sim:true,motivo:'snapshot-indisponivel'};
-  if(!Number(snap.ultimaSincronizacaoServidor||0))return {sim:true,motivo:'sync-inicial-pendente'};
-  if(!tarefa)return {sim:true,motivo:'tarefa-ausente'};
-  if(!historico)return {sim:true,motivo:'historico-ausente'};
-  return {sim:false,motivo:'cache-pronto'};
-}
-
-function toast(texto){
+function toast(texto,autoMs=0){
   let el=document.getElementById('rfJustificationSyncToast');
   if(!el){
     el=document.createElement('div');
@@ -65,45 +55,73 @@ function toast(texto){
     el.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60000;background:#1e293b;color:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.25);font:600 12px Segoe UI,Tahoma,sans-serif;max-width:88vw;text-align:center;display:none';
     document.body.appendChild(el);
   }
-  el.textContent=texto;
-  el.style.display='block';
-  return el;
+  if(toastTimer){clearTimeout(toastTimer);toastTimer=null;}
+  el.textContent=texto;el.style.display='block';
+  if(autoMs>0)toastTimer=setTimeout(()=>{el.style.display='none';toastTimer=null;},autoMs);
 }
-function esconderToast(){const el=document.getElementById('rfJustificationSyncToast');if(el)el.style.display='none';}
-const esperar=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+function esconderToast(){if(toastTimer){clearTimeout(toastTimer);toastTimer=null;}const el=document.getElementById('rfJustificationSyncToast');if(el)el.style.display='none';}
 
-async function aguardarSincronizacaoServidor(motivo){
-  const antes=Number(snapshot()?.ultimaSincronizacaoServidor||0);
-  const inicio=performance.now();
-  const depoisValido=depois=>antes>0?depois>antes:depois>0;
-  let tentativas=0;
-  while(performance.now()-inicio<SYNC_TIMEOUT_MS){
-    const registrado=Number(snapshot()?.ultimaSincronizacaoServidor||0);
-    if(depoisValido(registrado))return {ok:true,origem:'sync-concorrente-concluida',tentativas};
-    if(typeof window.rotinaSincronizarAdmAgora!=='function'){
-      await esperar(SYNC_RETRY_MS);
-      continue;
-    }
-    tentativas+=1;
-    const restante=Math.max(1,SYNC_TIMEOUT_MS-(performance.now()-inicio));
-    let resultado=false;
-    try{
-      resultado=await Promise.race([
-        Promise.resolve(window.rotinaSincronizarAdmAgora(`${motivo}-${tentativas}`)),
-        esperar(restante).then(()=>false)
-      ]);
-    }catch{}
-    const depois=Number(snapshot()?.ultimaSincronizacaoServidor||0);
-    if(depoisValido(depois))return {ok:true,origem:resultado===true?'chamada-direta':'sync-concorrente-concluida',tentativas};
-    if(performance.now()-inicio<SYNC_TIMEOUT_MS)await esperar(SYNC_RETRY_MS);
+function comTimeout(promise,ms=DIRECT_TIMEOUT_MS){
+  return new Promise((resolve,reject)=>{
+    let fim=false;
+    const timer=setTimeout(()=>{if(fim)return;fim=true;reject(new Error('Tempo limite ao consultar a ocorrência.'));},ms);
+    Promise.resolve(promise).then(v=>{if(fim)return;fim=true;clearTimeout(timer);resolve(v);},e=>{if(fim)return;fim=true;clearTimeout(timer);reject(e);});
+  });
+}
+
+async function buscarOcorrenciaServidor(ctx,cache){
+  if(!getApps().length)throw new Error('Firebase ainda não está disponível.');
+  const banco=getFirestore(getApp());
+  const grupo=grupoAtual();
+  let tarefa=cache?.tarefa||null;
+  if(!tarefa&&ctx.id){
+    const ts=await comTimeout(getDocFromServer(doc(banco,'tarefas',ctx.id)),4000);
+    if(ts.exists())tarefa={id:ts.id,...ts.data()};
   }
-  return {ok:false,origem:'timeout',tentativas};
+  if(!tarefa)throw new Error('Não foi possível localizar a tarefa desta justificativa.');
+
+  const perfilId=tarefa.perfilId||ctx.perfilId||'';
+  const data=ctx.data||'';
+  let historico=null;
+  if(perfilId&&data){
+    const esperado=`${perfilId}_${tarefa.id}_${data}`;
+    try{
+      const hs=await comTimeout(getDocFromServer(doc(banco,'historico',esperado)),4000);
+      if(hs.exists())historico={id:hs.id,...hs.data()};
+    }catch(e){
+      if(String(e?.message||'').includes('Tempo limite'))throw e;
+    }
+  }
+  if(!historico){
+    const q=query(collection(banco,'historico'),where('grupoId','==',grupo),where('tarefaId','==',tarefa.id));
+    const hs=await comTimeout(getDocsFromServer(q),DIRECT_TIMEOUT_MS);
+    historico=hs.docs.map(d=>({id:d.id,...d.data()})).find(h=>String(h.data||h.dataExecucao||'')===String(data)&&(!perfilId||!h.perfilId||String(h.perfilId)===String(perfilId)))||null;
+  }
+  if(!historico)throw new Error('Não encontrei a ocorrência desta justificativa no servidor.');
+  return {tarefa,historico};
 }
 
 async function garantirModuloRevisao(){
   if(typeof window.abrirRevisaoJustificativa==='function')return true;
-  await import('./adm-justification-review.js?v=sync-guard-3');
+  await comTimeout(import('./adm-justification-review.js?v=sync-guard-4'),4000);
   return typeof window.abrirRevisaoJustificativa==='function';
+}
+
+async function abrirComDados(ctx,tarefa,historico){
+  const moduloOk=await garantirModuloRevisao();
+  if(!moduloOk)throw new Error('Módulo de justificativas indisponível.');
+  if(!tarefa||!historico)return window.abrirRevisaoJustificativa(ctx);
+
+  const original=window.rotinaAdmCacheSnapshot;
+  const wrapper=()=>{
+    const base=typeof original==='function'?(original()||{}):{};
+    const tarefas=Array.isArray(base.tarefas)?base.tarefas.filter(x=>String(x.id||'')!==String(tarefa.id||'')):[];
+    const historicoLista=Array.isArray(base.historico)?base.historico.filter(x=>String(x.id||'')!==String(historico.id||'')):[];
+    return {...base,tarefas:[...tarefas,{...tarefa}],historico:[...historicoLista,{...historico}]};
+  };
+  window.rotinaAdmCacheSnapshot=wrapper;
+  try{return await window.abrirRevisaoJustificativa({...ctx,id:tarefa.id,perfilId:tarefa.perfilId||ctx.perfilId||''});}
+  finally{if(window.rotinaAdmCacheSnapshot===wrapper)window.rotinaAdmCacheSnapshot=original;}
 }
 
 async function tratarClique(flag){
@@ -113,43 +131,38 @@ async function tratarClique(flag){
   const inicio=performance.now();
   log('justificativa.abertura_inicio',{data:ctx.data||'',temId:Boolean(ctx.id)});
   try{
-    const necessidade=precisaSincronizar(ctx);
-    if(necessidade.sim){
-      log('justificativa.cache_miss',{motivo:necessidade.motivo,data:ctx.data||'',temId:Boolean(ctx.id)},'warning');
-      toast('Atualizando a justificativa com o servidor…');
-      const resultado=await aguardarSincronizacaoServidor(`justificativa-${necessidade.motivo}`);
-      log('justificativa.sync_fallback',{motivo:necessidade.motivo,ok:resultado.ok,origem:resultado.origem,tentativas:resultado.tentativas,tempoMs:Math.round(performance.now()-inicio)},resultado.ok?'info':'warning');
-      if(!resultado.ok&&navigator.onLine!==false)throw new Error('A atualização do servidor não foi confirmada.');
-    }else{
+    const cache=localizarNoCache(ctx);
+    if(cache.tarefa&&cache.historico){
       log('justificativa.cache_hit',{data:ctx.data||'',temId:Boolean(ctx.id)});
+      esconderToast();
+      await abrirComDados(ctx,cache.tarefa,cache.historico);
+      log('justificativa.abertura_ok',{origem:'cache',tempoMs:Math.round(performance.now()-inicio)});
+      return;
     }
-    const moduloOk=await garantirModuloRevisao();
-    if(!moduloOk)throw new Error('Módulo de justificativas indisponível.');
-    esconderToast();
-    window.abrirRevisaoJustificativa(ctx);
-    log('justificativa.abertura_encaminhada',{data:ctx.data||'',temId:Boolean(ctx.id),tempoMs:Math.round(performance.now()-inicio)});
-  }catch(e){
-    console.error('Falha ao abrir justificativa com sincronização:',e);
-    toast(navigator.onLine===false?'Sem internet. A justificativa será aberta com os dados disponíveis neste aparelho.':'Não foi possível atualizar a justificativa. Tente novamente.');
     if(navigator.onLine===false){
-      try{
-        const moduloOk=await garantirModuloRevisao();
-        if(moduloOk)window.abrirRevisaoJustificativa(ctx);
-      }catch{}
+      esconderToast();
+      await abrirComDados(ctx,cache.tarefa,cache.historico);
+      log('justificativa.abertura_offline',{tempoMs:Math.round(performance.now()-inicio)},'warning');
+      return;
     }
-    setTimeout(esconderToast,3500);
+
+    toast('Buscando esta justificativa no servidor…',6500);
+    log('justificativa.leitura_direta_inicio',{temTarefaCache:Boolean(cache.tarefa),temHistoricoCache:Boolean(cache.historico)});
+    const dados=await buscarOcorrenciaServidor(ctx,cache);
+    esconderToast();
+    await abrirComDados(ctx,dados.tarefa,dados.historico);
+    log('justificativa.abertura_ok',{origem:'servidor-direto',tempoMs:Math.round(performance.now()-inicio)});
+  }catch(e){
+    console.error('Falha ao abrir justificativa:',e);
+    toast(e?.message||'Não foi possível abrir esta justificativa.',3500);
     log('justificativa.abertura_erro',{mensagem:String(e?.message||e).slice(0,140),tempoMs:Math.round(performance.now()-inicio)},'error');
-  }finally{
-    processando=false;
-  }
+  }finally{processando=false;}
 }
 
 document.addEventListener('click',event=>{
   const flag=event.target.closest?.('.tooltip-justificativa,.mon-just-flag');
   if(!flag)return;
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
+  event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
   tratarClique(flag);
 },true);
 
