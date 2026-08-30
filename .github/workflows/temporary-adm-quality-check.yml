@@ -23,6 +23,7 @@ jobs:
           node --check adm-justification-review.js
           node --check adm-justification-sync-guard.js
           node --check adm-startup-stability-v1.js
+          node --check app-monitoring.js
           node --check adm-early-start-ui.js
           node --check adm-score-history-cards.js
           node --check adm-monitor-history-fix.js
@@ -49,7 +50,7 @@ jobs:
           const fs=require('fs');
           const p='adm-regression-audit.js';
           let s=fs.readFileSync(p,'utf8');
-          s=s.replace("rotina-family-adm-v46","rotina-family-adm-v66");
+          s=s.replace("rotina-family-adm-v46","rotina-family-adm-v67");
           s=s.replace("assert(notify.includes(\"collection(db, 'resgates')\"),'redemption notification listens to the resgates collection');","assert(notify.includes(\"window.rotinaAdmCacheSnapshot?.().resgates\"),'redemption notification reads the shared ADM cache');");
           fs.writeFileSync(p,s);
           NODE
@@ -62,6 +63,7 @@ jobs:
           const sw=fs.readFileSync('sw.js','utf8');
           const guard=fs.readFileSync('adm-justification-sync-guard.js','utf8');
           const startup=fs.readFileSync('adm-startup-stability-v1.js','utf8');
+          const monitoring=fs.readFileSync('app-monitoring.js','utf8');
           const assert=(ok,msg)=>{if(!ok)throw new Error(msg);console.log('OK - '+msg)};
           assert(!h.includes('setInterval('),'historical monitor adds no continuous polling');
           assert(h.includes("collection(db,'historico')")&&h.includes("where('grupoId','==',grupoId)"),'historical monitor reads group history');
@@ -70,11 +72,12 @@ jobs:
           assert(h.includes('toleranciaConsumidaSeg'),'exact tolerance consumption is displayed');
           assert(h.includes('inicioExecutadoEm')&&h.includes('terminoExecutadoEm'),'exact execution timestamps are used');
           assert(h.includes("| Consumido: ${formatarSegundos(consumido)}"),'monitor exposes consumed tolerance');
-          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v66'"),'ADM cache is v66');
+          assert(sw.includes("const CACHE_NAME='rotina-family-adm-v67'"),'ADM cache is v67');
           assert(sw.includes("'./adm-monitor-history-fix.js'"),'historical monitor is cached offline');
           assert(sw.includes("'./adm-justification-sync-guard.js'"),'justification guard is cached offline');
-          assert(startup.includes("adm-justification-sync-guard.js?v=4"),'startup loads justification guard v4');
+          assert(startup.includes("adm-justification-sync-guard.js?v=5"),'startup loads justification guard v5');
           assert(guard.includes('getDocFromServer')&&guard.includes('getDocsFromServer'),'justification has targeted server fallback');
+          assert(guard.includes('PENDING_LOGS_KEY')&&monitoring.includes('PENDING_JUSTIFICATION_KEY'),'justification logs survive monitoring startup order');
           assert(guard.includes("justificativa.abertura_erro")&&guard.includes("justificativa.abertura_ok"),'justification opening is instrumented');
           assert(sw.includes("adm-monitor-history-fix.js?v=3")&&sw.includes('faltantes.push'),'historical monitor remains available to production ADM');
           assert(sw.includes('function deveAplicarAddons(url)'),'service worker has an explicit addon scope guard');
