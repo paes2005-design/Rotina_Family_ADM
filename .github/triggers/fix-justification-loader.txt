@@ -1,2 +1,2 @@
-run=2026-08-29T22:21:00-03:00
-reason=restore-justification-module-and-bound-initial-sync
+run=2026-08-30T12:29:00-03:00
+reason=session-ready-before-initial-sync
