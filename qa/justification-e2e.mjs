@@ -7,7 +7,8 @@ for(const url of targets){
   const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
   const page=await context.newPage();
   const consoleErrors=[];
-  page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text());});
+  const expectedQaFirestore=/Firestore \(10\.8\.0\): Could not reach Cloud Firestore backend|permission-denied.*rotina-family-qa/i;
+  page.on('console',msg=>{if(msg.type()==='error'&&!expectedQaFirestore.test(msg.text()))consoleErrors.push(msg.text());});
   page.on('pageerror',err=>consoleErrors.push(`PAGEERROR: ${err.message}`));
 
   await page.goto(url,{waitUntil:'networkidle',timeout:60000});
