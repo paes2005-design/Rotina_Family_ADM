@@ -1,0 +1,148 @@
+name: Corrigir arquitetura central de cache ADM
+on:
+  push:
+    paths:
+      - '.github/triggers/fix-central-cache-architecture.txt'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Aplicar arquitetura Firestore inicial e cache 5 min
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin d649b22775311a5553c707478c4906eb17ff45aa
+
+          # Justificativas: mesma fonte central de cache, sem leitura Firestore paralela.
+          git checkout d649b22775311a5553c707478c4906eb17ff45aa -- adm-justification-review.js
+
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('index-ADMIN-v8.html')
+          s=p.read_text()
+
+          s=s.replace('let sincronizacaoAdmEmCurso = false;', 'let sincronizacaoAdmEmCurso = false;\n    let sincronizacaoAdmPromise = null;')
+
+          old="""        if(!gId||sincronizacaoAdmEmCurso)return false;\n        sincronizacaoAdmEmCurso=true;\n        const inicio=performance.now();\n        try{"""
+          new="""        if(!gId)return false;\n        if(sincronizacaoAdmPromise)return sincronizacaoAdmPromise;\n        sincronizacaoAdmEmCurso=true;\n        const inicio=performance.now();\n        const executar=async()=>{\n        try{"""
+          if old not in s: raise SystemExit('inicio de sincronizarDadosAdm não encontrado')
+          s=s.replace(old,new,1)
+
+          old="""            return falhas<resultados.length;\n        }catch(e){window.rotinaLog?.('sync.adm_erro',{origem,servidor,mensagem:String(e?.message||e)},'warning');return false;}\n        finally{sincronizacaoAdmEmCurso=false;}\n    }"""
+          new="""            return falhas===0;\n        }catch(e){window.rotinaLog?.('sync.adm_erro',{origem,servidor,mensagem:String(e?.message||e)},'warning');return false;}\n        };\n        sincronizacaoAdmPromise=executar();\n        try{return await sincronizacaoAdmPromise;}\n        finally{sincronizacaoAdmPromise=null;sincronizacaoAdmEmCurso=false;}\n    }"""
+          if old not in s: raise SystemExit('fim de sincronizarDadosAdm não encontrado')
+          s=s.replace(old,new,1)
+
+          s=s.replace("if(servidor&&falhas<resultados.length)ultimaSincronizacaoAdmServidor=Date.now();", "if(servidor&&falhas===0)ultimaSincronizacaoAdmServidor=Date.now();",1)
+          s=s.replace('function iniciarEscutasFirebase() {','async function iniciarEscutasFirebase() {',1)
+
+          old="sincronizarDadosAdm('cache-inicial',false).finally(()=>sincronizarDadosAdm('servidor-inicial',true));"
+          new="""let inicialOk=await sincronizarDadosAdm('servidor-inicial',true);\n        if(!inicialOk&&navigator.onLine!==false){\n            await new Promise(resolve=>setTimeout(resolve,500));\n            inicialOk=await sincronizarDadosAdm('servidor-inicial-retry',true);\n        }\n        if(!inicialOk)await sincronizarDadosAdm('cache-fallback-inicial',false);"""
+          if old not in s: raise SystemExit('sequência cache-inicial não encontrada')
+          s=s.replace(old,new,1)
+
+          old="""        window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));\n        iniciarEscutasFirebase();"""
+          new="""        await iniciarEscutasFirebase();\n        window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));"""
+          if s.count(old)!=1: raise SystemExit(f'fluxo login esperado 1x, encontrado {s.count(old)}')
+          s=s.replace(old,new,1)
+
+          old="""            window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));\n            iniciarEscutasFirebase();"""
+          new="""            await iniciarEscutasFirebase();\n            window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));"""
+          if s.count(old)!=1: raise SystemExit(f'fluxo restauração esperado 1x, encontrado {s.count(old)}')
+          s=s.replace(old,new,1)
+
+          s=s.replace("navigator.serviceWorker.register('./sw.js?v=63',{updateViaCache:'none'})", "navigator.serviceWorker.register('./sw.js?v=69',{updateViaCache:'none'})",1)
+          p.write_text(s)
+
+          # Monitor histórico: deixa de consultar Firestore por conta própria.
+          p=Path('adm-monitor-history-fix.js')
+          m=p.read_text()
+          m=re.sub(r"^import \{ getApps, getApp \}[^\n]*\nimport \{ getFirestore, collection, query, where, getDocs \}[^\n]*\n\n",'',m,count=1)
+          pattern=r"async function carregar\(force=false\)\{.*?\n\}\nfunction perfisVisiveis"
+          replacement="""function carregar(){\n  const grupoId=grupoAtual();\n  if(!grupoId||grupoId==='--'||grupoId==='CLI-Gen')return null;\n  const snap=window.rotinaAdmCacheSnapshot?.();\n  if(!snap||String(snap.grupoId||'')!==String(grupoId))return null;\n  cache={grupoId,at:Date.now(),tarefas:(snap.tarefas||[]).map(x=>({...x})),historico:(snap.historico||[]).map(x=>({...x}))};\n  return cache;\n}\nfunction perfisVisiveis"""
+          m2,n=re.subn(pattern,replacement,m,count=1,flags=re.S)
+          if n!=1: raise SystemExit('função carregar do Monitor não localizada')
+          m=m2
+          needle="window.addEventListener('rotina-monitor-period-change',()=>setTimeout(()=>renderHistoricoMonitor(true),0));"
+          repl=needle+"\n  window.addEventListener('rotina-adm-cache-updated',()=>setTimeout(()=>renderHistoricoMonitor(false),0));"
+          if needle not in m: raise SystemExit('ponto de listener do Monitor não localizado')
+          m=m.replace(needle,repl,1)
+          p.write_text(m)
+
+          # Justificativa: usa IDs da linha do mesmo snapshot, sem reconstrução frágil por texto.
+          p=Path('adm-justification-review.js')
+          j=p.read_text()
+          old="""  if(mobile){e.preventDefault();abrir({tarefa:mobile.dataset.taskName||'',usuario:mobile.dataset.user||'',dia:mobile.dataset.day||'',horario:mobile.dataset.schedule||'',justificativa:mobile.dataset.justification||'',data:mobile.dataset.date||''});return;}"""
+          new="""  if(mobile){e.preventDefault();const r=mobile.closest('tr');abrir({id:mobile.dataset.taskId||r?.dataset?.familyTaskId||'',perfilId:mobile.dataset.profileId||r?.dataset?.familyProfileId||'',tarefa:mobile.dataset.taskName||r?.dataset?.familyTaskName||'',usuario:mobile.dataset.user||r?.dataset?.familyProfileName||'',dia:mobile.dataset.day||r?.dataset?.familyTaskDay||'',horario:mobile.dataset.schedule||(r?.dataset?.familyTaskTime||''),justificativa:mobile.dataset.justification||'',data:mobile.dataset.date||r?.dataset?.historyDate||dataSelecionada()});return;}"""
+          if old in j: j=j.replace(old,new,1)
+          old="""    abrir({tarefa:c[1]?.querySelector('strong')?.textContent.trim()||c[1]?.textContent.trim()||'',usuario:c[2]?.textContent.trim()||'',dia:c[3]?.textContent.trim()||'',horario:c[0]?.querySelector('strong')?.textContent.trim()||'',justificativa:flag.querySelector('.tooltip-texto')?.textContent.trim()||'',data:dataSelecionada()});"""
+          new="""    abrir({id:r.dataset.familyTaskId||'',perfilId:r.dataset.familyProfileId||'',tarefa:r.dataset.familyTaskName||c[1]?.querySelector('strong')?.textContent.trim()||c[1]?.textContent.trim()||'',usuario:r.dataset.familyProfileName||c[2]?.textContent.trim()||'',dia:r.dataset.familyTaskDay||c[3]?.textContent.trim()||'',horario:(r.dataset.familyTaskTime&&r.dataset.familyTaskEnd)?`${r.dataset.familyTaskTime} - ${r.dataset.familyTaskEnd}`:(c[0]?.querySelector('strong')?.textContent.trim()||''),justificativa:flag.querySelector('.tooltip-texto')?.textContent.trim()||'',data:r.dataset.historyDate||dataSelecionada()});"""
+          if old not in j: raise SystemExit('handler desktop de justificativa não localizado')
+          j=j.replace(old,new,1)
+          j=j.replace("window.rotinaLog?.('justificativa.adm_cache_hit'", "window.rotinaLog?.('justificativa.abertura_ok'",1)
+          p.write_text(j)
+
+          # Versionamento para atualização garantida no PWA.
+          p=Path('sw.js'); sw=p.read_text()
+          sw=re.sub(r"const CACHE_NAME='rotina-family-adm-v\d+';", "const CACHE_NAME='rotina-family-adm-v69';", sw, count=1)
+          sw=re.sub(r"const ROTINA_SW_VERSION='\d+';", "const ROTINA_SW_VERSION='69';", sw, count=1)
+          sw=re.sub(r"const ROTINA_BUILD_ID='[^']+';", "const ROTINA_BUILD_ID='20260829.5';", sw, count=1)
+          sw=sw.replace("runtime-build-info.js?v=20260829.4","runtime-build-info.js?v=20260829.5")
+          p.write_text(sw)
+
+          p=Path('runtime-build-info.js'); r=p.read_text()
+          r=re.sub(r"build:'[^']+'", "build:'20260829.5'", r, count=1)
+          r=re.sub(r"expectedServiceWorkerVersion:'[^']+'", "expectedServiceWorkerVersion:'69'", r, count=1)
+          p.write_text(r)
+
+          p=Path('index.html'); h=p.read_text(); h=re.sub(r'entry=\d{8}\.\d+', 'entry=20260829.5', h); p.write_text(h)
+          PY
+
+      - name: Auditar arquitetura antes de publicar
+        shell: bash
+        run: |
+          node --check adm-monitor-history-fix.js
+          node --check adm-justification-review.js
+          node --check app-monitoring.js
+          node --check adm-startup-stability-v1.js
+          node --check sw.js
+          python - <<'PY'
+          from pathlib import Path
+          i=Path('index-ADMIN-v8.html').read_text()
+          m=Path('adm-monitor-history-fix.js').read_text()
+          j=Path('adm-justification-review.js').read_text()
+          sw=Path('sw.js').read_text()
+          checks={
+            'sem cache-inicial antes do servidor': "sincronizarDadosAdm('cache-inicial',false)" not in i,
+            'servidor inicial obrigatório': "await sincronizarDadosAdm('servidor-inicial',true)" in i,
+            'sessão espera sincronização': i.count('await iniciarEscutasFirebase();')==2,
+            'sincronização concorrente compartilha promise': 'if(sincronizacaoAdmPromise)return sincronizacaoAdmPromise;' in i,
+            'ciclo só é válido sem falhas': 'return falhas===0;' in i and 'if(servidor&&falhas===0)' in i,
+            'monitor usa cache central': 'rotinaAdmCacheSnapshot' in m,
+            'monitor não lê Firestore': all(x not in m for x in ['getDocs(','getDoc(','getDocsFromServer','getDocFromServer','getFirestore']),
+            'monitor atualiza no ciclo central': 'rotina-adm-cache-updated' in m,
+            'justificativa usa cache central': 'rotinaAdmCacheSnapshot' in j,
+            'justificativa não lê Firestore': all(x not in j for x in ['getDocs(','getDoc(','getDocsFromServer','getDocFromServer']),
+            'justificativa usa id da linha': 'familyTaskId' in j and 'familyProfileId' in j and 'historyDate' in j,
+            'sw v69': "rotina-family-adm-v69" in sw,
+          }
+          bad=[k for k,v in checks.items() if not v]
+          for k,v in checks.items(): print(('OK' if v else 'FAIL'),'-',k)
+          if bad: raise SystemExit('Falhas: '+', '.join(bad))
+          PY
+
+      - name: Publicar correção
+        shell: bash
+        run: |
+          git config user.name 'rotina-family-cache-fix-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index-ADMIN-v8.html adm-monitor-history-fix.js adm-justification-review.js sw.js runtime-build-info.js index.html
+          git commit -m 'Corrigir sincronização inicial e unificar Monitor e Justificativas no cache central'
+          git push
