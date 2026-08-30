@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Consultar Worker e registrar resultado
+      - name: Consultar Worker e registrar resumo
         shell: bash
         run: |
           set -u
@@ -27,27 +27,33 @@ jobs:
           python - <<'PY'
           import json, pathlib, datetime
           p=pathlib.Path('/tmp/rfdiag')
-          def load(name):
+          def raw(name):
               status=(p/f'{name}.status').read_text(errors='replace').strip()
-              raw=(p/f'{name}.json').read_text(errors='replace') if (p/f'{name}.json').exists() else ''
-              try: body=json.loads(raw)
-              except Exception: body=raw[:5000]
-              return {'http':status,'body':body}
+              text=(p/f'{name}.json').read_text(errors='replace') if (p/f'{name}.json').exists() else ''
+              try: body=json.loads(text)
+              except Exception: body={'raw':text[:1200]}
+              return status,body
+          ms,m=raw('monitoramento'); ts,t=raw('diagnostico-tecnico'); ws,w=raw('diagnostico-worker'); ls,l=raw('logs')
+          last=m.get('lastRun') or {}
           out={
             'capturadoEm':datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            'monitoramento':load('monitoramento'),
-            'diagnosticoTecnico':load('diagnostico-tecnico'),
-            'diagnosticoWorker':load('diagnostico-worker'),
-            'logsPrivadosSemToken':load('logs')
+            'monitoramento':{
+              'http':ms,'status':m.get('status'),'lastRunAt':m.get('lastRunAt'),
+              'states':last.get('states'),'versions':last.get('versions'),
+              'healthReasons':m.get('healthReasons')
+            },
+            'diagnosticoTecnico':{'http':ts,'body':t},
+            'diagnosticoWorker':{'http':ws,'body':w},
+            'logsPrivadosSemToken':{'http':ls,'body':l}
           }
-          pathlib.Path('diagnostics/worker-live-latest.json').write_text(json.dumps(out,ensure_ascii=False,indent=2))
+          pathlib.Path('diagnostics/worker-live-summary.json').write_text(json.dumps(out,ensure_ascii=False,indent=2))
           PY
       - name: Gravar diagnóstico no repositório
         shell: bash
         run: |
           git config user.name 'rotina-family-diagnostic-bot'
           git config user.email 'actions@users.noreply.github.com'
-          git add diagnostics/worker-live-latest.json
+          git add diagnostics/worker-live-summary.json
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'Registrar diagnostico ao vivo do Worker [skip ci]'
+          git commit -m 'Registrar resumo do diagnostico ao vivo [skip ci]'
           git push
