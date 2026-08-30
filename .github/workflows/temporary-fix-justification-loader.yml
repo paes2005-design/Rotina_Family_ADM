@@ -1,4 +1,4 @@
-name: Corrigir carregamento de justificativas e sync inicial
+name: Corrigir sessão pronta antes da sincronização ADM
 on:
   push:
     paths:
@@ -12,188 +12,60 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Aplicar correção cirúrgica
+      - name: Destravar sessão administrativa
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
 
           p=Path('index-ADMIN-v8.html')
           s=p.read_text()
-
-          helper="""    function limitarLeituraAdm(promise,nome,ms=8000){
-        return Promise.race([
-            promise,
-            new Promise((_,reject)=>setTimeout(()=>reject(new Error(`timeout-${nome}`)),ms))
-        ]);
-    }
-
-"""
-          marker="    async function sincronizarDadosAdm(origem='intervalo-5min',servidor=true){\n"
-          if helper not in s:
-              assert marker in s, 'marcador sincronizarDadosAdm ausente'
-              s=s.replace(marker,helper+marker,1)
-
-          old="""            const resultados=await Promise.allSettled([
-                lerColecao(query(collection(db,'perfis'),where('grupoId','==',gId))),
-                lerColecao(query(collection(db,'tarefas'),where('grupoId','==',gId))),
-                lerColecao(query(collection(db,'historico'),where('grupoId','==',gId))),
-                lerColecao(query(collection(db,'recompensas'),where('grupoId','==',gId))),
-                lerColecao(query(collection(db,'resgates'),where('grupoId','==',gId))),
-                lerDocumento(doc(db,'configGrupos',gId))
-            ]);"""
-          new="""            const resultados=await Promise.allSettled([
-                limitarLeituraAdm(lerColecao(query(collection(db,'perfis'),where('grupoId','==',gId))),'perfis'),
-                limitarLeituraAdm(lerColecao(query(collection(db,'tarefas'),where('grupoId','==',gId))),'tarefas'),
-                limitarLeituraAdm(lerColecao(query(collection(db,'historico'),where('grupoId','==',gId))),'historico'),
-                limitarLeituraAdm(lerColecao(query(collection(db,'recompensas'),where('grupoId','==',gId))),'recompensas'),
-                limitarLeituraAdm(lerColecao(query(collection(db,'resgates'),where('grupoId','==',gId))),'resgates'),
-                limitarLeituraAdm(lerDocumento(doc(db,'configGrupos',gId)),'configGrupos')
-            ]);"""
-          assert old in s, 'bloco Promise.allSettled nao encontrado'
-          s=s.replace(old,new,1)
-
-          old="""            const falhas=resultados.filter(x=>x.status==='rejected').length;
-            if(servidor&&falhas===0)ultimaSincronizacaoAdmServidor=Date.now();"""
-          new="""            const nomesFontes=['perfis','tarefas','historico','recompensas','resgates','configGrupos'];
-            const fontesFalha=resultados.map((x,i)=>x.status==='rejected'?nomesFontes[i]:'').filter(Boolean);
-            const falhas=fontesFalha.length;
-            if(servidor&&falhas===0)ultimaSincronizacaoAdmServidor=Date.now();"""
-          assert old in s, 'bloco falhas nao encontrado'
-          s=s.replace(old,new,1)
-          s=s.replace("window.rotinaLog?.('sync.adm_ciclo',{origem,servidor,tempoMs:Math.round(performance.now()-inicio),falhas,intervaloMin:5},falhas?'warning':'info');","window.rotinaLog?.('sync.adm_ciclo',{origem,servidor,tempoMs:Math.round(performance.now()-inicio),falhas,fontesFalha:fontesFalha.join(','),intervaloMin:5},falhas?'warning':'info');",1)
-
-          old="""        let inicialOk=await sincronizarDadosAdm('servidor-inicial',true);
-        if(!inicialOk&&navigator.onLine!==false){
-            await new Promise(resolve=>setTimeout(resolve,500));
-            inicialOk=await sincronizarDadosAdm('servidor-inicial-retry',true);
-        }
-        if(!inicialOk)await sincronizarDadosAdm('cache-fallback-inicial',false);"""
-          new="""        const inicialOk=await sincronizarDadosAdm('servidor-inicial',true);
-        if(!inicialOk)await sincronizarDadosAdm('cache-fallback-inicial',false);"""
-          assert old in s, 'bloco retry inicial nao encontrado'
-          s=s.replace(old,new,1)
-
-          old1="""        await iniciarEscutasFirebase();
-        window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));"""
-          new1="""        const syncInicialAdm=iniciarEscutasFirebase();
-        window.rotinaAdmInitialSyncPromise=syncInicialAdm;
-        window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));
-        syncInicialAdm.catch(e=>console.error('Falha na sincronização inicial do ADM',e));"""
-          assert old1 in s, 'login sync/session nao encontrado'
-          s=s.replace(old1,new1,1)
-
-          old2="""            await iniciarEscutasFirebase();
-            window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));"""
-          new2="""            const syncInicialAdm=iniciarEscutasFirebase();
-            window.rotinaAdmInitialSyncPromise=syncInicialAdm;
-            window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));
-            syncInicialAdm.catch(e=>console.error('Falha na sincronização inicial do ADM',e));"""
-          assert old2 in s, 'restore sync/session nao encontrado'
-          s=s.replace(old2,new2,1)
-
-          s=s.replace("navigator.serviceWorker.register('./sw.js?v=63',{updateViaCache:'none'})","navigator.serviceWorker.register('./sw.js?v=70',{updateViaCache:'none'})")
-
-          loader='<script type="module" src="./adm-justification-review.js?v=6"></script>'
-          if loader not in s:
-              anchor='<script type="module" src="./adm-zero-points-restitution-20260827.js?v=1"></script>'
-              assert anchor in s, 'ancora de scripts do ADM ausente'
-              s=s.replace(anchor,loader+'\n'+anchor,1)
+          pattern=re.compile(r"(?P<i>[ \t]*)await iniciarEscutasFirebase\(\);\n(?P=i)window\.dispatchEvent\(new CustomEvent\('rotina-admin-session-ready',\{detail:\{grupoId:adminLogadoAtual\.codigoCliente \|\| adminLogadoAtual\.grupoId\}\}\)\);")
+          def repl(m):
+              i=m.group('i')
+              return (
+                  f"{i}const syncInicialAdm=iniciarEscutasFirebase();\n"
+                  f"{i}window.rotinaAdmInitialSyncPromise=syncInicialAdm;\n"
+                  f"{i}window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{{detail:{{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}}}));\n"
+                  f"{i}syncInicialAdm.catch(e=>console.error('Falha na sincronização inicial do ADM',e));"
+              )
+          s,n=pattern.subn(repl,s)
+          if n != 2:
+              raise SystemExit(f'Esperadas 2 substituições de sessão, encontradas {n}')
+          s=s.replace("navigator.serviceWorker.register('./sw.js?v=70',{updateViaCache:'none'})", "navigator.serviceWorker.register('./sw.js?v=71',{updateViaCache:'none'})")
           p.write_text(s)
 
-          p=Path('adm-justification-review.js')
-          s=p.read_text()
-          helper2="""async function aguardarSincronizacaoInicial(){
-  const p=window.rotinaAdmInitialSyncPromise;
-  if(!p)return;
-  await Promise.race([
-    Promise.resolve(p).catch(()=>false),
-    new Promise(resolve=>setTimeout(resolve,9000))
-  ]);
-}
-"""
-          anchor="""function cacheSnapshot(){
-  try{return typeof window.rotinaAdmCacheSnapshot==='function'?window.rotinaAdmCacheSnapshot():null;}catch{return null;}
-}
-"""
-          if helper2 not in s:
-              assert anchor in s, 'cacheSnapshot ausente'
-              s=s.replace(anchor,anchor+helper2,1)
+          sw=Path('sw.js')
+          x=sw.read_text()
+          x=x.replace("const CACHE_NAME='rotina-family-adm-v70';", "const CACHE_NAME='rotina-family-adm-v71';")
+          x=x.replace("const ROTINA_SW_VERSION='70';", "const ROTINA_SW_VERSION='71';")
+          x=x.replace("const ROTINA_BUILD_ID='20260829.6';", "const ROTINA_BUILD_ID='20260830.1';")
+          x=x.replace('runtime-build-info.js?v=20260829.6', 'runtime-build-info.js?v=20260830.1')
+          sw.write_text(x)
 
-          old="""    const banco=db();if(!banco)throw new Error('Firebase ainda não está disponível.');
-    const started=performance.now();
-    const t=localizarTarefa(ctx);"""
-          new="""    const banco=db();if(!banco)throw new Error('Firebase ainda não está disponível.');
-    const started=performance.now();
-    window.rotinaLog?.('justificativa.abertura_inicio',{data,temId:Boolean(ctx.id)},'info');
-    await aguardarSincronizacaoInicial();
-    const t=localizarTarefa(ctx);"""
-          assert old in s, 'inicio de abertura de justificativa nao encontrado'
-          s=s.replace(old,new,1)
+          r=Path('runtime-build-info.js')
+          x=r.read_text().replace("build:'20260829.6'", "build:'20260830.1'").replace("expectedServiceWorkerVersion:'70'", "expectedServiceWorkerVersion:'71'")
+          r.write_text(x)
 
-          old="""  }catch(e){console.error('Revisão de justificativa:',e);msg.textContent=e.message||'Não foi possível carregar a justificativa.';}
-}"""
-          new="""  }catch(e){
-    console.error('Revisão de justificativa:',e);
-    const texto=String(e?.message||'');
-    const motivo=/histórico/i.test(texto)?'historico-ausente':/tarefa/i.test(texto)?'tarefa-ausente':/dados do painel/i.test(texto)?'cache-indisponivel':'erro-abertura';
-    window.rotinaLog?.('justificativa.abertura_erro',{motivo,duracaoMs:Math.round(performance.now()-started),data},'error');
-    msg.textContent=e.message||'Não foi possível carregar a justificativa.';
-  }
-}"""
-          assert old in s, 'catch de abertura nao encontrado'
-          s=s.replace(old,new,1)
-          p.write_text(s)
-
-          p=Path('sw.js')
-          s=p.read_text()
-          s=s.replace("const CACHE_NAME='rotina-family-adm-v69';","const CACHE_NAME='rotina-family-adm-v70';",1)
-          s=s.replace("const ROTINA_SW_VERSION='69';","const ROTINA_SW_VERSION='70';",1)
-          s=s.replace("const ROTINA_BUILD_ID='20260829.5';","const ROTINA_BUILD_ID='20260829.6';",1)
-          inject="  if(!html.includes('adm-justification-review.js'))faltantes.push('<script type=\"module\" src=\"./adm-justification-review.js?v=6\"><\\/script>');\n"
-          marker="  if(!html.includes('adm-score-history-cards.js'))"
-          if "adm-justification-review.js?v=6" not in s:
-              assert marker in s, 'marcador de addons do SW ausente'
-              s=s.replace(marker,inject+marker,1)
-          s=s.replace("runtime-build-info.js?v=20260827.3","runtime-build-info.js?v=20260829.6")
-          p.write_text(s)
-
-          p=Path('runtime-build-info.js')
-          s=p.read_text().replace("build:'20260829.5'","build:'20260829.6'").replace("expectedServiceWorkerVersion:'69'","expectedServiceWorkerVersion:'70'")
-          p.write_text(s)
-
-          p=Path('index.html')
-          s=p.read_text().replace('entry=20260829.5','entry=20260829.6')
-          p.write_text(s)
+          i=Path('index.html')
+          x=i.read_text().replace('entry=20260829.6', 'entry=20260830.1')
+          i.write_text(x)
           PY
-      - name: Validar sintaxe e arquitetura
+      - name: Validar correção
         shell: bash
         run: |
-          node --check adm-justification-review.js
-          node --check sw.js
-          python - <<'PY'
-          from pathlib import Path
-          h=Path('index-ADMIN-v8.html').read_text()
-          j=Path('adm-justification-review.js').read_text()
-          sw=Path('sw.js').read_text()
-          assert 'adm-justification-review.js?v=6' in h
-          assert 'window.rotinaAdmInitialSyncPromise=syncInicialAdm' in h
-          assert "limitarLeituraAdm(lerColecao(query(collection(db,'historico')" in h
-          assert "sincronizarDadosAdm('servidor-inicial',true)" in h
-          assert "sincronizarDadosAdm('cache-fallback-inicial',false)" in h
-          assert "servidor-inicial-retry" not in h
-          assert 'aguardarSincronizacaoInicial' in j
-          assert "justificativa.abertura_inicio" in j and "justificativa.abertura_erro" in j
-          assert "rotina-family-adm-v70" in sw and "ROTINA_BUILD_ID='20260829.6'" in sw
-          assert "adm-justification-review.js?v=6" in sw
-          print('JUSTIFICATION_LOADER_AND_INITIAL_SYNC=OK')
-          PY
-      - name: Commitar correção
+          test "$(grep -c 'const syncInicialAdm=iniciarEscutasFirebase();' index-ADMIN-v8.html)" -eq 2
+          test "$(grep -c 'await iniciarEscutasFirebase();' index-ADMIN-v8.html || true)" -eq 0
+          grep -q "rotina-family-adm-v71" sw.js
+          grep -q "ROTINA_BUILD_ID='20260830.1'" sw.js
+          grep -q "expectedServiceWorkerVersion:'71'" runtime-build-info.js
+      - name: Gravar correção
         shell: bash
         run: |
           git config user.name 'rotina-family-fix-bot'
           git config user.email 'actions@users.noreply.github.com'
-          git add index-ADMIN-v8.html adm-justification-review.js sw.js runtime-build-info.js index.html
+          git add index-ADMIN-v8.html sw.js runtime-build-info.js index.html
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'Restaurar justificativas e limitar sincronização inicial'
+          git commit -m 'Destravar sessão ADM antes da sincronização inicial'
           git push
