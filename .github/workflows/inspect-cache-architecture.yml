@@ -1,0 +1,40 @@
+name: Inspecionar arquitetura cache ADM
+on:
+  push:
+    paths:
+      - '.github/triggers/inspect-cache-architecture.txt'
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair fluxo central de sincronização
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, json
+          text=Path('index-ADMIN-v8.html').read_text()
+          keys=['SINCRONIZACAO_ADM_MS','sincronizarDadosAdm','rotinaAdmCacheSnapshot','servidor-inicial','cache-inicial','setInterval','getDocsFromServer','getDocsFromCache','ultimaSincronizacaoServidor','rotinaSincronizarAdmAgora']
+          out=[]
+          lines=text.splitlines()
+          for key in keys:
+              hits=[i for i,l in enumerate(lines) if key in l]
+              out.append(f'### {key} hits={len(hits)}')
+              for i in hits[:8]:
+                  a=max(0,i-6); b=min(len(lines),i+15)
+                  out.extend(f'{n+1}: {lines[n]}' for n in range(a,b))
+                  out.append('---')
+          for file in ['adm-monitor-history-fix.js','adm-justification-review.js','app-monitoring.js']:
+              t=Path(file).read_text()
+              out.append(f'### FILE {file}')
+              for token in ['getDocs(','getDoc(','getDocsFromServer','getDocFromServer','rotinaAdmCacheSnapshot']:
+                  out.append(f'{token}={t.count(token)}')
+          Path('diagnostics/cache-architecture.txt').write_text('\n'.join(out))
+          PY
+          git config user.name 'rotina-family-diagnostic-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add diagnostics/cache-architecture.txt
+          git commit -m 'Registrar inspeção da arquitetura de cache [skip ci]' || exit 0
+          git push
