@@ -1,8 +1,8 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import './adm-justification-review.js?v=7';
+import './adm-justification-review.js?v=8';
 
-const VERSION = 6;
+const VERSION = 7;
 const MAX_RETRIES = 1;
 let flowStartedAt = performance.now();
 const flowElapsed = () => Math.max(0, Math.round(performance.now() - flowStartedAt));
@@ -29,6 +29,7 @@ function shield() {
 }
 
 function show(text = 'Carregando painel...') {
+  if(sessionReady && authenticated){hide();return;}
   const el = shield();
   const label = el.querySelector('#admStartupText');
   if (label) label.textContent = text;
@@ -62,6 +63,17 @@ function ensureSomethingVisible(reason = 'check') {
   const main = document.getElementById('sistemaPrincipal');
   const accessVisible = visible(access);
   const mainVisible = visible(main);
+
+  if (sessionReady && authenticated) {
+    if (!mainVisible && main) {
+      main.style.display = 'block';
+      if (access) access.style.display = 'none';
+      log('startup.adm_painel_restaurado_pos_sessao', { motivo: reason }, 'warning');
+    }
+    blankSince = 0;
+    hide();
+    return;
+  }
 
   if (accessVisible || mainVisible) {
     blankSince = 0;

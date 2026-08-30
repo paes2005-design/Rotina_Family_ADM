@@ -209,11 +209,12 @@ window.abrirRevisaoJustificativa=abrir;
 
 document.addEventListener('click',e=>{
   const mobile=e.target.closest?.('.mon-just-flag');
-  if(mobile){e.preventDefault();const r=mobile.closest('tr');abrir({id:mobile.dataset.taskId||r?.dataset?.familyTaskId||'',perfilId:mobile.dataset.profileId||r?.dataset?.familyProfileId||'',tarefa:mobile.dataset.taskName||r?.dataset?.familyTaskName||'',usuario:mobile.dataset.user||r?.dataset?.familyProfileName||'',dia:mobile.dataset.day||r?.dataset?.familyTaskDay||'',horario:mobile.dataset.schedule||(r?.dataset?.familyTaskTime||''),justificativa:mobile.dataset.justification||'',data:mobile.dataset.date||r?.dataset?.historyDate||dataSelecionada()});return;}
+  if(mobile){window.rotinaLog?.('justificativa.clique_capturado',{origem:'mobile'},'info');e.preventDefault();const r=mobile.closest('tr');abrir({id:mobile.dataset.taskId||r?.dataset?.familyTaskId||'',perfilId:mobile.dataset.profileId||r?.dataset?.familyProfileId||'',tarefa:mobile.dataset.taskName||r?.dataset?.familyTaskName||'',usuario:mobile.dataset.user||r?.dataset?.familyProfileName||'',dia:mobile.dataset.day||r?.dataset?.familyTaskDay||'',horario:mobile.dataset.schedule||(r?.dataset?.familyTaskTime||''),justificativa:mobile.dataset.justification||'',data:mobile.dataset.date||r?.dataset?.historyDate||dataSelecionada()});return;}
   const flag=e.target.closest?.('.tooltip-justificativa');
   if(flag){
+    window.rotinaLog?.('justificativa.clique_capturado',{origem:'desktop'},'info');
     e.preventDefault();
     const r=flag.closest('tr'),c=r?.children;if(!c||c.length<4)return;
     abrir({id:r.dataset.familyTaskId||'',perfilId:r.dataset.familyProfileId||'',tarefa:r.dataset.familyTaskName||c[1]?.querySelector('strong')?.textContent.trim()||c[1]?.textContent.trim()||'',usuario:r.dataset.familyProfileName||c[2]?.textContent.trim()||'',dia:r.dataset.familyTaskDay||c[3]?.textContent.trim()||'',horario:(r.dataset.familyTaskTime&&r.dataset.familyTaskEnd)?`${r.dataset.familyTaskTime} - ${r.dataset.familyTaskEnd}`:(c[0]?.querySelector('strong')?.textContent.trim()||''),justificativa:flag.querySelector('.tooltip-texto')?.textContent.trim()||'',data:r.dataset.historyDate||dataSelecionada()});
   }
-});
+},true);
