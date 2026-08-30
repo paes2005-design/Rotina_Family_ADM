@@ -1,6 +1,6 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import './adm-justification-review.js?v=8';
+import './adm-justification-review.js?v=9';
 
 const VERSION = 7;
 const MAX_RETRIES = 1;

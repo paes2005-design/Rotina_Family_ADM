@@ -98,6 +98,7 @@ async function abrir(ctx={}){
   m.style.display='flex';msg.textContent='Carregando ocorrência…';m.querySelector('#admReviewAcoes').innerHTML='';m.querySelector('#admReviewTexto').textContent=ctx.justificativa||'Carregando…';
   try{
     window.rotinaLog?.('justificativa.abertura_inicio',{data,temId:Boolean(ctx.id)},'info');
+    window.rotinaLog?.('startup.adm_justificativa_abertura',{data,temId:Boolean(ctx.id)},'info');
     if(!/^\d{4}-\d{2}-\d{2}$/.test(data))throw new Error('Selecione a data da ocorrência no Monitor antes de revisar.');
     const banco=db();if(!banco)throw new Error('Firebase ainda não está disponível.');
     const started=performance.now();
@@ -105,6 +106,7 @@ async function abrir(ctx={}){
     const rel=docsRelacionados(banco,t,data);if(!rel.hist.length)throw new Error('Não encontrei o histórico dessa ocorrência no cache atual. Aguarde a próxima sincronização e tente novamente.');
     const h={...rel.hist[0]};
     window.rotinaLog?.('justificativa.abertura_ok',{duracaoMs:Math.round(performance.now()-started),data},'info');
+    window.rotinaLog?.('startup.adm_justificativa_ok',{duracaoMs:Math.round(performance.now()-started),data},'info');
     const justificativa=(h.justificativaAtraso||ctx.justificativa||'').trim();
     contextoAtual={tarefa:t,data,historico:h,histRefs:rel.histRefs,execRefs:rel.execRefs};
     const a=montarAcoes(h);
@@ -114,7 +116,7 @@ async function abrir(ctx={}){
     m.querySelector('#admReviewOriginal').innerHTML=resumoResultado(h,a);
     m.querySelector('#admReviewAcoes').innerHTML=justificativa?a.html:'<div style="grid-column:1/-1;color:#64748b;font-size:12px">Sem justificativa enviada, não há pontos para revisar por este fluxo.</div>';
     msg.textContent=decisaoTomada(h)?'Esta ocorrência já possui uma decisão. Para escolher outra, reverta primeiro.':'';
-  }catch(e){console.error('Revisão de justificativa:',e);window.rotinaLog?.('justificativa.abertura_erro',{data,temId:Boolean(ctx.id),mensagem:String(e?.message||e).slice(0,140)},'error');msg.textContent=e.message||'Não foi possível carregar a justificativa.';}
+  }catch(e){console.error('Revisão de justificativa:',e);window.rotinaLog?.('justificativa.abertura_erro',{data,temId:Boolean(ctx.id),mensagem:String(e?.message||e).slice(0,140)},'error');window.rotinaLog?.('startup.adm_justificativa_erro',{data,temId:Boolean(ctx.id),mensagem:String(e?.message||e).slice(0,140)},'error');msg.textContent=e.message||'Não foi possível carregar a justificativa.';}
 }
 
 function commitSemBloquearOffline(batch,operacaoId,msg){
@@ -207,14 +209,13 @@ async function salvarRevisao(tipo,pct){
 
 window.abrirRevisaoJustificativa=abrir;
 
+// Compatibilidade apenas com linhas legadas. As linhas atuais do Monitor
+// possuem botao .mon-just-flag com onclick proprio e contexto completo da ocorrencia.
 document.addEventListener('click',e=>{
-  const mobile=e.target.closest?.('.mon-just-flag');
-  if(mobile){window.rotinaLog?.('justificativa.clique_capturado',{origem:'mobile'},'info');e.preventDefault();const r=mobile.closest('tr');abrir({id:mobile.dataset.taskId||r?.dataset?.familyTaskId||'',perfilId:mobile.dataset.profileId||r?.dataset?.familyProfileId||'',tarefa:mobile.dataset.taskName||r?.dataset?.familyTaskName||'',usuario:mobile.dataset.user||r?.dataset?.familyProfileName||'',dia:mobile.dataset.day||r?.dataset?.familyTaskDay||'',horario:mobile.dataset.schedule||(r?.dataset?.familyTaskTime||''),justificativa:mobile.dataset.justification||'',data:mobile.dataset.date||r?.dataset?.historyDate||dataSelecionada()});return;}
   const flag=e.target.closest?.('.tooltip-justificativa');
-  if(flag){
-    window.rotinaLog?.('justificativa.clique_capturado',{origem:'desktop'},'info');
-    e.preventDefault();
-    const r=flag.closest('tr'),c=r?.children;if(!c||c.length<4)return;
-    abrir({id:r.dataset.familyTaskId||'',perfilId:r.dataset.familyProfileId||'',tarefa:r.dataset.familyTaskName||c[1]?.querySelector('strong')?.textContent.trim()||c[1]?.textContent.trim()||'',usuario:r.dataset.familyProfileName||c[2]?.textContent.trim()||'',dia:r.dataset.familyTaskDay||c[3]?.textContent.trim()||'',horario:(r.dataset.familyTaskTime&&r.dataset.familyTaskEnd)?`${r.dataset.familyTaskTime} - ${r.dataset.familyTaskEnd}`:(c[0]?.querySelector('strong')?.textContent.trim()||''),justificativa:flag.querySelector('.tooltip-texto')?.textContent.trim()||'',data:r.dataset.historyDate||dataSelecionada()});
-  }
+  if(!flag)return;
+  window.rotinaLog?.('startup.adm_justificativa_legacy_clique',{origem:'desktop'},'info');
+  e.preventDefault();
+  const r=flag.closest('tr'),c=r?.children;if(!c||c.length<4)return;
+  abrir({id:r.dataset.familyTaskId||'',perfilId:r.dataset.familyProfileId||'',tarefa:r.dataset.familyTaskName||c[1]?.querySelector('strong')?.textContent.trim()||c[1]?.textContent.trim()||'',usuario:r.dataset.familyProfileName||c[2]?.textContent.trim()||'',dia:r.dataset.familyTaskDay||c[3]?.textContent.trim()||'',horario:(r.dataset.familyTaskTime&&r.dataset.familyTaskEnd)?`${r.dataset.familyTaskTime} - ${r.dataset.familyTaskEnd}`:(c[0]?.querySelector('strong')?.textContent.trim()||''),justificativa:flag.querySelector('.tooltip-texto')?.textContent.trim()||'',data:r.dataset.historyDate||dataSelecionada()});
 },true);
