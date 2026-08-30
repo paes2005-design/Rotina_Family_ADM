@@ -1,2 +1,2 @@
-run=2026-08-30T14:04:00-03:00
-reason=align-monitor-and-justification-history-date-retry
+run=2026-08-30T14:45:00-03:00
+reason=prevent-post-session-shield-and-capture-justification-click
