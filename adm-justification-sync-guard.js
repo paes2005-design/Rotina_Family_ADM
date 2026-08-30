@@ -1,14 +1,27 @@
 import {getApps,getApp} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import {getFirestore,doc,collection,query,where,getDocFromServer,getDocsFromServer} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-const VERSION=4;
+const VERSION=5;
 const DIRECT_TIMEOUT_MS=5500;
+const PENDING_LOGS_KEY='__rfJustificationPendingLogsV1';
 let processando=false;
 let toastTimer=null;
 
-const log=(evento,detalhes={},nivel='info')=>{
-  try{window.rotinaLog?.(evento,{...detalhes,justificationSyncGuardVersion:VERSION},nivel);}catch{}
-};
+function log(evento,detalhes={},nivel='info'){
+  const payload={...detalhes,justificationSyncGuardVersion:VERSION};
+  try{
+    if(typeof window.rotinaLog==='function'){window.rotinaLog(evento,payload,nivel);return;}
+    const fila=Array.isArray(window[PENDING_LOGS_KEY])?window[PENDING_LOGS_KEY]:[];
+    fila.push({evento,detalhes:payload,nivel,registradoEm:new Date().toISOString()});
+    window[PENDING_LOGS_KEY]=fila.slice(-40);
+  }catch{}
+}
+function flushPending(){
+  if(typeof window.rotinaLog!=='function')return;
+  const fila=Array.isArray(window[PENDING_LOGS_KEY])?window[PENDING_LOGS_KEY].splice(0):[];
+  for(const item of fila){try{window.rotinaLog(item.evento,item.detalhes,item.nivel);}catch{}}
+}
+window.addEventListener('rotina-monitoring-ready',flushPending);
 
 function snapshot(){
   try{return typeof window.rotinaAdmCacheSnapshot==='function'?window.rotinaAdmCacheSnapshot():null;}catch{return null;}
@@ -103,7 +116,7 @@ async function buscarOcorrenciaServidor(ctx,cache){
 
 async function garantirModuloRevisao(){
   if(typeof window.abrirRevisaoJustificativa==='function')return true;
-  await comTimeout(import('./adm-justification-review.js?v=sync-guard-4'),4000);
+  await comTimeout(import('./adm-justification-review.js?v=sync-guard-5'),4000);
   return typeof window.abrirRevisaoJustificativa==='function';
 }
 
@@ -125,7 +138,7 @@ async function abrirComDados(ctx,tarefa,historico){
 }
 
 async function tratarClique(flag){
-  if(processando)return;
+  if(processando){log('justificativa.clique_ignorado',{motivo:'processando'},'warning');return;}
   processando=true;
   const ctx=contextoDoClique(flag);
   const inicio=performance.now();
@@ -139,6 +152,7 @@ async function tratarClique(flag){
       log('justificativa.abertura_ok',{origem:'cache',tempoMs:Math.round(performance.now()-inicio)});
       return;
     }
+    log('justificativa.cache_miss',{temTarefaCache:Boolean(cache.tarefa),temHistoricoCache:Boolean(cache.historico)},'warning');
     if(navigator.onLine===false){
       esconderToast();
       await abrirComDados(ctx,cache.tarefa,cache.historico);
@@ -149,6 +163,7 @@ async function tratarClique(flag){
     toast('Buscando esta justificativa no servidor…',6500);
     log('justificativa.leitura_direta_inicio',{temTarefaCache:Boolean(cache.tarefa),temHistoricoCache:Boolean(cache.historico)});
     const dados=await buscarOcorrenciaServidor(ctx,cache);
+    log('justificativa.leitura_direta_ok',{temTarefa:Boolean(dados.tarefa),temHistorico:Boolean(dados.historico),tempoMs:Math.round(performance.now()-inicio)});
     esconderToast();
     await abrirComDados(ctx,dados.tarefa,dados.historico);
     log('justificativa.abertura_ok',{origem:'servidor-direto',tempoMs:Math.round(performance.now()-inicio)});
@@ -156,7 +171,7 @@ async function tratarClique(flag){
     console.error('Falha ao abrir justificativa:',e);
     toast(e?.message||'Não foi possível abrir esta justificativa.',3500);
     log('justificativa.abertura_erro',{mensagem:String(e?.message||e).slice(0,140),tempoMs:Math.round(performance.now()-inicio)},'error');
-  }finally{processando=false;}
+  }finally{processando=false;flushPending();}
 }
 
 document.addEventListener('click',event=>{
@@ -167,3 +182,4 @@ document.addEventListener('click',event=>{
 },true);
 
 log('justificativa.sync_guard_pronto',{versao:VERSION});
+flushPending();
