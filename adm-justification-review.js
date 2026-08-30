@@ -70,7 +70,7 @@ function docsRelacionados(banco,t,data){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(data))throw new Error('Data da ocorrência inválida.');
   const snap=cacheSnapshot();
   const historico=Array.isArray(snap?.historico)?snap.historico:[];
-  const candidatos=historico.filter(h=>String(h.tarefaId||'')===String(t.id||'')&&String(h.data||'')===data&&(!t.perfilId||!h.perfilId||String(h.perfilId)===String(t.perfilId)));
+  const candidatos=historico.filter(h=>String(h.tarefaId||'')===String(t.id||'')&&String(h.data||h.dataExecucao||'')===data&&(!t.perfilId||!h.perfilId||String(h.perfilId)===String(t.perfilId)));
   const esperado=t.perfilId?`${t.perfilId}_${t.id}_${data}`:'';
   const h=candidatos.find(x=>String(x.id||'')===esperado)||candidatos[0]||null;
   if(!h)return {hist:[],histRefs:[],execRefs:[]};
@@ -97,6 +97,7 @@ async function abrir(ctx={}){
   const m=garantirModal(),msg=m.querySelector('#admReviewMsg'),data=ctx.data||dataSelecionada();
   m.style.display='flex';msg.textContent='Carregando ocorrência…';m.querySelector('#admReviewAcoes').innerHTML='';m.querySelector('#admReviewTexto').textContent=ctx.justificativa||'Carregando…';
   try{
+    window.rotinaLog?.('justificativa.abertura_inicio',{data,temId:Boolean(ctx.id)},'info');
     if(!/^\d{4}-\d{2}-\d{2}$/.test(data))throw new Error('Selecione a data da ocorrência no Monitor antes de revisar.');
     const banco=db();if(!banco)throw new Error('Firebase ainda não está disponível.');
     const started=performance.now();
@@ -113,7 +114,7 @@ async function abrir(ctx={}){
     m.querySelector('#admReviewOriginal').innerHTML=resumoResultado(h,a);
     m.querySelector('#admReviewAcoes').innerHTML=justificativa?a.html:'<div style="grid-column:1/-1;color:#64748b;font-size:12px">Sem justificativa enviada, não há pontos para revisar por este fluxo.</div>';
     msg.textContent=decisaoTomada(h)?'Esta ocorrência já possui uma decisão. Para escolher outra, reverta primeiro.':'';
-  }catch(e){console.error('Revisão de justificativa:',e);msg.textContent=e.message||'Não foi possível carregar a justificativa.';}
+  }catch(e){console.error('Revisão de justificativa:',e);window.rotinaLog?.('justificativa.abertura_erro',{data,temId:Boolean(ctx.id),mensagem:String(e?.message||e).slice(0,140)},'error');msg.textContent=e.message||'Não foi possível carregar a justificativa.';}
 }
 
 function commitSemBloquearOffline(batch,operacaoId,msg){
