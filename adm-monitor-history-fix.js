@@ -1,6 +1,3 @@
-import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import { getFirestore, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-
 const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pad=n=>String(n).padStart(2,'0');
@@ -47,16 +44,12 @@ function badge(x){
   if(status.toLowerCase().includes('andamento'))return 'badge-andamento';
   return 'badge-pendente';
 }
-async function carregar(force=false){
+function carregar(){
   const grupoId=grupoAtual();
-  if(!grupoId||grupoId==='--'||grupoId==='CLI-Gen'||!getApps().length)return null;
-  if(!force&&cache.grupoId===grupoId&&Date.now()-cache.at<8000)return cache;
-  const db=getFirestore(getApp());
-  const [ts,hs]=await Promise.all([
-    getDocs(query(collection(db,'tarefas'),where('grupoId','==',grupoId))),
-    getDocs(query(collection(db,'historico'),where('grupoId','==',grupoId)))
-  ]);
-  cache={grupoId,at:Date.now(),tarefas:ts.docs.map(d=>({id:d.id,...d.data()})),historico:hs.docs.map(d=>({id:d.id,...d.data()}))};
+  if(!grupoId||grupoId==='--'||grupoId==='CLI-Gen')return null;
+  const snap=window.rotinaAdmCacheSnapshot?.();
+  if(!snap||String(snap.grupoId||'')!==String(grupoId))return null;
+  cache={grupoId,at:Date.now(),tarefas:(snap.tarefas||[]).map(x=>({...x})),historico:(snap.historico||[]).map(x=>({...x}))};
   return cache;
 }
 function perfisVisiveis(dados){
@@ -135,6 +128,7 @@ function instalar(t=0){
   document.addEventListener('change',e=>{if(['filtroData','filtroIntegrante','monitorData'].includes(e.target?.id))setTimeout(()=>renderHistoricoMonitor(true),0);});
   document.addEventListener('click',e=>{if(e.target?.closest('#monitorAplicar,#monitorLimpar,#rfMonitorDateNav button,#monitorPeriodNav button,#monitorPeriodTabs button,#monitorPeriodNavPro button'))setTimeout(()=>renderHistoricoMonitor(true),40);});
   window.addEventListener('rotina-monitor-period-change',()=>setTimeout(()=>renderHistoricoMonitor(true),0));
+  window.addEventListener('rotina-adm-cache-updated',()=>setTimeout(()=>renderHistoricoMonitor(false),0));
   setTimeout(()=>renderHistoricoMonitor(true),120);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>instalar(),{once:true});else instalar();

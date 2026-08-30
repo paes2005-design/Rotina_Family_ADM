@@ -1,5 +1,5 @@
 import {getApps,getApp} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import {getFirestore,collection,query,where,getDocs,doc,getDoc,writeBatch,deleteField} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import {getFirestore,doc,writeBatch,deleteField} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 const esc=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 const pad=n=>String(n).padStart(2,'0');
@@ -52,25 +52,32 @@ function garantirModal(){
 }
 function fecharModal(){if(salvando)return;const m=document.getElementById('admReviewJustModal');if(m)m.style.display='none';contextoAtual=null;}
 
-async function localizarTarefa(ctx){
-  const banco=db(),g=grupo();if(!banco||!g||g==='--'||g==='CLI-Gen')throw new Error('Grupo não identificado.');
-  if(ctx.id){const s=await getDoc(doc(banco,'tarefas',ctx.id));if(s.exists())return{id:s.id,...s.data()};}
-  const snap=await getDocs(query(collection(banco,'tarefas'),where('grupoId','==',g)));
+function cacheSnapshot(){
+  try{return typeof window.rotinaAdmCacheSnapshot==='function'?window.rotinaAdmCacheSnapshot():null;}catch{return null;}
+}
+function localizarTarefa(ctx){
+  const snap=cacheSnapshot(),g=grupo();
+  if(!snap||!g||g==='--'||g==='CLI-Gen')throw new Error('Os dados do painel ainda não estão prontos.');
+  const tarefas=Array.isArray(snap.tarefas)?snap.tarefas:[];
+  if(ctx.id){const t=tarefas.find(x=>String(x.id||'')===String(ctx.id));if(t)return t;}
   const horario=parseHorario(ctx.horario||ctx.schedule||'');
-  const lista=snap.docs.map(d=>({id:d.id,...d.data()})).filter(t=>(!ctx.tarefa||t.nome===ctx.tarefa)&&(!ctx.usuario||t.perfilNome===ctx.usuario)&&(!ctx.dia||t.diaSemana===ctx.dia)&&(!horario.inicio||t.horaSugeridaInicio===horario.inicio)&&(!horario.fim||t.horaSugeridaFim===horario.fim));
+  const norm=v=>String(v||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const lista=tarefas.filter(t=>(!ctx.tarefa||norm(t.nome)===norm(ctx.tarefa))&&(!ctx.usuario||norm(t.perfilNome)===norm(ctx.usuario))&&(!ctx.dia||norm(t.diaSemana)===norm(ctx.dia))&&(!horario.inicio||t.horaSugeridaInicio===horario.inicio)&&(!horario.fim||t.horaSugeridaFim===horario.fim));
   return lista[0]||null;
 }
 
-async function docsRelacionados(banco,t,data){
+function docsRelacionados(banco,t,data){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(data))throw new Error('Data da ocorrência inválida.');
-  const hist=[],exec=[];
-  if(t.perfilId){const h=await getDoc(doc(banco,'historico',`${t.perfilId}_${t.id}_${data}`));if(h.exists())hist.push(h);}
-  const e=await getDoc(doc(banco,'execucoes',`${data}__${t.id}`));if(e.exists())exec.push(e);
-  if(!hist.length){
-    const hs=await getDocs(query(collection(banco,'historico'),where('tarefaId','==',t.id)));
-    hs.docs.filter(d=>{const x=d.data();return x.data===data&&(!t.perfilId||!x.perfilId||x.perfilId===t.perfilId);}).forEach(d=>hist.push(d));
-  }
-  return {hist,exec};
+  const snap=cacheSnapshot();
+  const historico=Array.isArray(snap?.historico)?snap.historico:[];
+  const candidatos=historico.filter(h=>String(h.tarefaId||'')===String(t.id||'')&&String(h.data||'')===data&&(!t.perfilId||!h.perfilId||String(h.perfilId)===String(t.perfilId)));
+  const esperado=t.perfilId?`${t.perfilId}_${t.id}_${data}`:'';
+  const h=candidatos.find(x=>String(x.id||'')===esperado)||candidatos[0]||null;
+  if(!h)return {hist:[],histRefs:[],execRefs:[]};
+  const histId=String(h.id||esperado||'').trim();
+  const histRefs=histId?[doc(banco,'historico',histId)]:[];
+  const execRefs=[doc(banco,'execucoes',`${data}__${t.id}`)];
+  return {hist:[{...h}],histRefs,execRefs};
 }
 
 function montarAcoes(h){
@@ -92,11 +99,13 @@ async function abrir(ctx={}){
   try{
     if(!/^\d{4}-\d{2}-\d{2}$/.test(data))throw new Error('Selecione a data da ocorrência no Monitor antes de revisar.');
     const banco=db();if(!banco)throw new Error('Firebase ainda não está disponível.');
-    const t=await localizarTarefa(ctx);if(!t)throw new Error('Não foi possível localizar esta tarefa.');
-    const rel=await docsRelacionados(banco,t,data);if(!rel.hist.length)throw new Error('Não encontrei o histórico dessa ocorrência na data selecionada.');
-    const h={id:rel.hist[0].id,...rel.hist[0].data()};
+    const started=performance.now();
+    const t=localizarTarefa(ctx);if(!t)throw new Error('Não foi possível localizar esta tarefa no cache atual.');
+    const rel=docsRelacionados(banco,t,data);if(!rel.hist.length)throw new Error('Não encontrei o histórico dessa ocorrência no cache atual. Aguarde a próxima sincronização e tente novamente.');
+    const h={...rel.hist[0]};
+    window.rotinaLog?.('justificativa.abertura_ok',{duracaoMs:Math.round(performance.now()-started),data},'info');
     const justificativa=(h.justificativaAtraso||ctx.justificativa||'').trim();
-    contextoAtual={tarefa:t,data,historico:h,histDocs:rel.hist,execDocs:rel.exec};
+    contextoAtual={tarefa:t,data,historico:h,histRefs:rel.histRefs,execRefs:rel.execRefs};
     const a=montarAcoes(h);
     m.querySelector('#admReviewTitulo').textContent=h.nomeTarefa||t.nome||'Revisar ocorrência';
     m.querySelector('#admReviewResumo').innerHTML=`<strong>${esc(h.perfilNome||t.perfilNome||ctx.usuario||'Integrante')}</strong> · ${esc(h.diaSemana||t.diaSemana||ctx.dia||'')} · ${esc(data.split('-').reverse().join('/'))}<br>${esc(h.horaSugeridaInicio||t.horaSugeridaInicio||'--:--')}–${esc(h.horaSugeridaFim||t.horaSugeridaFim||'--:--')}`;
@@ -130,8 +139,8 @@ async function salvarRevisao(tipo,pct){
   msg.textContent=tipo==='reverter'?'Registrando reversão…':'Registrando parecer…';
   try{
     const banco=db();if(!banco)throw new Error('Firebase ainda não está disponível.');
-    const {tarefa:t,data,histDocs,execDocs}=contextoAtual;
-    if(!histDocs.length)throw new Error('Histórico da ocorrência não encontrado.');
+    const {tarefa:t,data,histRefs,execRefs}=contextoAtual;
+    if(!histRefs.length)throw new Error('Histórico da ocorrência não encontrado.');
 
     // O estado local/cache é a referência imediata. Isso mantém a decisão única na
     // interface e permite reverter + escolher novamente sem depender de internet.
@@ -152,8 +161,8 @@ async function salvarRevisao(tipo,pct){
         revisaoDecisao:deleteField(),
         revisadoEm:deleteField()
       };
-      histDocs.forEach(d=>batch.update(d.ref,patch));
-      execDocs.forEach(d=>batch.update(d.ref,patch));
+      histRefs.forEach(ref=>batch.set(ref,patch,{merge:true}));
+      execRefs.forEach(ref=>batch.set(ref,patch,{merge:true}));
       if(data===hojeISO())batch.update(doc(banco,'tarefas',t.id),patch);
 
       atualizado={...atual,pontosGanhos:o.pontos,pontosOriginais:o.pontos,percentualOriginal:o.pct,revisaoStatus:'aguardando'};
@@ -174,8 +183,8 @@ async function salvarRevisao(tipo,pct){
     const agora=new Date().toISOString();
     const decisao=tipo==='manter'?'resultado-mantido':alvoPct>=100?'devolucao-total':`devolucao-${alvoPct}`;
     const patch={pontosGanhos:novosPts,pontosOriginais:o.pontos,percentualOriginal:o.pct,percentualRevisado:alvoPct,pontosDevolvidos:devolvidos,revisaoStatus:'revisado',revisaoDecisao:decisao,revisadoEm:agora};
-    histDocs.forEach(d=>batch.update(d.ref,patch));
-    execDocs.forEach(d=>batch.update(d.ref,patch));
+    histRefs.forEach(ref=>batch.set(ref,patch,{merge:true}));
+    execRefs.forEach(ref=>batch.set(ref,patch,{merge:true}));
     if(data===hojeISO())batch.update(doc(banco,'tarefas',t.id),patch);
 
     atualizado={...atual,...patch};
@@ -199,11 +208,11 @@ window.abrirRevisaoJustificativa=abrir;
 
 document.addEventListener('click',e=>{
   const mobile=e.target.closest?.('.mon-just-flag');
-  if(mobile){e.preventDefault();abrir({tarefa:mobile.dataset.taskName||'',usuario:mobile.dataset.user||'',dia:mobile.dataset.day||'',horario:mobile.dataset.schedule||'',justificativa:mobile.dataset.justification||'',data:mobile.dataset.date||''});return;}
+  if(mobile){e.preventDefault();const r=mobile.closest('tr');abrir({id:mobile.dataset.taskId||r?.dataset?.familyTaskId||'',perfilId:mobile.dataset.profileId||r?.dataset?.familyProfileId||'',tarefa:mobile.dataset.taskName||r?.dataset?.familyTaskName||'',usuario:mobile.dataset.user||r?.dataset?.familyProfileName||'',dia:mobile.dataset.day||r?.dataset?.familyTaskDay||'',horario:mobile.dataset.schedule||(r?.dataset?.familyTaskTime||''),justificativa:mobile.dataset.justification||'',data:mobile.dataset.date||r?.dataset?.historyDate||dataSelecionada()});return;}
   const flag=e.target.closest?.('.tooltip-justificativa');
   if(flag){
     e.preventDefault();
     const r=flag.closest('tr'),c=r?.children;if(!c||c.length<4)return;
-    abrir({tarefa:c[1]?.querySelector('strong')?.textContent.trim()||c[1]?.textContent.trim()||'',usuario:c[2]?.textContent.trim()||'',dia:c[3]?.textContent.trim()||'',horario:c[0]?.querySelector('strong')?.textContent.trim()||'',justificativa:flag.querySelector('.tooltip-texto')?.textContent.trim()||'',data:dataSelecionada()});
+    abrir({id:r.dataset.familyTaskId||'',perfilId:r.dataset.familyProfileId||'',tarefa:r.dataset.familyTaskName||c[1]?.querySelector('strong')?.textContent.trim()||c[1]?.textContent.trim()||'',usuario:r.dataset.familyProfileName||c[2]?.textContent.trim()||'',dia:r.dataset.familyTaskDay||c[3]?.textContent.trim()||'',horario:(r.dataset.familyTaskTime&&r.dataset.familyTaskEnd)?`${r.dataset.familyTaskTime} - ${r.dataset.familyTaskEnd}`:(c[0]?.querySelector('strong')?.textContent.trim()||''),justificativa:flag.querySelector('.tooltip-texto')?.textContent.trim()||'',data:r.dataset.historyDate||dataSelecionada()});
   }
 });

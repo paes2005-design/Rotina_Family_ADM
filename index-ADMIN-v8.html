@@ -776,6 +776,7 @@
     const SINCRONIZACAO_ADM_MS = 5 * 60 * 1000;
     let sincronizacaoAdmTimer = null;
     let sincronizacaoAdmEmCurso = false;
+    let sincronizacaoAdmPromise = null;
     let ultimaSincronizacaoAdmServidor = 0;
     let eventosSincronizacaoAdmInstalados = false;
     let migracaoLegadaConferida = false;
@@ -941,8 +942,8 @@
         document.getElementById('telaAcesso').style.display='none'; document.getElementById('sistemaPrincipal').style.display='block';
         document.getElementById('displayCodigoAdmin').innerText=adminLogadoAtual.codigoAdmin || 'ADM-Gen';
         document.getElementById('displayCodigoCliente').innerText=adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId || 'CLI-Gen';
+        await iniciarEscutasFirebase();
         window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));
-        iniciarEscutasFirebase();
         // Regra/configuração é carregada pelo cache central. Reset semanal permanece em tarefa de manutenção separada.
         setTimeout(()=>verificarEExecutarResetSemanal(adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId),1500);
     };
@@ -973,9 +974,11 @@
 
     async function sincronizarDadosAdm(origem='intervalo-5min',servidor=true){
         const gId=adminLogadoAtual?.codigoCliente||adminLogadoAtual?.grupoId;
-        if(!gId||sincronizacaoAdmEmCurso)return false;
+        if(!gId)return false;
+        if(sincronizacaoAdmPromise)return sincronizacaoAdmPromise;
         sincronizacaoAdmEmCurso=true;
         const inicio=performance.now();
+        const executar=async()=>{
         try{
             const lerColecao=servidor?getDocsFromServer:getDocsFromCache;
             const lerDocumento=servidor?getDocFromServer:getDocFromCache;
@@ -995,25 +998,33 @@
             if(resgates.status==='fulfilled')resgatesCache=resgates.value.docs.map(d=>({id:d.id,...d.data()}));
             if(config.status==='fulfilled')regraAtrasoAtual=normalizarRegraAtraso(config.value.exists()?config.value.data():{});
             const falhas=resultados.filter(x=>x.status==='rejected').length;
-            if(servidor&&falhas<resultados.length)ultimaSincronizacaoAdmServidor=Date.now();
+            if(servidor&&falhas===0)ultimaSincronizacaoAdmServidor=Date.now();
             renderizarCachesAdm();
             if(!migracaoLegadaConferida&&perfisCache.length&&tarefasCache.length){migracaoLegadaConferida=true;migrarTarefasLegadas().catch(console.error);}
             window.rotinaLog?.('sync.adm_ciclo',{origem,servidor,tempoMs:Math.round(performance.now()-inicio),falhas,intervaloMin:5},falhas?'warning':'info');
             window.dispatchEvent(new CustomEvent('rotina-adm-sync-complete',{detail:{origem,servidor,falhas}}));
-            return falhas<resultados.length;
+            return falhas===0;
         }catch(e){window.rotinaLog?.('sync.adm_erro',{origem,servidor,mensagem:String(e?.message||e)},'warning');return false;}
-        finally{sincronizacaoAdmEmCurso=false;}
+        };
+        sincronizacaoAdmPromise=executar();
+        try{return await sincronizacaoAdmPromise;}
+        finally{sincronizacaoAdmPromise=null;sincronizacaoAdmEmCurso=false;}
     }
     window.rotinaSincronizarAdmAgora=(motivo='manual')=>sincronizarDadosAdm(motivo,true);
     window.rotinaAtualizarAdmCacheLocal=(motivo='acao-local')=>sincronizarDadosAdm(motivo,false);
 
     function encerrarSincronizacaoAdm(){if(sincronizacaoAdmTimer){clearInterval(sincronizacaoAdmTimer);sincronizacaoAdmTimer=null;}}
-    function iniciarEscutasFirebase() {
+    async function iniciarEscutasFirebase() {
         // Cache-first: o ADM não mantém mais cinco listeners funcionais permanentes.
         [unsubscribePerfis,unsubscribeTarefasAdmin,unsubscribeHistoricoGrupo,unsubscribeRecompensas,unsubscribeResgates].forEach(u=>u&&u());
         encerrarSincronizacaoAdm();
         unsubscribePerfis=encerrarSincronizacaoAdm;unsubscribeTarefasAdmin=null;unsubscribeHistoricoGrupo=null;unsubscribeRecompensas=null;unsubscribeResgates=null;
-        sincronizarDadosAdm('cache-inicial',false).finally(()=>sincronizarDadosAdm('servidor-inicial',true));
+        let inicialOk=await sincronizarDadosAdm('servidor-inicial',true);
+        if(!inicialOk&&navigator.onLine!==false){
+            await new Promise(resolve=>setTimeout(resolve,500));
+            inicialOk=await sincronizarDadosAdm('servidor-inicial-retry',true);
+        }
+        if(!inicialOk)await sincronizarDadosAdm('cache-fallback-inicial',false);
         sincronizacaoAdmTimer=setInterval(()=>{if(!document.hidden)sincronizarDadosAdm('intervalo-5min',true);},SINCRONIZACAO_ADM_MS);
         if(!eventosSincronizacaoAdmInstalados){
             eventosSincronizacaoAdmInstalados=true;
@@ -1648,8 +1659,8 @@
             document.getElementById('sistemaPrincipal').style.display='block';
             document.getElementById('displayCodigoAdmin').innerText=adminLogadoAtual.codigoAdmin || 'ADM-Gen';
             document.getElementById('displayCodigoCliente').innerText=adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId || 'CLI-Gen';
+            await iniciarEscutasFirebase();
             window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));
-            iniciarEscutasFirebase();
             setTimeout(()=>verificarEExecutarResetSemanal(adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId),1500);
         } catch(e) { console.error('Falha ao restaurar sessão administrativa',e); }
     });
@@ -1657,7 +1668,7 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=63',{updateViaCache:'none'})
+      navigator.serviceWorker.register('./sw.js?v=69',{updateViaCache:'none'})
         .then(reg => console.log('Service Worker registrado com sucesso!', reg))
         .catch(err => console.error('Erro ao registrar Service Worker:', err));
     });
