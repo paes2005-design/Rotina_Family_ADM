@@ -36,8 +36,12 @@ jobs:
           reg_sw=re.search(r"serviceWorker\.register\('./sw\.js\?v=([^']+)'",admin).group(1)
           assert build==sw_build==entry_build,(build,sw_build,entry_build)
           assert expected_sw==sw_ver==reg_sw,(expected_sw,sw_ver,reg_sw)
-          assert "adm-justification-review.js?v=9" in mobile
+          assert "runtime-build-info.js?v=20260830.7" in startup
           assert "adm-justification-review.js?v=9" in startup
+          assert "adm-monitor-history-fix.js?v=4" in startup
+          assert "import './mobile-app-ui.js'" in startup
+          assert "serviceWorker.register('./sw.js?v=77'" in startup
+          assert "adm-justification-review.js?v=9" in mobile
           assert "adm-justification-review.js?v=9" in sw
           assert "class=\"mon-just-flag\"" in monitor
           assert "cards.addEventListener('click'" in mobile
@@ -45,6 +49,7 @@ jobs:
           assert "window.abrirRevisaoJustificativa=abrir" in review
           assert "h.data||h.dataExecucao" in review
           print(f'VERSION_PIPELINE=PASS build={build} sw={sw_ver}')
+          print('DETERMINISTIC_RUNTIME=PASS startup->runtime,review,history,mobile,sw')
           print('STATIC_FLOW=PASS monitor->mobile-card->review->cache')
           PY
       - name: Instalar Chromium de teste
@@ -69,15 +74,22 @@ jobs:
             sleep 3
           done
           test "$ok" = 1
-      - name: Verificar versão publicada ao vivo
+      - name: Verificar runtime publicado ao vivo
         shell: bash
         run: |
           root='https://paes2005-design.github.io/Rotina_Family_ADM'
-          curl -fsS "$root/index.html?qa=$(date +%s)" | grep -q 'entry=20260830.7'
-          curl -fsS "$root/runtime-build-info.js?qa=$(date +%s)" | grep -q "build:'20260830.7'"
-          curl -fsS "$root/sw.js?qa=$(date +%s)" | grep -q "ROTINA_SW_VERSION='77'"
-          curl -fsS "$root/index-ADMIN-v8.html?qa=$(date +%s)" | grep -q "sw.js?v=77"
-          echo 'LIVE_VERSION_PIPELINE=PASS build=20260830.7 sw=77'
+          stamp=$(date +%s)
+          curl -fsS "$root/index.html?qa=$stamp" | grep -q 'entry=20260830.7'
+          curl -fsS "$root/runtime-build-info.js?qa=$stamp" | grep -q "build:'20260830.7'"
+          curl -fsS "$root/sw.js?qa=$stamp" | grep -q "ROTINA_SW_VERSION='77'"
+          curl -fsS "$root/index-ADMIN-v8.html?qa=$stamp" | grep -q "sw.js?v=77"
+          startup=$(curl -fsS "$root/adm-startup-stability-v1.js?qa=$stamp")
+          printf '%s' "$startup" | grep -q "runtime-build-info.js?v=20260830.7"
+          printf '%s' "$startup" | grep -q "adm-justification-review.js?v=9"
+          printf '%s' "$startup" | grep -q "adm-monitor-history-fix.js?v=4"
+          printf '%s' "$startup" | grep -q "import './mobile-app-ui.js'"
+          printf '%s' "$startup" | grep -q "serviceWorker.register('./sw.js?v=77'"
+          echo 'LIVE_RUNTIME=PASS build=20260830.7 sw=77 deterministic-modules=PASS'
       - name: Testar em Chromium mobile no GitHub Pages
         env:
           QA_URLS: https://paes2005-design.github.io/Rotina_Family_ADM/qa/justification-mobile-harness.html
