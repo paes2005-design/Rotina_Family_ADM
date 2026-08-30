@@ -1,0 +1,55 @@
+name: Restaurar justificativas estáveis
+on:
+  push:
+    paths:
+      - '.github/triggers/restore-stable-justification.txt'
+permissions:
+  contents: write
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restaurar fluxo comprovadamente estável
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin 86f9bc862f2cb812688899186e294397197c5db3 277b8a512ec18c5a9e4a34b595077aadcc11bee8
+
+          # Justificativas: volta à leitura direta Firestore, versão que funcionava antes da regressão cache-only de 27/08.
+          git checkout 277b8a512ec18c5a9e4a34b595077aadcc11bee8 -- adm-justification-review.js
+
+          # Retira interferências introduzidas nesta rodada.
+          git checkout 86f9bc862f2cb812688899186e294397197c5db3 -- adm-startup-stability-v1.js app-monitoring.js
+
+          # Service Worker parte da base estável e recebe um número novo para forçar atualização nos aparelhos.
+          git checkout 86f9bc862f2cb812688899186e294397197c5db3 -- sw.js
+          sed -i "s/rotina-family-adm-v64/rotina-family-adm-v68/g" sw.js
+          sed -i "s/ROTINA_SW_VERSION='64'/ROTINA_SW_VERSION='68'/g" sw.js
+          sed -i "s/ROTINA_BUILD_ID='20260828.1'/ROTINA_BUILD_ID='20260829.4'/g" sw.js
+
+          # Identificação visível do novo build.
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('runtime-build-info.js')
+          s=p.read_text()
+          import re
+          s=re.sub(r"build:'[^']+'", "build:'20260829.4'", s)
+          s=re.sub(r"expectedServiceWorkerVersion:'[^']+'", "expectedServiceWorkerVersion:'68'", s)
+          p.write_text(s)
+          p=Path('index.html')
+          s=p.read_text()
+          s=re.sub(r'entry=\d{8}\.\d+', 'entry=20260829.4', s)
+          p.write_text(s)
+          PY
+
+          # O guard de justificativa fica completamente fora do runtime.
+          rm -f adm-justification-sync-guard.js
+
+          git config user.name 'rotina-family-restore-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Restaurar fluxo estável de justificativas e remover guardiões experimentais'
+          git push
