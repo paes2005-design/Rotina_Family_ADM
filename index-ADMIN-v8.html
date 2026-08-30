@@ -942,8 +942,10 @@
         document.getElementById('telaAcesso').style.display='none'; document.getElementById('sistemaPrincipal').style.display='block';
         document.getElementById('displayCodigoAdmin').innerText=adminLogadoAtual.codigoAdmin || 'ADM-Gen';
         document.getElementById('displayCodigoCliente').innerText=adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId || 'CLI-Gen';
-        await iniciarEscutasFirebase();
+        const syncInicialAdm=iniciarEscutasFirebase();
+        window.rotinaAdmInitialSyncPromise=syncInicialAdm;
         window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));
+        syncInicialAdm.catch(e=>console.error('Falha na sincronização inicial do ADM',e));
         // Regra/configuração é carregada pelo cache central. Reset semanal permanece em tarefa de manutenção separada.
         setTimeout(()=>verificarEExecutarResetSemanal(adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId),1500);
     };
@@ -1659,8 +1661,10 @@
             document.getElementById('sistemaPrincipal').style.display='block';
             document.getElementById('displayCodigoAdmin').innerText=adminLogadoAtual.codigoAdmin || 'ADM-Gen';
             document.getElementById('displayCodigoCliente').innerText=adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId || 'CLI-Gen';
-            await iniciarEscutasFirebase();
+            const syncInicialAdm=iniciarEscutasFirebase();
+            window.rotinaAdmInitialSyncPromise=syncInicialAdm;
             window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));
+            syncInicialAdm.catch(e=>console.error('Falha na sincronização inicial do ADM',e));
             setTimeout(()=>verificarEExecutarResetSemanal(adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId),1500);
         } catch(e) { console.error('Falha ao restaurar sessão administrativa',e); }
     });
