@@ -1,0 +1,512 @@
+### SINCRONIZACAO_ADM_MS hits=4
+770:     let historicoGrupoCache = [];
+771:     let recompensasCache = [];
+772:     let resgatesCache = [];
+773:     let unsubscribeHistoricoGrupo = null;
+774:     let unsubscribeRecompensas = null;
+775:     let unsubscribeResgates = null;
+776:     const SINCRONIZACAO_ADM_MS = 5 * 60 * 1000;
+777:     let sincronizacaoAdmTimer = null;
+778:     let sincronizacaoAdmEmCurso = false;
+779:     let ultimaSincronizacaoAdmServidor = 0;
+780:     let eventosSincronizacaoAdmInstalados = false;
+781:     let migracaoLegadaConferida = false;
+782: 
+783:     const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+784: 
+785:     document.getElementById('filtroData').valueAsDate = new Date();
+786:     const dashData=document.getElementById('dashboardDataRef'); if(dashData) dashData.value=formatarDataISO(new Date());
+787: 
+788: 
+789:     function formatarDataISO(d) {
+790:         const ano = d.getFullYear();
+---
+1011:     function iniciarEscutasFirebase() {
+1012:         // Cache-first: o ADM não mantém mais cinco listeners funcionais permanentes.
+1013:         [unsubscribePerfis,unsubscribeTarefasAdmin,unsubscribeHistoricoGrupo,unsubscribeRecompensas,unsubscribeResgates].forEach(u=>u&&u());
+1014:         encerrarSincronizacaoAdm();
+1015:         unsubscribePerfis=encerrarSincronizacaoAdm;unsubscribeTarefasAdmin=null;unsubscribeHistoricoGrupo=null;unsubscribeRecompensas=null;unsubscribeResgates=null;
+1016:         sincronizarDadosAdm('cache-inicial',false).finally(()=>sincronizarDadosAdm('servidor-inicial',true));
+1017:         sincronizacaoAdmTimer=setInterval(()=>{if(!document.hidden)sincronizarDadosAdm('intervalo-5min',true);},SINCRONIZACAO_ADM_MS);
+1018:         if(!eventosSincronizacaoAdmInstalados){
+1019:             eventosSincronizacaoAdmInstalados=true;
+1020:             document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('retorno-visivel-stale',true);});
+1021:             window.addEventListener('online',()=>{if(Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('reconectado-stale',true);});
+1022:             // Após comandos locais, releia somente o IndexedDB local; isso não gera leitura cobrada.
+1023:             document.addEventListener('click',e=>{
+1024:                 const el=e.target.closest?.('button,[role="button"]');if(!el)return;
+1025:                 const acao=String(el.getAttribute('onclick')||el.dataset?.action||el.dataset?.act||'');
+1026:                 if(!/(salvar|excluir|aprovar|recusar|bloquear|desbloquear|confirmar|reverter|retirar|ativar)/i.test(acao))return;
+1027:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache',false),700);
+1028:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache-tardio',false),1800);
+1029:             },true);
+1030:         }
+1031:     }
+---
+1014:         encerrarSincronizacaoAdm();
+1015:         unsubscribePerfis=encerrarSincronizacaoAdm;unsubscribeTarefasAdmin=null;unsubscribeHistoricoGrupo=null;unsubscribeRecompensas=null;unsubscribeResgates=null;
+1016:         sincronizarDadosAdm('cache-inicial',false).finally(()=>sincronizarDadosAdm('servidor-inicial',true));
+1017:         sincronizacaoAdmTimer=setInterval(()=>{if(!document.hidden)sincronizarDadosAdm('intervalo-5min',true);},SINCRONIZACAO_ADM_MS);
+1018:         if(!eventosSincronizacaoAdmInstalados){
+1019:             eventosSincronizacaoAdmInstalados=true;
+1020:             document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('retorno-visivel-stale',true);});
+1021:             window.addEventListener('online',()=>{if(Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('reconectado-stale',true);});
+1022:             // Após comandos locais, releia somente o IndexedDB local; isso não gera leitura cobrada.
+1023:             document.addEventListener('click',e=>{
+1024:                 const el=e.target.closest?.('button,[role="button"]');if(!el)return;
+1025:                 const acao=String(el.getAttribute('onclick')||el.dataset?.action||el.dataset?.act||'');
+1026:                 if(!/(salvar|excluir|aprovar|recusar|bloquear|desbloquear|confirmar|reverter|retirar|ativar)/i.test(acao))return;
+1027:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache',false),700);
+1028:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache-tardio',false),1800);
+1029:             },true);
+1030:         }
+1031:     }
+1032: 
+1033:     async function migrarTarefasLegadas(){
+1034:         if(!perfisCache.length || !tarefasCache.length) return;
+---
+1015:         unsubscribePerfis=encerrarSincronizacaoAdm;unsubscribeTarefasAdmin=null;unsubscribeHistoricoGrupo=null;unsubscribeRecompensas=null;unsubscribeResgates=null;
+1016:         sincronizarDadosAdm('cache-inicial',false).finally(()=>sincronizarDadosAdm('servidor-inicial',true));
+1017:         sincronizacaoAdmTimer=setInterval(()=>{if(!document.hidden)sincronizarDadosAdm('intervalo-5min',true);},SINCRONIZACAO_ADM_MS);
+1018:         if(!eventosSincronizacaoAdmInstalados){
+1019:             eventosSincronizacaoAdmInstalados=true;
+1020:             document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('retorno-visivel-stale',true);});
+1021:             window.addEventListener('online',()=>{if(Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('reconectado-stale',true);});
+1022:             // Após comandos locais, releia somente o IndexedDB local; isso não gera leitura cobrada.
+1023:             document.addEventListener('click',e=>{
+1024:                 const el=e.target.closest?.('button,[role="button"]');if(!el)return;
+1025:                 const acao=String(el.getAttribute('onclick')||el.dataset?.action||el.dataset?.act||'');
+1026:                 if(!/(salvar|excluir|aprovar|recusar|bloquear|desbloquear|confirmar|reverter|retirar|ativar)/i.test(acao))return;
+1027:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache',false),700);
+1028:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache-tardio',false),1800);
+1029:             },true);
+1030:         }
+1031:     }
+1032: 
+1033:     async function migrarTarefasLegadas(){
+1034:         if(!perfisCache.length || !tarefasCache.length) return;
+1035:         const gruposLegados = new Map();
+---
+### sincronizarDadosAdm hits=9
+968:         renderizarResgatesAdmin();
+969:         atualizarExplicacaoRegraAtrasoAdmin();
+970:         window.dispatchEvent(new CustomEvent('rotina-family-tasks-rendered',{detail:{origem:'cache-central-adm'}}));
+971:         window.dispatchEvent(new CustomEvent('rotina-adm-cache-updated',{detail:{grupoId:adminLogadoAtual?.codigoCliente||adminLogadoAtual?.grupoId||''}}));
+972:     }
+973: 
+974:     async function sincronizarDadosAdm(origem='intervalo-5min',servidor=true){
+975:         const gId=adminLogadoAtual?.codigoCliente||adminLogadoAtual?.grupoId;
+976:         if(!gId||sincronizacaoAdmEmCurso)return false;
+977:         sincronizacaoAdmEmCurso=true;
+978:         const inicio=performance.now();
+979:         try{
+980:             const lerColecao=servidor?getDocsFromServer:getDocsFromCache;
+981:             const lerDocumento=servidor?getDocFromServer:getDocFromCache;
+982:             const resultados=await Promise.allSettled([
+983:                 lerColecao(query(collection(db,'perfis'),where('grupoId','==',gId))),
+984:                 lerColecao(query(collection(db,'tarefas'),where('grupoId','==',gId))),
+985:                 lerColecao(query(collection(db,'historico'),where('grupoId','==',gId))),
+986:                 lerColecao(query(collection(db,'recompensas'),where('grupoId','==',gId))),
+987:                 lerColecao(query(collection(db,'resgates'),where('grupoId','==',gId))),
+988:                 lerDocumento(doc(db,'configGrupos',gId))
+---
+1001:             window.rotinaLog?.('sync.adm_ciclo',{origem,servidor,tempoMs:Math.round(performance.now()-inicio),falhas,intervaloMin:5},falhas?'warning':'info');
+1002:             window.dispatchEvent(new CustomEvent('rotina-adm-sync-complete',{detail:{origem,servidor,falhas}}));
+1003:             return falhas<resultados.length;
+1004:         }catch(e){window.rotinaLog?.('sync.adm_erro',{origem,servidor,mensagem:String(e?.message||e)},'warning');return false;}
+1005:         finally{sincronizacaoAdmEmCurso=false;}
+1006:     }
+1007:     window.rotinaSincronizarAdmAgora=(motivo='manual')=>sincronizarDadosAdm(motivo,true);
+1008:     window.rotinaAtualizarAdmCacheLocal=(motivo='acao-local')=>sincronizarDadosAdm(motivo,false);
+1009: 
+1010:     function encerrarSincronizacaoAdm(){if(sincronizacaoAdmTimer){clearInterval(sincronizacaoAdmTimer);sincronizacaoAdmTimer=null;}}
+1011:     function iniciarEscutasFirebase() {
+1012:         // Cache-first: o ADM não mantém mais cinco listeners funcionais permanentes.
+1013:         [unsubscribePerfis,unsubscribeTarefasAdmin,unsubscribeHistoricoGrupo,unsubscribeRecompensas,unsubscribeResgates].forEach(u=>u&&u());
+1014:         encerrarSincronizacaoAdm();
+1015:         unsubscribePerfis=encerrarSincronizacaoAdm;unsubscribeTarefasAdmin=null;unsubscribeHistoricoGrupo=null;unsubscribeRecompensas=null;unsubscribeResgates=null;
+1016:         sincronizarDadosAdm('cache-inicial',false).finally(()=>sincronizarDadosAdm('servidor-inicial',true));
+1017:         sincronizacaoAdmTimer=setInterval(()=>{if(!document.hidden)sincronizarDadosAdm('intervalo-5min',true);},SINCRONIZACAO_ADM_MS);
+1018:         if(!eventosSincronizacaoAdmInstalados){
+1019:             eventosSincronizacaoAdmInstalados=true;
+1020:             document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('retorno-visivel-stale',true);});
+1021:             window.addEventListener('online',()=>{if(Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('reconectado-stale',true);});
+---
+1002:             window.dispatchEvent(new CustomEvent('rotina-adm-sync-complete',{detail:{origem,servidor,falhas}}));
+1003:             return falhas<resultados.length;
+1004:         }catch(e){window.rotinaLog?.('sync.adm_erro',{origem,servidor,mensagem:String(e?.message||e)},'warning');return false;}
+1005:         finally{sincronizacaoAdmEmCurso=false;}
+1006:     }
+1007:     window.rotinaSincronizarAdmAgora=(motivo='manual')=>sincronizarDadosAdm(motivo,true);
+1008:     window.rotinaAtualizarAdmCacheLocal=(motivo='acao-local')=>sincronizarDadosAdm(motivo,false);
+1009: 
+1010:     function encerrarSincronizacaoAdm(){if(sincronizacaoAdmTimer){clearInterval(sincronizacaoAdmTimer);sincronizacaoAdmTimer=null;}}
+1011:     function iniciarEscutasFirebase() {
+1012:         // Cache-first: o ADM não mantém mais cinco listeners funcionais permanentes.
+1013:         [unsubscribePerfis,unsubscribeTarefasAdmin,unsubscribeHistoricoGrupo,unsubscribeRecompensas,unsubscribeResgates].forEach(u=>u&&u());
+1014:         encerrarSincronizacaoAdm();
+1015:         unsubscribePerfis=encerrarSincronizacaoAdm;unsubscribeTarefasAdmin=null;unsubscribeHistoricoGrupo=null;unsubscribeRecompensas=null;unsubscribeResgates=null;
+1016:         sincronizarDadosAdm('cache-inicial',false).finally(()=>sincronizarDadosAdm('servidor-inicial',true));
+1017:         sincronizacaoAdmTimer=setInterval(()=>{if(!document.hidden)sincronizarDadosAdm('intervalo-5min',true);},SINCRONIZACAO_ADM_MS);
+1018:         if(!eventosSincronizacaoAdmInstalados){
+1019:             eventosSincronizacaoAdmInstalados=true;
+1020:             document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('retorno-visivel-stale',true);});
+1021:             window.addEventListener('online',()=>{if(Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('reconectado-stale',true);});
+1022:             // Após comandos locais, releia somente o IndexedDB local; isso não gera leitura cobrada.
+---
+1010:     function encerrarSincronizacaoAdm(){if(sincronizacaoAdmTimer){clearInterval(sincronizacaoAdmTimer);sincronizacaoAdmTimer=null;}}
+1011:     function iniciarEscutasFirebase() {
+1012:         // Cache-first: o ADM não mantém mais cinco listeners funcionais permanentes.
+1013:         [unsubscribePerfis,unsubscribeTarefasAdmin,unsubscribeHistoricoGrupo,unsubscribeRecompensas,unsubscribeResgates].forEach(u=>u&&u());
+1014:         encerrarSincronizacaoAdm();
+1015:         unsubscribePerfis=encerrarSincronizacaoAdm;unsubscribeTarefasAdmin=null;unsubscribeHistoricoGrupo=null;unsubscribeRecompensas=null;unsubscribeResgates=null;
+1016:         sincronizarDadosAdm('cache-inicial',false).finally(()=>sincronizarDadosAdm('servidor-inicial',true));
+1017:         sincronizacaoAdmTimer=setInterval(()=>{if(!document.hidden)sincronizarDadosAdm('intervalo-5min',true);},SINCRONIZACAO_ADM_MS);
+1018:         if(!eventosSincronizacaoAdmInstalados){
+1019:             eventosSincronizacaoAdmInstalados=true;
+1020:             document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('retorno-visivel-stale',true);});
+1021:             window.addEventListener('online',()=>{if(Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('reconectado-stale',true);});
+1022:             // Após comandos locais, releia somente o IndexedDB local; isso não gera leitura cobrada.
+1023:             document.addEventListener('click',e=>{
+1024:                 const el=e.target.closest?.('button,[role="button"]');if(!el)return;
+1025:                 const acao=String(el.getAttribute('onclick')||el.dataset?.action||el.dataset?.act||'');
+1026:                 if(!/(salvar|excluir|aprovar|recusar|bloquear|desbloquear|confirmar|reverter|retirar|ativar)/i.test(acao))return;
+1027:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache',false),700);
+1028:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache-tardio',false),1800);
+1029:             },true);
+1030:         }
+---
+1011:     function iniciarEscutasFirebase() {
+1012:         // Cache-first: o ADM não mantém mais cinco listeners funcionais permanentes.
+1013:         [unsubscribePerfis,unsubscribeTarefasAdmin,unsubscribeHistoricoGrupo,unsubscribeRecompensas,unsubscribeResgates].forEach(u=>u&&u());
+1014:         encerrarSincronizacaoAdm();
+1015:         unsubscribePerfis=encerrarSincronizacaoAdm;unsubscribeTarefasAdmin=null;unsubscribeHistoricoGrupo=null;unsubscribeRecompensas=null;unsubscribeResgates=null;
+1016:         sincronizarDadosAdm('cache-inicial',false).finally(()=>sincronizarDadosAdm('servidor-inicial',true));
+1017:         sincronizacaoAdmTimer=setInterval(()=>{if(!document.hidden)sincronizarDadosAdm('intervalo-5min',true);},SINCRONIZACAO_ADM_MS);
+1018:         if(!eventosSincronizacaoAdmInstalados){
+1019:             eventosSincronizacaoAdmInstalados=true;
+1020:             document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('retorno-visivel-stale',true);});
+1021:             window.addEventListener('online',()=>{if(Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('reconectado-stale',true);});
+1022:             // Após comandos locais, releia somente o IndexedDB local; isso não gera leitura cobrada.
+1023:             document.addEventListener('click',e=>{
+1024:                 const el=e.target.closest?.('button,[role="button"]');if(!el)return;
+1025:                 const acao=String(el.getAttribute('onclick')||el.dataset?.action||el.dataset?.act||'');
+1026:                 if(!/(salvar|excluir|aprovar|recusar|bloquear|desbloquear|confirmar|reverter|retirar|ativar)/i.test(acao))return;
+1027:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache',false),700);
+1028:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache-tardio',false),1800);
+1029:             },true);
+1030:         }
+1031:     }
+---
+1014:         encerrarSincronizacaoAdm();
+1015:         unsubscribePerfis=encerrarSincronizacaoAdm;unsubscribeTarefasAdmin=null;unsubscribeHistoricoGrupo=null;unsubscribeRecompensas=null;unsubscribeResgates=null;
+1016:         sincronizarDadosAdm('cache-inicial',false).finally(()=>sincronizarDadosAdm('servidor-inicial',true));
+1017:         sincronizacaoAdmTimer=setInterval(()=>{if(!document.hidden)sincronizarDadosAdm('intervalo-5min',true);},SINCRONIZACAO_ADM_MS);
+1018:         if(!eventosSincronizacaoAdmInstalados){
+1019:             eventosSincronizacaoAdmInstalados=true;
+1020:             document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('retorno-visivel-stale',true);});
+1021:             window.addEventListener('online',()=>{if(Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('reconectado-stale',true);});
+1022:             // Após comandos locais, releia somente o IndexedDB local; isso não gera leitura cobrada.
+1023:             document.addEventListener('click',e=>{
+1024:                 const el=e.target.closest?.('button,[role="button"]');if(!el)return;
+1025:                 const acao=String(el.getAttribute('onclick')||el.dataset?.action||el.dataset?.act||'');
+1026:                 if(!/(salvar|excluir|aprovar|recusar|bloquear|desbloquear|confirmar|reverter|retirar|ativar)/i.test(acao))return;
+1027:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache',false),700);
+1028:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache-tardio',false),1800);
+1029:             },true);
+1030:         }
+1031:     }
+1032: 
+1033:     async function migrarTarefasLegadas(){
+1034:         if(!perfisCache.length || !tarefasCache.length) return;
+---
+1015:         unsubscribePerfis=encerrarSincronizacaoAdm;unsubscribeTarefasAdmin=null;unsubscribeHistoricoGrupo=null;unsubscribeRecompensas=null;unsubscribeResgates=null;
+1016:         sincronizarDadosAdm('cache-inicial',false).finally(()=>sincronizarDadosAdm('servidor-inicial',true));
+1017:         sincronizacaoAdmTimer=setInterval(()=>{if(!document.hidden)sincronizarDadosAdm('intervalo-5min',true);},SINCRONIZACAO_ADM_MS);
+1018:         if(!eventosSincronizacaoAdmInstalados){
+1019:             eventosSincronizacaoAdmInstalados=true;
+1020:             document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('retorno-visivel-stale',true);});
+1021:             window.addEventListener('online',()=>{if(Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('reconectado-stale',true);});
+1022:             // Após comandos locais, releia somente o IndexedDB local; isso não gera leitura cobrada.
+1023:             document.addEventListener('click',e=>{
+1024:                 const el=e.target.closest?.('button,[role="button"]');if(!el)return;
+1025:                 const acao=String(el.getAttribute('onclick')||el.dataset?.action||el.dataset?.act||'');
+1026:                 if(!/(salvar|excluir|aprovar|recusar|bloquear|desbloquear|confirmar|reverter|retirar|ativar)/i.test(acao))return;
+1027:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache',false),700);
+1028:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache-tardio',false),1800);
+1029:             },true);
+1030:         }
+1031:     }
+1032: 
+1033:     async function migrarTarefasLegadas(){
+1034:         if(!perfisCache.length || !tarefasCache.length) return;
+1035:         const gruposLegados = new Map();
+---
+1021:             window.addEventListener('online',()=>{if(Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('reconectado-stale',true);});
+1022:             // Após comandos locais, releia somente o IndexedDB local; isso não gera leitura cobrada.
+1023:             document.addEventListener('click',e=>{
+1024:                 const el=e.target.closest?.('button,[role="button"]');if(!el)return;
+1025:                 const acao=String(el.getAttribute('onclick')||el.dataset?.action||el.dataset?.act||'');
+1026:                 if(!/(salvar|excluir|aprovar|recusar|bloquear|desbloquear|confirmar|reverter|retirar|ativar)/i.test(acao))return;
+1027:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache',false),700);
+1028:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache-tardio',false),1800);
+1029:             },true);
+1030:         }
+1031:     }
+1032: 
+1033:     async function migrarTarefasLegadas(){
+1034:         if(!perfisCache.length || !tarefasCache.length) return;
+1035:         const gruposLegados = new Map();
+1036:         for(const t of tarefasCache){
+1037:             const perfil = perfisCache.find(p => p.id===t.perfilId || p.nome===t.perfilNome);
+1038:             const atualizacoes={};
+1039:             if(perfil && !t.perfilId) atualizacoes.perfilId=perfil.id;
+1040:             if(!t.tarefaGrupoId){
+1041:                 const chave=`${perfil?.id||t.perfilNome}|${t.nome}`;
+---
+### rotinaAdmCacheSnapshot hits=1
+954:         catch(e) { alert('Não foi possível enviar a recuperação. Confirme o e-mail e se o Firebase Authentication está habilitado.'); }
+955:     };
+956: 
+957:     function snapshotAdmCompartilhado(){
+958:         return {grupoId:adminLogadoAtual?.codigoCliente||adminLogadoAtual?.grupoId||'',perfis:perfisCache.map(x=>({...x})),tarefas:tarefasCache.map(x=>({...x})),historico:historicoGrupoCache.map(x=>({...x})),recompensas:recompensasCache.map(x=>({...x})),resgates:resgatesCache.map(x=>({...x})),regraAtraso:{...regraAtrasoAtual},ultimaSincronizacaoServidor:ultimaSincronizacaoAdmServidor};
+959:     }
+960:     window.rotinaAdmCacheSnapshot=snapshotAdmCompartilhado;
+961: 
+962:     function renderizarCachesAdm(){
+963:         atualizarSelects();
+964:         atualizarMonitor();
+965:         renderizarTabelaExclusao();
+966:         renderizarDashboard();
+967:         renderizarRecompensasAdmin();
+968:         renderizarResgatesAdmin();
+969:         atualizarExplicacaoRegraAtrasoAdmin();
+970:         window.dispatchEvent(new CustomEvent('rotina-family-tasks-rendered',{detail:{origem:'cache-central-adm'}}));
+971:         window.dispatchEvent(new CustomEvent('rotina-adm-cache-updated',{detail:{grupoId:adminLogadoAtual?.codigoCliente||adminLogadoAtual?.grupoId||''}}));
+972:     }
+973: 
+974:     async function sincronizarDadosAdm(origem='intervalo-5min',servidor=true){
+---
+### servidor-inicial hits=1
+1010:     function encerrarSincronizacaoAdm(){if(sincronizacaoAdmTimer){clearInterval(sincronizacaoAdmTimer);sincronizacaoAdmTimer=null;}}
+1011:     function iniciarEscutasFirebase() {
+1012:         // Cache-first: o ADM não mantém mais cinco listeners funcionais permanentes.
+1013:         [unsubscribePerfis,unsubscribeTarefasAdmin,unsubscribeHistoricoGrupo,unsubscribeRecompensas,unsubscribeResgates].forEach(u=>u&&u());
+1014:         encerrarSincronizacaoAdm();
+1015:         unsubscribePerfis=encerrarSincronizacaoAdm;unsubscribeTarefasAdmin=null;unsubscribeHistoricoGrupo=null;unsubscribeRecompensas=null;unsubscribeResgates=null;
+1016:         sincronizarDadosAdm('cache-inicial',false).finally(()=>sincronizarDadosAdm('servidor-inicial',true));
+1017:         sincronizacaoAdmTimer=setInterval(()=>{if(!document.hidden)sincronizarDadosAdm('intervalo-5min',true);},SINCRONIZACAO_ADM_MS);
+1018:         if(!eventosSincronizacaoAdmInstalados){
+1019:             eventosSincronizacaoAdmInstalados=true;
+1020:             document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('retorno-visivel-stale',true);});
+1021:             window.addEventListener('online',()=>{if(Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('reconectado-stale',true);});
+1022:             // Após comandos locais, releia somente o IndexedDB local; isso não gera leitura cobrada.
+1023:             document.addEventListener('click',e=>{
+1024:                 const el=e.target.closest?.('button,[role="button"]');if(!el)return;
+1025:                 const acao=String(el.getAttribute('onclick')||el.dataset?.action||el.dataset?.act||'');
+1026:                 if(!/(salvar|excluir|aprovar|recusar|bloquear|desbloquear|confirmar|reverter|retirar|ativar)/i.test(acao))return;
+1027:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache',false),700);
+1028:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache-tardio',false),1800);
+1029:             },true);
+1030:         }
+---
+### cache-inicial hits=1
+1010:     function encerrarSincronizacaoAdm(){if(sincronizacaoAdmTimer){clearInterval(sincronizacaoAdmTimer);sincronizacaoAdmTimer=null;}}
+1011:     function iniciarEscutasFirebase() {
+1012:         // Cache-first: o ADM não mantém mais cinco listeners funcionais permanentes.
+1013:         [unsubscribePerfis,unsubscribeTarefasAdmin,unsubscribeHistoricoGrupo,unsubscribeRecompensas,unsubscribeResgates].forEach(u=>u&&u());
+1014:         encerrarSincronizacaoAdm();
+1015:         unsubscribePerfis=encerrarSincronizacaoAdm;unsubscribeTarefasAdmin=null;unsubscribeHistoricoGrupo=null;unsubscribeRecompensas=null;unsubscribeResgates=null;
+1016:         sincronizarDadosAdm('cache-inicial',false).finally(()=>sincronizarDadosAdm('servidor-inicial',true));
+1017:         sincronizacaoAdmTimer=setInterval(()=>{if(!document.hidden)sincronizarDadosAdm('intervalo-5min',true);},SINCRONIZACAO_ADM_MS);
+1018:         if(!eventosSincronizacaoAdmInstalados){
+1019:             eventosSincronizacaoAdmInstalados=true;
+1020:             document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('retorno-visivel-stale',true);});
+1021:             window.addEventListener('online',()=>{if(Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('reconectado-stale',true);});
+1022:             // Após comandos locais, releia somente o IndexedDB local; isso não gera leitura cobrada.
+1023:             document.addEventListener('click',e=>{
+1024:                 const el=e.target.closest?.('button,[role="button"]');if(!el)return;
+1025:                 const acao=String(el.getAttribute('onclick')||el.dataset?.action||el.dataset?.act||'');
+1026:                 if(!/(salvar|excluir|aprovar|recusar|bloquear|desbloquear|confirmar|reverter|retirar|ativar)/i.test(acao))return;
+1027:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache',false),700);
+1028:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache-tardio',false),1800);
+1029:             },true);
+1030:         }
+---
+### setInterval hits=1
+1011:     function iniciarEscutasFirebase() {
+1012:         // Cache-first: o ADM não mantém mais cinco listeners funcionais permanentes.
+1013:         [unsubscribePerfis,unsubscribeTarefasAdmin,unsubscribeHistoricoGrupo,unsubscribeRecompensas,unsubscribeResgates].forEach(u=>u&&u());
+1014:         encerrarSincronizacaoAdm();
+1015:         unsubscribePerfis=encerrarSincronizacaoAdm;unsubscribeTarefasAdmin=null;unsubscribeHistoricoGrupo=null;unsubscribeRecompensas=null;unsubscribeResgates=null;
+1016:         sincronizarDadosAdm('cache-inicial',false).finally(()=>sincronizarDadosAdm('servidor-inicial',true));
+1017:         sincronizacaoAdmTimer=setInterval(()=>{if(!document.hidden)sincronizarDadosAdm('intervalo-5min',true);},SINCRONIZACAO_ADM_MS);
+1018:         if(!eventosSincronizacaoAdmInstalados){
+1019:             eventosSincronizacaoAdmInstalados=true;
+1020:             document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('retorno-visivel-stale',true);});
+1021:             window.addEventListener('online',()=>{if(Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('reconectado-stale',true);});
+1022:             // Após comandos locais, releia somente o IndexedDB local; isso não gera leitura cobrada.
+1023:             document.addEventListener('click',e=>{
+1024:                 const el=e.target.closest?.('button,[role="button"]');if(!el)return;
+1025:                 const acao=String(el.getAttribute('onclick')||el.dataset?.action||el.dataset?.act||'');
+1026:                 if(!/(salvar|excluir|aprovar|recusar|bloquear|desbloquear|confirmar|reverter|retirar|ativar)/i.test(acao))return;
+1027:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache',false),700);
+1028:                 setTimeout(()=>sincronizarDadosAdm('acao-local-cache-tardio',false),1800);
+1029:             },true);
+1030:         }
+1031:     }
+---
+### getDocsFromServer hits=2
+682:     </div>
+683:   </div>
+684: </div>
+685: 
+686: <script type="module">
+687:     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+688:     import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, where, addDoc, getDocs, getDocsFromCache, getDocsFromServer, writeBatch, doc, deleteDoc, updateDoc, getDoc, getDocFromCache, getDocFromServer, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+689:     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+690: 
+691:     const firebaseConfig = {
+692:         apiKey: "AIzaSyCP9odEV8TJGOM4lflHk64BbPyXXVjGcYg",
+693:         authDomain: "sistema-de-metas-diarias.firebaseapp.com",
+694:         projectId: "sistema-de-metas-diarias",
+695:         storageBucket: "sistema-de-metas-diarias.firebasestorage.app",
+696:         messagingSenderId: "576624564310",
+697:         appId: "1:576624564310:web:fb2115a0c21659fefb83f7"
+698:     };
+699: 
+700:     const app = initializeApp(firebaseConfig);
+701:     const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+702:     const auth = getAuth(app);
+---
+974:     async function sincronizarDadosAdm(origem='intervalo-5min',servidor=true){
+975:         const gId=adminLogadoAtual?.codigoCliente||adminLogadoAtual?.grupoId;
+976:         if(!gId||sincronizacaoAdmEmCurso)return false;
+977:         sincronizacaoAdmEmCurso=true;
+978:         const inicio=performance.now();
+979:         try{
+980:             const lerColecao=servidor?getDocsFromServer:getDocsFromCache;
+981:             const lerDocumento=servidor?getDocFromServer:getDocFromCache;
+982:             const resultados=await Promise.allSettled([
+983:                 lerColecao(query(collection(db,'perfis'),where('grupoId','==',gId))),
+984:                 lerColecao(query(collection(db,'tarefas'),where('grupoId','==',gId))),
+985:                 lerColecao(query(collection(db,'historico'),where('grupoId','==',gId))),
+986:                 lerColecao(query(collection(db,'recompensas'),where('grupoId','==',gId))),
+987:                 lerColecao(query(collection(db,'resgates'),where('grupoId','==',gId))),
+988:                 lerDocumento(doc(db,'configGrupos',gId))
+989:             ]);
+990:             const [perfis,tarefas,historico,recompensas,resgates,config]=resultados;
+991:             if(perfis.status==='fulfilled')perfisCache=perfis.value.docs.map(d=>({id:d.id,perfilId:d.data().perfilId||d.id,...d.data()}));
+992:             if(tarefas.status==='fulfilled')tarefasCache=tarefas.value.docs.map(d=>({id:d.id,...d.data()}));
+993:             if(historico.status==='fulfilled')historicoGrupoCache=historico.value.docs.map(d=>({id:d.id,...d.data()}));
+994:             if(recompensas.status==='fulfilled')recompensasCache=recompensas.value.docs.map(d=>({id:d.id,...d.data()}));
+---
+### getDocsFromCache hits=2
+682:     </div>
+683:   </div>
+684: </div>
+685: 
+686: <script type="module">
+687:     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+688:     import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, where, addDoc, getDocs, getDocsFromCache, getDocsFromServer, writeBatch, doc, deleteDoc, updateDoc, getDoc, getDocFromCache, getDocFromServer, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+689:     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+690: 
+691:     const firebaseConfig = {
+692:         apiKey: "AIzaSyCP9odEV8TJGOM4lflHk64BbPyXXVjGcYg",
+693:         authDomain: "sistema-de-metas-diarias.firebaseapp.com",
+694:         projectId: "sistema-de-metas-diarias",
+695:         storageBucket: "sistema-de-metas-diarias.firebasestorage.app",
+696:         messagingSenderId: "576624564310",
+697:         appId: "1:576624564310:web:fb2115a0c21659fefb83f7"
+698:     };
+699: 
+700:     const app = initializeApp(firebaseConfig);
+701:     const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+702:     const auth = getAuth(app);
+---
+974:     async function sincronizarDadosAdm(origem='intervalo-5min',servidor=true){
+975:         const gId=adminLogadoAtual?.codigoCliente||adminLogadoAtual?.grupoId;
+976:         if(!gId||sincronizacaoAdmEmCurso)return false;
+977:         sincronizacaoAdmEmCurso=true;
+978:         const inicio=performance.now();
+979:         try{
+980:             const lerColecao=servidor?getDocsFromServer:getDocsFromCache;
+981:             const lerDocumento=servidor?getDocFromServer:getDocFromCache;
+982:             const resultados=await Promise.allSettled([
+983:                 lerColecao(query(collection(db,'perfis'),where('grupoId','==',gId))),
+984:                 lerColecao(query(collection(db,'tarefas'),where('grupoId','==',gId))),
+985:                 lerColecao(query(collection(db,'historico'),where('grupoId','==',gId))),
+986:                 lerColecao(query(collection(db,'recompensas'),where('grupoId','==',gId))),
+987:                 lerColecao(query(collection(db,'resgates'),where('grupoId','==',gId))),
+988:                 lerDocumento(doc(db,'configGrupos',gId))
+989:             ]);
+990:             const [perfis,tarefas,historico,recompensas,resgates,config]=resultados;
+991:             if(perfis.status==='fulfilled')perfisCache=perfis.value.docs.map(d=>({id:d.id,perfilId:d.data().perfilId||d.id,...d.data()}));
+992:             if(tarefas.status==='fulfilled')tarefasCache=tarefas.value.docs.map(d=>({id:d.id,...d.data()}));
+993:             if(historico.status==='fulfilled')historicoGrupoCache=historico.value.docs.map(d=>({id:d.id,...d.data()}));
+994:             if(recompensas.status==='fulfilled')recompensasCache=recompensas.value.docs.map(d=>({id:d.id,...d.data()}));
+---
+### ultimaSincronizacaoServidor hits=1
+952:         if(!email) return;
+953:         try { await sendPasswordResetEmail(auth,email.trim().toLowerCase()); alert('Enviamos um link para redefinir sua senha.'); }
+954:         catch(e) { alert('Não foi possível enviar a recuperação. Confirme o e-mail e se o Firebase Authentication está habilitado.'); }
+955:     };
+956: 
+957:     function snapshotAdmCompartilhado(){
+958:         return {grupoId:adminLogadoAtual?.codigoCliente||adminLogadoAtual?.grupoId||'',perfis:perfisCache.map(x=>({...x})),tarefas:tarefasCache.map(x=>({...x})),historico:historicoGrupoCache.map(x=>({...x})),recompensas:recompensasCache.map(x=>({...x})),resgates:resgatesCache.map(x=>({...x})),regraAtraso:{...regraAtrasoAtual},ultimaSincronizacaoServidor:ultimaSincronizacaoAdmServidor};
+959:     }
+960:     window.rotinaAdmCacheSnapshot=snapshotAdmCompartilhado;
+961: 
+962:     function renderizarCachesAdm(){
+963:         atualizarSelects();
+964:         atualizarMonitor();
+965:         renderizarTabelaExclusao();
+966:         renderizarDashboard();
+967:         renderizarRecompensasAdmin();
+968:         renderizarResgatesAdmin();
+969:         atualizarExplicacaoRegraAtrasoAdmin();
+970:         window.dispatchEvent(new CustomEvent('rotina-family-tasks-rendered',{detail:{origem:'cache-central-adm'}}));
+971:         window.dispatchEvent(new CustomEvent('rotina-adm-cache-updated',{detail:{grupoId:adminLogadoAtual?.codigoCliente||adminLogadoAtual?.grupoId||''}}));
+972:     }
+---
+### rotinaSincronizarAdmAgora hits=1
+1001:             window.rotinaLog?.('sync.adm_ciclo',{origem,servidor,tempoMs:Math.round(performance.now()-inicio),falhas,intervaloMin:5},falhas?'warning':'info');
+1002:             window.dispatchEvent(new CustomEvent('rotina-adm-sync-complete',{detail:{origem,servidor,falhas}}));
+1003:             return falhas<resultados.length;
+1004:         }catch(e){window.rotinaLog?.('sync.adm_erro',{origem,servidor,mensagem:String(e?.message||e)},'warning');return false;}
+1005:         finally{sincronizacaoAdmEmCurso=false;}
+1006:     }
+1007:     window.rotinaSincronizarAdmAgora=(motivo='manual')=>sincronizarDadosAdm(motivo,true);
+1008:     window.rotinaAtualizarAdmCacheLocal=(motivo='acao-local')=>sincronizarDadosAdm(motivo,false);
+1009: 
+1010:     function encerrarSincronizacaoAdm(){if(sincronizacaoAdmTimer){clearInterval(sincronizacaoAdmTimer);sincronizacaoAdmTimer=null;}}
+1011:     function iniciarEscutasFirebase() {
+1012:         // Cache-first: o ADM não mantém mais cinco listeners funcionais permanentes.
+1013:         [unsubscribePerfis,unsubscribeTarefasAdmin,unsubscribeHistoricoGrupo,unsubscribeRecompensas,unsubscribeResgates].forEach(u=>u&&u());
+1014:         encerrarSincronizacaoAdm();
+1015:         unsubscribePerfis=encerrarSincronizacaoAdm;unsubscribeTarefasAdmin=null;unsubscribeHistoricoGrupo=null;unsubscribeRecompensas=null;unsubscribeResgates=null;
+1016:         sincronizarDadosAdm('cache-inicial',false).finally(()=>sincronizarDadosAdm('servidor-inicial',true));
+1017:         sincronizacaoAdmTimer=setInterval(()=>{if(!document.hidden)sincronizarDadosAdm('intervalo-5min',true);},SINCRONIZACAO_ADM_MS);
+1018:         if(!eventosSincronizacaoAdmInstalados){
+1019:             eventosSincronizacaoAdmInstalados=true;
+1020:             document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('retorno-visivel-stale',true);});
+1021:             window.addEventListener('online',()=>{if(Date.now()-ultimaSincronizacaoAdmServidor>=SINCRONIZACAO_ADM_MS)sincronizarDadosAdm('reconectado-stale',true);});
+---
+### FILE adm-monitor-history-fix.js
+getDocs(=2
+getDoc(=0
+getDocsFromServer=0
+getDocFromServer=0
+rotinaAdmCacheSnapshot=0
+### FILE adm-justification-review.js
+getDocs(=2
+getDoc(=3
+getDocsFromServer=0
+getDocFromServer=0
+rotinaAdmCacheSnapshot=0
+### FILE app-monitoring.js
+getDocs(=0
+getDoc(=0
+getDocsFromServer=0
+getDocFromServer=0
+rotinaAdmCacheSnapshot=0
