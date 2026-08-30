@@ -12,163 +12,41 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Restaurar carregamento das justificativas e limitar sync inicial
+      - name: Consultar Worker e filtrar logs da justificativa
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          h = Path('index-ADMIN-v8.html')
-          s = h.read_text()
-
-          if "function limitarLeituraAdm(" not in s:
-              marker = "    async function sincronizarDadosAdm(origem='intervalo-5min',servidor=true){\n"
-              assert marker in s
-              helper = """    function limitarLeituraAdm(promise,nome,ms=8000){
-        return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout-'+nome)),ms))]);
-    }
-
-"""
-              s = s.replace(marker, helper + marker, 1)
-
-          old_reads = """            const resultados=await Promise.allSettled([
-                lerColecao(query(collection(db,'perfis'),where('grupoId','==',gId))),
-                lerColecao(query(collection(db,'tarefas'),where('grupoId','==',gId))),
-                lerColecao(query(collection(db,'historico'),where('grupoId','==',gId))),
-                lerColecao(query(collection(db,'recompensas'),where('grupoId','==',gId))),
-                lerColecao(query(collection(db,'resgates'),where('grupoId','==',gId))),
-                lerDocumento(doc(db,'configGrupos',gId))
-            ]);"""
-          new_reads = """            const resultados=await Promise.allSettled([
-                limitarLeituraAdm(lerColecao(query(collection(db,'perfis'),where('grupoId','==',gId))),'perfis'),
-                limitarLeituraAdm(lerColecao(query(collection(db,'tarefas'),where('grupoId','==',gId))),'tarefas'),
-                limitarLeituraAdm(lerColecao(query(collection(db,'historico'),where('grupoId','==',gId))),'historico'),
-                limitarLeituraAdm(lerColecao(query(collection(db,'recompensas'),where('grupoId','==',gId))),'recompensas'),
-                limitarLeituraAdm(lerColecao(query(collection(db,'resgates'),where('grupoId','==',gId))),'resgates'),
-                limitarLeituraAdm(lerDocumento(doc(db,'configGrupos',gId)),'configGrupos')
-            ]);"""
-          if old_reads in s:
-              s = s.replace(old_reads, new_reads, 1)
-
-          old_retry = """        let inicialOk=await sincronizarDadosAdm('servidor-inicial',true);
-        if(!inicialOk&&navigator.onLine!==false){
-            await new Promise(resolve=>setTimeout(resolve,500));
-            inicialOk=await sincronizarDadosAdm('servidor-inicial-retry',true);
-        }
-        if(!inicialOk)await sincronizarDadosAdm('cache-fallback-inicial',false);"""
-          new_retry = """        const inicialOk=await sincronizarDadosAdm('servidor-inicial',true);
-        if(!inicialOk)await sincronizarDadosAdm('cache-fallback-inicial',false);"""
-          if old_retry in s:
-              s = s.replace(old_retry, new_retry, 1)
-
-          login_old = """        await iniciarEscutasFirebase();
-        window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));"""
-          login_new = """        const syncInicialAdm=iniciarEscutasFirebase();
-        window.rotinaAdmInitialSyncPromise=syncInicialAdm;
-        window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));
-        syncInicialAdm.catch(e=>console.error('Falha na sincronização inicial do ADM',e));"""
-          if login_old in s:
-              s = s.replace(login_old, login_new, 1)
-
-          restore_old = """            await iniciarEscutasFirebase();
-            window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));"""
-          restore_new = """            const syncInicialAdm=iniciarEscutasFirebase();
-            window.rotinaAdmInitialSyncPromise=syncInicialAdm;
-            window.dispatchEvent(new CustomEvent('rotina-admin-session-ready',{detail:{grupoId:adminLogadoAtual.codigoCliente || adminLogadoAtual.grupoId}}));
-            syncInicialAdm.catch(e=>console.error('Falha na sincronização inicial do ADM',e));"""
-          if restore_old in s:
-              s = s.replace(restore_old, restore_new, 1)
-
-          s = s.replace("navigator.serviceWorker.register('./sw.js?v=63',{updateViaCache:'none'})", "navigator.serviceWorker.register('./sw.js?v=70',{updateViaCache:'none'})")
-          loader = '<script type="module" src="./adm-justification-review.js?v=6"></script>'
-          anchor = '<script type="module" src="./adm-zero-points-restitution-20260827.js?v=1"></script>'
-          if loader not in s:
-              assert anchor in s
-              s = s.replace(anchor, loader + '\n' + anchor, 1)
-          h.write_text(s)
-
-          j = Path('adm-justification-review.js')
-          s = j.read_text()
-          wait_fn = """async function aguardarSincronizacaoInicial(){
-  const p=window.rotinaAdmInitialSyncPromise;
-  if(!p)return;
-  await Promise.race([Promise.resolve(p).catch(()=>false),new Promise(resolve=>setTimeout(resolve,9000))]);
-}
-"""
-          cache_anchor = """function cacheSnapshot(){
-  try{return typeof window.rotinaAdmCacheSnapshot==='function'?window.rotinaAdmCacheSnapshot():null;}catch{return null;}
-}
-"""
-          if wait_fn not in s:
-              assert cache_anchor in s
-              s = s.replace(cache_anchor, cache_anchor + wait_fn, 1)
-          open_old = """    const banco=db();if(!banco)throw new Error('Firebase ainda não está disponível.');
-    const started=performance.now();
-    const t=localizarTarefa(ctx);"""
-          open_new = """    const banco=db();if(!banco)throw new Error('Firebase ainda não está disponível.');
-    const started=performance.now();
-    window.rotinaLog?.('justificativa.abertura_inicio',{data,temId:Boolean(ctx.id)},'info');
-    await aguardarSincronizacaoInicial();
-    const t=localizarTarefa(ctx);"""
-          if open_old in s:
-              s = s.replace(open_old, open_new, 1)
-          catch_old = """  }catch(e){console.error('Revisão de justificativa:',e);msg.textContent=e.message||'Não foi possível carregar a justificativa.';}
-}"""
-          catch_new = """  }catch(e){
-    console.error('Revisão de justificativa:',e);
-    const texto=String(e?.message||'');
-    const motivo=/histórico/i.test(texto)?'historico-ausente':/tarefa/i.test(texto)?'tarefa-ausente':/dados do painel/i.test(texto)?'cache-indisponivel':'erro-abertura';
-    window.rotinaLog?.('justificativa.abertura_erro',{motivo,duracaoMs:Math.round(performance.now()-started),data},'error');
-    msg.textContent=e.message||'Não foi possível carregar a justificativa.';
-  }
-}"""
-          if catch_old in s:
-              s = s.replace(catch_old, catch_new, 1)
-          j.write_text(s)
-
-          sw = Path('sw.js')
-          s = sw.read_text()
-          s = s.replace("const CACHE_NAME='rotina-family-adm-v69';", "const CACHE_NAME='rotina-family-adm-v70';", 1)
-          s = s.replace("const ROTINA_SW_VERSION='69';", "const ROTINA_SW_VERSION='70';", 1)
-          s = s.replace("const ROTINA_BUILD_ID='20260829.5';", "const ROTINA_BUILD_ID='20260829.6';", 1)
-          addon = "  if(!html.includes('adm-justification-review.js'))faltantes.push('<script type=\"module\" src=\"./adm-justification-review.js?v=6\"><\\/script>');\n"
-          addon_marker = "  if(!html.includes('adm-score-history-cards.js'))"
-          if "adm-justification-review.js?v=6" not in s:
-              assert addon_marker in s
-              s = s.replace(addon_marker, addon + addon_marker, 1)
-          s = s.replace('runtime-build-info.js?v=20260827.3', 'runtime-build-info.js?v=20260829.6')
-          sw.write_text(s)
-
-          r = Path('runtime-build-info.js')
-          s = r.read_text().replace("build:'20260829.5'", "build:'20260829.6'").replace("expectedServiceWorkerVersion:'69'", "expectedServiceWorkerVersion:'70'")
-          r.write_text(s)
-
-          i = Path('index.html')
-          s = i.read_text().replace('entry=20260829.5', 'entry=20260829.6')
-          i.write_text(s)
-          PY
-      - name: Validar correção
-        shell: bash
-        run: |
-          node --check adm-justification-review.js
-          node --check sw.js
-          grep -q 'adm-justification-review.js?v=6' index-ADMIN-v8.html
-          grep -q 'rotinaAdmInitialSyncPromise' index-ADMIN-v8.html
-          grep -q 'limitarLeituraAdm' index-ADMIN-v8.html
-          grep -q 'rotina-family-adm-v70' sw.js
-          grep -q "ROTINA_BUILD_ID='20260829.6'" sw.js
-      - name: Consultar Worker e registrar logs atuais
-        shell: bash
-        run: |
+          set -u
           ROOT='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev'
-          mkdir -p diagnostics
-          curl -sS --max-time 20 "$ROOT/diagnostico-tecnico" > diagnostics/worker-after-fix.json || true
-      - name: Gravar correção
+          mkdir -p diagnostics /tmp/rfdiag
+          code=$(curl -sS --max-time 20 -o /tmp/rfdiag/tecnico.json -w '%{http_code}' "$ROOT/diagnostico-tecnico" || true)
+          CODE="$code" python - <<'PY'
+          import json, pathlib, datetime, os
+          p=pathlib.Path('/tmp/rfdiag/tecnico.json')
+          try: body=json.loads(p.read_text(errors='replace'))
+          except Exception: body={}
+          logs=body.get('logs') or []
+          wanted=[]
+          for x in logs:
+              ev=str(x.get('evento') or '')
+              if ev.startswith('justificativa.') or ev.startswith('sync.adm_') or ev.startswith('build.') or ev.startswith('startup.adm_'):
+                  wanted.append(x)
+          out={
+            'capturadoEm':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            'http':os.environ.get('CODE',''),
+            'workerStatus':body.get('status'),
+            'lastLogAt':body.get('lastLogAt'),
+            'summary':body.get('summary'),
+            'totalFiltrado':len(wanted),
+            'logs':wanted
+          }
+          pathlib.Path('diagnostics/justification-live-logs.json').write_text(json.dumps(out,ensure_ascii=False,indent=2))
+          PY
+      - name: Gravar diagnóstico no repositório
         shell: bash
         run: |
           git config user.name 'rotina-family-diagnostic-bot'
           git config user.email 'actions@users.noreply.github.com'
-          git add index-ADMIN-v8.html adm-justification-review.js sw.js runtime-build-info.js index.html diagnostics/worker-after-fix.json
+          git add diagnostics/justification-live-logs.json
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'Restaurar justificativas e destravar sincronização inicial'
+          git commit -m 'Registrar logs filtrados da justificativa [skip ci]'
           git push
