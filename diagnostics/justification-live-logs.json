@@ -1,19 +1,99 @@
 {
-  "capturadoEm": "2026-08-30T00:38:00.844647+00:00",
+  "capturadoEm": "2026-08-30T01:20:25.471858+00:00",
   "http": "200",
   "workerStatus": "SAUDAVEL",
-  "lastLogAt": "2026-08-30T00:36:30.023Z",
+  "lastLogAt": "2026-08-30T01:18:53.072Z",
   "summary": {
-    "technicalLogs": 23,
+    "technicalLogs": 27,
     "errors": 5,
-    "warnings": 4,
+    "warnings": 6,
     "slowOperations": 0,
     "http400": 0,
     "http429": 0,
     "ignoredClicks": 0
   },
-  "totalFiltrado": 20,
+  "totalFiltrado": 25,
   "logs": [
+    {
+      "aplicativo": "adm",
+      "evento": "startup.adm_tela_protegida",
+      "nivel": "warning",
+      "detalhes": {
+        "motivo": "auth-com-usuario",
+        "autenticado": true,
+        "startupStabilityVersion": 5
+      },
+      "clienteEm": "2026-08-30T01:18:41.086Z",
+      "pagina": "index-ADMIN-v8.html",
+      "navegador": "Chrome",
+      "online": true,
+      "visibilidade": "visible",
+      "instalado": true
+    },
+    {
+      "aplicativo": "adm",
+      "evento": "startup.adm_auth_resolvido",
+      "nivel": "info",
+      "detalhes": {
+        "autenticado": true,
+        "ms": 0,
+        "startupStabilityVersion": 5
+      },
+      "clienteEm": "2026-08-30T01:18:40.684Z",
+      "pagina": "index-ADMIN-v8.html",
+      "navegador": "Chrome",
+      "online": true,
+      "visibilidade": "visible",
+      "instalado": true
+    },
+    {
+      "aplicativo": "adm",
+      "evento": "startup.adm_tela_protegida",
+      "nivel": "warning",
+      "detalhes": {
+        "motivo": "auth-com-usuario",
+        "autenticado": true,
+        "startupStabilityVersion": 5
+      },
+      "clienteEm": "2026-08-30T01:17:41.170Z",
+      "pagina": "index-ADMIN-v8.html",
+      "navegador": "Chrome",
+      "online": true,
+      "visibilidade": "visible",
+      "instalado": true
+    },
+    {
+      "aplicativo": "adm",
+      "evento": "startup.adm_tela_protegida",
+      "nivel": "warning",
+      "detalhes": {
+        "motivo": "auth-com-usuario",
+        "autenticado": true,
+        "startupStabilityVersion": 5
+      },
+      "clienteEm": "2026-08-30T01:17:23.828Z",
+      "pagina": "index-ADMIN-v8.html",
+      "navegador": "Chrome",
+      "online": true,
+      "visibilidade": "visible",
+      "instalado": true
+    },
+    {
+      "aplicativo": "adm",
+      "evento": "startup.adm_auth_resolvido",
+      "nivel": "info",
+      "detalhes": {
+        "autenticado": true,
+        "ms": 0,
+        "startupStabilityVersion": 5
+      },
+      "clienteEm": "2026-08-30T01:17:23.426Z",
+      "pagina": "index-ADMIN-v8.html",
+      "navegador": "Chrome",
+      "online": true,
+      "visibilidade": "visible",
+      "instalado": true
+    },
     {
       "aplicativo": "adm",
       "evento": "justificativa.abertura_erro",
