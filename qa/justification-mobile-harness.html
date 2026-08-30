@@ -41,16 +41,26 @@
 <script type="module">
   import {initializeApp,getApps} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   if(!getApps().length) initializeApp({apiKey:'qa',projectId:'rotina-family-qa',appId:'1:1:web:qa'});
+
+  const HIST={id:'hist-qa-1',grupoId:'CLI-QA',tarefaId:'task-qa-1',perfilId:'perfil-qa-1',perfilNome:'Teste Mobile',nomeTarefa:'Arrumar o quarto',diaSemana:'Domingo',dataExecucao:'2026-08-30',horaSugeridaInicio:'18:00',horaSugeridaFim:'18:30',status:'75% atraso leve',pontosMaximos:10,pontosGanhos:7,percentualAplicado:75,justificativaAtraso:'O ônibus atrasou.'};
+
   window.__qaLogs=[];
   window.rotinaLog=(evento,detalhes={},nivel='info')=>window.__qaLogs.push({evento,detalhes,nivel});
   window.rotinaAdmCacheSnapshot=()=>({
     grupoId:'CLI-QA',
     tarefas:[{id:'task-qa-1',grupoId:'CLI-QA',perfilId:'perfil-qa-1',perfilNome:'Teste Mobile',nome:'Arrumar o quarto',diaSemana:'Domingo',horaSugeridaInicio:'18:00',horaSugeridaFim:'18:30',pontosMaximos:10}],
-    historico:[{id:'hist-qa-1',grupoId:'CLI-QA',tarefaId:'task-qa-1',perfilId:'perfil-qa-1',perfilNome:'Teste Mobile',nomeTarefa:'Arrumar o quarto',diaSemana:'Domingo',dataExecucao:'2026-08-30',horaSugeridaInicio:'18:00',horaSugeridaFim:'18:30',status:'75% atraso leve',pontosMaximos:10,pontosGanhos:7,percentualAplicado:75,justificativaAtraso:'O ônibus atrasou.'}],
+    historico:[],
     recompensas:[],resgates:[]
   });
-  await import('../mobile-app-ui.js?qa=20260830.7');
-  document.getElementById('qaStatus').textContent='QA_READY';
+  window.__rotinaQaHistoryReader=async ctx=>{
+    window.__qaReaderContext={...ctx};
+    await new Promise(r=>setTimeout(r,40));
+    return ctx.historicoId==='hist-qa-1'?{...HIST}:null;
+  };
+
+  await import('../mobile-app-ui.js?qa=20260830.8');
+  await import('../adm-justification-live-resolver.js?v=2&qa=20260830.8');
+  document.getElementById('qaStatus').textContent='QA_READY_CACHE_MISS';
   window.__qaReady=true;
 </script>
 </body>
