@@ -1,8 +1,11 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import './runtime-build-info.js?v=20260830.7';
 import './adm-justification-review.js?v=9';
+import './adm-monitor-history-fix.js?v=4';
+import './mobile-app-ui.js';
 
-const VERSION = 7;
+const VERSION = 8;
 const MAX_RETRIES = 1;
 let flowStartedAt = performance.now();
 const flowElapsed = () => Math.max(0, Math.round(performance.now() - flowStartedAt));
@@ -15,6 +18,17 @@ let authGeneration = 0;
 const log = (event, details = {}, level = 'info') => {
   try { window.rotinaLog?.(event, { ...details, startupStabilityVersion: VERSION }, level); } catch {}
 };
+
+async function atualizarServiceWorkerCedo() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.register('./sw.js?v=77', { updateViaCache: 'none' });
+    await reg.update().catch(() => {});
+    log('startup.adm_sw_atualizacao_solicitada', { alvo: '77' });
+  } catch (error) {
+    log('startup.adm_sw_atualizacao_falhou', { mensagem: String(error?.message || error).slice(0, 140) }, 'warning');
+  }
+}
 
 function shield() {
   let el = document.getElementById('admStartupShield');
@@ -163,6 +177,7 @@ function installAuthWatch(attempt = 0) {
 
 function boot() {
   shield();
+  void atualizarServiceWorkerCedo();
   window.addEventListener('rotina-admin-session-ready', markSessionReady);
   window.addEventListener('error', event => {
     log('startup.adm_erro_javascript', { mensagem: String(event.message || 'erro').slice(0, 150), arquivo: String(event.filename || '').split('/').pop() || '' }, 'error');
