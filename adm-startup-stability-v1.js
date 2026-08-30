@@ -1,12 +1,12 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import './runtime-build-info.js?v=20260830.7';
+import './runtime-build-info.js?v=20260830.8';
 import './adm-justification-review.js?v=9';
 import './adm-monitor-history-fix.js?v=4';
 import './mobile-app-ui.js';
-import './adm-justification-live-resolver.js?v=1';
+import './adm-justification-live-resolver.js?v=2';
 
-const VERSION = 9;
+const VERSION = 10;
 const MAX_RETRIES = 1;
 let flowStartedAt = performance.now();
 const flowElapsed = () => Math.max(0, Math.round(performance.now() - flowStartedAt));
@@ -23,9 +23,9 @@ const log = (event, details = {}, level = 'info') => {
 async function atualizarServiceWorkerCedo() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const reg = await navigator.serviceWorker.register('./sw.js?v=77', { updateViaCache: 'none' });
+    const reg = await navigator.serviceWorker.register('./sw.js?v=78', { updateViaCache: 'none' });
     await reg.update().catch(() => {});
-    log('startup.adm_sw_atualizacao_solicitada', { alvo: '77' });
+    log('startup.adm_sw_atualizacao_solicitada', { alvo: '78' });
   } catch (error) {
     log('startup.adm_sw_atualizacao_falhou', { mensagem: String(error?.message || error).slice(0, 140) }, 'warning');
   }
