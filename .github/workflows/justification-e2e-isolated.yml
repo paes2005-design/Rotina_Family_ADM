@@ -1,0 +1,84 @@
+name: Justification E2E isolated
+on:
+  push:
+    paths:
+      - 'qa/**'
+      - '.github/workflows/justification-e2e-isolated.yml'
+      - '.github/triggers/justification-e2e.txt'
+permissions:
+  contents: read
+jobs:
+  mobile-chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Auditar coerência de versões e fluxo
+        shell: bash
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          runtime=Path('runtime-build-info.js').read_text()
+          sw=Path('sw.js').read_text()
+          entry=Path('index.html').read_text()
+          admin=Path('index-ADMIN-v8.html').read_text()
+          mobile=Path('mobile-app-ui.js').read_text()
+          startup=Path('adm-startup-stability-v1.js').read_text()
+          review=Path('adm-justification-review.js').read_text()
+          monitor=Path('adm-monitor-history-fix.js').read_text()
+
+          build=re.search(r"build:'([^']+)'",runtime).group(1)
+          expected_sw=re.search(r"expectedServiceWorkerVersion:'([^']+)'",runtime).group(1)
+          sw_build=re.search(r"ROTINA_BUILD_ID='([^']+)'",sw).group(1)
+          sw_ver=re.search(r"ROTINA_SW_VERSION='([^']+)'",sw).group(1)
+          entry_build=re.search(r'entry=([0-9.]+)',entry).group(1)
+          reg_sw=re.search(r"serviceWorker\.register\('./sw\.js\?v=([^']+)'",admin).group(1)
+          assert build==sw_build==entry_build,(build,sw_build,entry_build)
+          assert expected_sw==sw_ver==reg_sw,(expected_sw,sw_ver,reg_sw)
+          assert "adm-justification-review.js?v=9" in mobile
+          assert "adm-justification-review.js?v=9" in startup
+          assert "adm-justification-review.js?v=9" in sw
+          assert "class=\"mon-just-flag\"" in monitor
+          assert "cards.addEventListener('click'" in mobile
+          assert "window.abrirRevisaoJustificativa(ctx)" in mobile
+          assert "window.abrirRevisaoJustificativa=abrir" in review
+          assert "h.data||h.dataExecucao" in review
+          print(f'VERSION_PIPELINE=PASS build={build} sw={sw_ver}')
+          print('STATIC_FLOW=PASS monitor->mobile-card->review->cache')
+          PY
+      - name: Instalar Chromium de teste
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Testar em Chromium mobile local
+        shell: bash
+        run: |
+          python3 -m http.server 4173 >/tmp/rf-qa-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:4173/qa/justification-mobile-harness.html >/dev/null && break; sleep 1; done
+          QA_URLS='http://127.0.0.1:4173/qa/justification-mobile-harness.html' node qa/justification-e2e.mjs
+      - name: Aguardar publicação do ambiente QA
+        shell: bash
+        run: |
+          url='https://paes2005-design.github.io/Rotina_Family_ADM/qa/justification-mobile-harness.html'
+          ok=0
+          for i in $(seq 1 60); do
+            if curl -fsS "$url?attempt=$i" | grep -q 'QA Justificativas Mobile'; then ok=1; break; fi
+            sleep 3
+          done
+          test "$ok" = 1
+      - name: Verificar versão publicada ao vivo
+        shell: bash
+        run: |
+          root='https://paes2005-design.github.io/Rotina_Family_ADM'
+          curl -fsS "$root/index.html?qa=$(date +%s)" | grep -q 'entry=20260830.7'
+          curl -fsS "$root/runtime-build-info.js?qa=$(date +%s)" | grep -q "build:'20260830.7'"
+          curl -fsS "$root/sw.js?qa=$(date +%s)" | grep -q "ROTINA_SW_VERSION='77'"
+          curl -fsS "$root/index-ADMIN-v8.html?qa=$(date +%s)" | grep -q "sw.js?v=77"
+          echo 'LIVE_VERSION_PIPELINE=PASS build=20260830.7 sw=77'
+      - name: Testar em Chromium mobile no GitHub Pages
+        env:
+          QA_URLS: https://paes2005-design.github.io/Rotina_Family_ADM/qa/justification-mobile-harness.html
+        run: node qa/justification-e2e.mjs
