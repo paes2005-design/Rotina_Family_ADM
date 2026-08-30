@@ -1,7 +1,7 @@
 const escUI=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-// Revisão de justificativas/pontos: módulo isolado, sem timer contínuo nem observer próprio.
-import('./adm-justification-review.js').catch(e=>console.error('Revisão de justificativa:',e));
+// Revisão de justificativas/pontos: usa a mesma versão carregada no startup para evitar instâncias duplicadas.
+import('./adm-justification-review.js?v=9').catch(e=>console.error('Revisão de justificativa:',e));
 // Início antecipado: selo informativo azul e motivo em leitura, sem alterar pontos.
 import('./adm-early-start-ui.js').catch(e=>console.error('Início antecipado ADM:',e));
 
@@ -40,23 +40,54 @@ function dadosMonitor(){
       const icone=c[1]?.querySelector('.task-icon-cell')?.textContent.trim()||'';
       const horario=c[0]?.querySelector('strong')?.textContent.trim()||c[0]?.textContent.trim().split('|')[0]||'';
       const detalheOriginal=c[0]?.querySelector('div');
-      const justificativa=detalheOriginal?.querySelector('.tooltip-justificativa .tooltip-texto')?.textContent.trim()||'';
+      const flagOriginal=detalheOriginal?.querySelector('.mon-just-flag,.tooltip-justificativa')||null;
+      const justificativa=flagOriginal?.dataset?.justification||flagOriginal?.querySelector?.('.tooltip-texto')?.textContent.trim()||'';
       const early=c[4]?.querySelector('.early-start-adm-badge');
       let detalhes='';
       if(detalheOriginal){
         const clone=detalheOriginal.cloneNode(true);
-        clone.querySelectorAll('.tooltip-justificativa,[title*="Justificativa"]').forEach(x=>x.remove());
+        clone.querySelectorAll('.mon-just-flag,.tooltip-justificativa,[title*="Justificativa"]').forEach(x=>x.remove());
         detalhes=(clone.textContent||'').replace(/\s+/g,' ').trim();
       }
       const status=c[4]?.querySelector('.badge')?.textContent.trim()||c[4]?.textContent.trim()||'Pendente';
-      return{horario,tarefa,icone,usuario:c[2]?.textContent.trim()||'',dia:c[3]?.textContent.trim()||'',status,pontos:c[5]?.textContent.trim()||'',detalhes,justificativa,data,inicioAntecipado:!!early,motivoInicioAntecipado:early?.dataset.earlyReason||'',antecipacaoMin:early?.dataset.earlyMinutes||'',dataAntecipacao:early?.dataset.date||data,tarefaId:r.dataset.familyTaskId||'',tarefaGrupoId:r.dataset.familyTaskGroup||'',dataAgendada:r.dataset.familyTaskDate||data,horaInicio:r.dataset.familyTaskTime||'',horaFim:r.dataset.familyTaskEnd||'',perfilId:r.dataset.familyProfileId||'',perfilNome:r.dataset.familyProfileName||c[2]?.textContent.trim()||''};
+      return{horario,tarefa,icone,usuario:c[2]?.textContent.trim()||'',dia:c[3]?.textContent.trim()||'',status,pontos:c[5]?.textContent.trim()||'',detalhes,justificativa,data:flagOriginal?.dataset?.date||data,inicioAntecipado:!!early,motivoInicioAntecipado:early?.dataset.earlyReason||'',antecipacaoMin:early?.dataset.earlyMinutes||'',dataAntecipacao:early?.dataset.date||data,tarefaId:flagOriginal?.dataset?.taskId||r.dataset.familyTaskId||'',historicoId:flagOriginal?.dataset?.historyId||'',tarefaGrupoId:r.dataset.familyTaskGroup||'',dataAgendada:r.dataset.familyTaskDate||data,horaInicio:r.dataset.familyTaskTime||'',horaFim:r.dataset.familyTaskEnd||'',perfilId:flagOriginal?.dataset?.profileId||r.dataset.familyProfileId||'',perfilNome:r.dataset.familyProfileName||c[2]?.textContent.trim()||''};
     });
+}
+
+function contextoJustificativaMobile(btn){
+  const card=btn.closest('.mon-app-card');
+  return {
+    id:btn.dataset.taskId||card?.dataset?.familyTaskId||'',
+    perfilId:btn.dataset.profileId||card?.dataset?.familyProfileId||'',
+    tarefa:btn.dataset.taskName||card?.dataset?.familyTaskName||'',
+    usuario:btn.dataset.user||card?.dataset?.familyProfileName||'',
+    dia:btn.dataset.day||card?.dataset?.familyTaskDay||'',
+    horario:btn.dataset.schedule||((card?.dataset?.familyTaskTime||card?.dataset?.familyTaskEnd)?`${card?.dataset?.familyTaskTime||''} - ${card?.dataset?.familyTaskEnd||''}`:''),
+    justificativa:btn.dataset.justification||'',
+    data:btn.dataset.date||card?.dataset?.familyTaskDate||document.getElementById('filtroData')?.value||''
+  };
 }
 
 function garantirCardsMonitor(){
   const monitor=document.getElementById('monitor');if(!monitor)return null;
   let cards=document.getElementById('monitorNativeCards');if(cards)return cards;
   cards=document.createElement('div');cards.id='monitorNativeCards';cards.className='monitor-native-cards';
+  cards.addEventListener('click',async ev=>{
+    const btn=ev.target.closest?.('.mon-just-flag');
+    if(!btn)return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const ctx=contextoJustificativaMobile(btn);
+    window.rotinaLog?.('startup.adm_justificativa_clique',{origem:'mobile-card',temId:Boolean(ctx.id),temPerfilId:Boolean(ctx.perfilId),data:ctx.data||''},'info');
+    try{
+      if(typeof window.abrirRevisaoJustificativa!=='function')await import('./adm-justification-review.js?v=9');
+      if(typeof window.abrirRevisaoJustificativa!=='function')throw new Error('Módulo de justificativa indisponível.');
+      window.abrirRevisaoJustificativa(ctx);
+    }catch(e){
+      console.error('Abrir justificativa mobile:',e);
+      window.rotinaLog?.('startup.adm_justificativa_modulo_ausente',{origem:'mobile-card',temId:Boolean(ctx.id),mensagem:String(e?.message||e).slice(0,120)},'error');
+    }
+  });
   const tabela=document.querySelector('#monitor .monitor-scroll-pro')||document.querySelector('#monitor .tabela-scroll');
   tabela?.insertAdjacentElement('afterend',cards);
   return cards;
@@ -68,7 +99,7 @@ function renderCardsMonitor(){
   const dados=dadosMonitor();
   const novoHtml=!dados.length?'<div class="monitor-native-empty">Nenhuma tarefa para os filtros selecionados.</div>':dados.map(x=>{
     const[cls,label]=statusCard(x.status);
-    const flag=x.justificativa?`<button type="button" class="mon-just-flag" aria-label="Abrir justificativa de ${escUI(x.tarefa)}" title="Ver justificativa" data-task-name="${escUI(x.tarefa)}" data-user="${escUI(x.usuario)}" data-day="${escUI(x.dia)}" data-date="${escUI(x.data)}" data-schedule="${escUI(x.horario)}" data-justification="${escUI(x.justificativa)}">🚩</button>`:'';
+    const flag=x.justificativa?`<button type="button" class="mon-just-flag" aria-label="Abrir justificativa de ${escUI(x.tarefa)}" title="Ver justificativa" data-task-id="${escUI(x.tarefaId)}" data-history-id="${escUI(x.historicoId)}" data-profile-id="${escUI(x.perfilId)}" data-task-name="${escUI(x.tarefa)}" data-user="${escUI(x.usuario)}" data-day="${escUI(x.dia)}" data-date="${escUI(x.data)}" data-schedule="${escUI(x.horario)}" data-justification="${escUI(x.justificativa)}">🚩</button>`:'';
     const early=x.inicioAntecipado?`<button type="button" class="early-start-adm-badge" title="Ver motivo do início antecipado" data-task-name="${escUI(x.tarefa)}" data-user="${escUI(x.usuario)}" data-date="${escUI(x.dataAntecipacao)}" data-schedule="${escUI(x.horario)}" data-early-reason="${escUI(x.motivoInicioAntecipado)}" data-early-minutes="${escUI(x.antecipacaoMin)}">🔵 Início antecipado</button>`:'';
     return`<article class="mon-app-card" data-family-task-id="${escUI(x.tarefaId)}" data-family-task-group="${escUI(x.tarefaGrupoId)}" data-family-task-name="${escUI(x.tarefa)}" data-family-task-day="${escUI(x.dia)}" data-family-task-date="${escUI(x.dataAgendada)}" data-family-task-time="${escUI(x.horaInicio)}" data-family-task-end="${escUI(x.horaFim)}" data-family-profile-id="${escUI(x.perfilId)}" data-family-profile-name="${escUI(x.perfilNome)}"><div class="mon-app-time">${escUI(x.horario.replace(' às ','–'))}</div><div class="mon-app-main"><span class="task-icon-badge" aria-hidden="true">${escUI(x.icone||iconeTarefa(x.tarefa))}</span><div class="mon-app-copy"><strong>${escUI(x.tarefa)}</strong><span>${escUI(x.usuario)}</span></div></div><div class="mon-app-side"><span class="mon-app-status ${cls}">${escUI(label)}</span>${early}<span class="mon-app-points">${escUI(x.pontos)}</span></div><div class="mon-app-meta"><span>${escUI(x.dia)}</span><span class="real-time">${escUI(x.detalhes)}</span>${flag}</div></article>`;
   }).join('');
