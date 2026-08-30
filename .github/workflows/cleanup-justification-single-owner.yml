@@ -1,0 +1,69 @@
+name: Limpar fluxo unico de justificativas
+on:
+  push:
+    paths:
+      - '.github/triggers/cleanup-justification-single-owner.txt'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Remover handler duplicado e reforcar diagnostico
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p=Path('adm-justification-review.js')
+          s=p.read_text()
+          old="""document.addEventListener('click',e=>{\n  const mobile=e.target.closest?.('.mon-just-flag');\n  if(mobile){window.rotinaLog?.('justificativa.clique_capturado',{origem:'mobile'},'info');e.preventDefault();const r=mobile.closest('tr');abrir({id:mobile.dataset.taskId||r?.dataset?.familyTaskId||'',perfilId:mobile.dataset.profileId||r?.dataset?.familyProfileId||'',tarefa:mobile.dataset.taskName||r?.dataset?.familyTaskName||'',usuario:mobile.dataset.user||r?.dataset?.familyProfileName||'',dia:mobile.dataset.day||r?.dataset?.familyTaskDay||'',horario:mobile.dataset.schedule||(r?.dataset?.familyTaskTime||''),justificativa:mobile.dataset.justification||'',data:mobile.dataset.date||r?.dataset?.historyDate||dataSelecionada()});return;}\n  const flag=e.target.closest?.('.tooltip-justificativa');\n  if(flag){\n    window.rotinaLog?.('justificativa.clique_capturado',{origem:'desktop'},'info');\n    e.preventDefault();\n    const r=flag.closest('tr'),c=r?.children;if(!c||c.length<4)return;\n    abrir({id:r.dataset.familyTaskId||'',perfilId:r.dataset.familyProfileId||'',tarefa:r.dataset.familyTaskName||c[1]?.querySelector('strong')?.textContent.trim()||c[1]?.textContent.trim()||'',usuario:r.dataset.familyProfileName||c[2]?.textContent.trim()||'',dia:r.dataset.familyTaskDay||c[3]?.textContent.trim()||'',horario:(r.dataset.familyTaskTime&&r.dataset.familyTaskEnd)?`${r.dataset.familyTaskTime} - ${r.dataset.familyTaskEnd}`:(c[0]?.querySelector('strong')?.textContent.trim()||''),justificativa:flag.querySelector('.tooltip-texto')?.textContent.trim()||'',data:r.dataset.historyDate||dataSelecionada()});\n  }\n},true);"""
+          new="""// Compatibilidade apenas com linhas legadas. As linhas atuais do Monitor\n// possuem botao .mon-just-flag com onclick proprio e contexto completo da ocorrencia.\ndocument.addEventListener('click',e=>{\n  const flag=e.target.closest?.('.tooltip-justificativa');\n  if(!flag)return;\n  window.rotinaLog?.('startup.adm_justificativa_legacy_clique',{origem:'desktop'},'info');\n  e.preventDefault();\n  const r=flag.closest('tr'),c=r?.children;if(!c||c.length<4)return;\n  abrir({id:r.dataset.familyTaskId||'',perfilId:r.dataset.familyProfileId||'',tarefa:r.dataset.familyTaskName||c[1]?.querySelector('strong')?.textContent.trim()||c[1]?.textContent.trim()||'',usuario:r.dataset.familyProfileName||c[2]?.textContent.trim()||'',dia:r.dataset.familyTaskDay||c[3]?.textContent.trim()||'',horario:(r.dataset.familyTaskTime&&r.dataset.familyTaskEnd)?`${r.dataset.familyTaskTime} - ${r.dataset.familyTaskEnd}`:(c[0]?.querySelector('strong')?.textContent.trim()||''),justificativa:flag.querySelector('.tooltip-texto')?.textContent.trim()||'',data:r.dataset.historyDate||dataSelecionada()});\n},true);"""
+          if old not in s:
+              raise SystemExit('Handler duplicado esperado nao encontrado')
+          s=s.replace(old,new,1)
+
+          needle="window.rotinaLog?.('justificativa.abertura_inicio',{data,temId:Boolean(ctx.id)},'info');"
+          repl=needle+"\n    window.rotinaLog?.('startup.adm_justificativa_abertura',{data,temId:Boolean(ctx.id)},'info');"
+          if needle not in s: raise SystemExit('Log de abertura esperado nao encontrado')
+          s=s.replace(needle,repl,1)
+
+          needle="window.rotinaLog?.('justificativa.abertura_ok',{duracaoMs:Math.round(performance.now()-started),data},'info');"
+          repl=needle+"\n    window.rotinaLog?.('startup.adm_justificativa_ok',{duracaoMs:Math.round(performance.now()-started),data},'info');"
+          if needle not in s: raise SystemExit('Log de sucesso esperado nao encontrado')
+          s=s.replace(needle,repl,1)
+
+          oldcatch="window.rotinaLog?.('justificativa.abertura_erro',{data,temId:Boolean(ctx.id),mensagem:String(e?.message||e).slice(0,140)},'error');msg.textContent=e.message||'Não foi possível carregar a justificativa.';"
+          newcatch="window.rotinaLog?.('justificativa.abertura_erro',{data,temId:Boolean(ctx.id),mensagem:String(e?.message||e).slice(0,140)},'error');window.rotinaLog?.('startup.adm_justificativa_erro',{data,temId:Boolean(ctx.id),mensagem:String(e?.message||e).slice(0,140)},'error');msg.textContent=e.message||'Não foi possível carregar a justificativa.';"
+          if oldcatch not in s: raise SystemExit('Catch esperado nao encontrado')
+          s=s.replace(oldcatch,newcatch,1)
+          p.write_text(s)
+
+          p=Path('adm-startup-stability-v1.js'); s=p.read_text(); s=s.replace("adm-justification-review.js?v=8","adm-justification-review.js?v=9"); p.write_text(s)
+          p=Path('sw.js'); s=p.read_text(); s=s.replace("rotina-family-adm-v74","rotina-family-adm-v75").replace("ROTINA_SW_VERSION='74'","ROTINA_SW_VERSION='75'").replace("20260830.4","20260830.5").replace("adm-justification-review.js?v=8","adm-justification-review.js?v=9"); p.write_text(s)
+          p=Path('runtime-build-info.js'); s=p.read_text(); s=s.replace("20260830.4","20260830.5").replace("expectedServiceWorkerVersion:'74'","expectedServiceWorkerVersion:'75'"); p.write_text(s)
+          p=Path('index.html'); s=p.read_text(); s=s.replace("20260830.4","20260830.5"); p.write_text(s)
+          PY
+          node --check adm-justification-review.js
+          node --check adm-startup-stability-v1.js
+          node --check adm-monitor-history-fix.js
+          node --check sw.js
+          grep -F "startup.adm_justificativa_abertura" adm-justification-review.js
+          grep -F "startup.adm_justificativa_erro" adm-justification-review.js
+          if grep -F "const mobile=e.target.closest?.('.mon-just-flag')" adm-justification-review.js; then
+            echo 'Handler duplicado de mon-just-flag ainda existe' >&2
+            exit 1
+          fi
+          grep -F "adm-justification-review.js?v=9" adm-startup-stability-v1.js
+          grep -F "rotina-family-adm-v75" sw.js
+      - name: Publicar limpeza
+        shell: bash
+        run: |
+          git config user.name 'rotina-family-fix-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add adm-justification-review.js adm-startup-stability-v1.js sw.js runtime-build-info.js index.html
+          git commit -m 'Unificar clique da justificativa e reforcar diagnostico'
+          git push
