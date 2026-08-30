@@ -1672,7 +1672,7 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=77',{updateViaCache:'none'})
+      navigator.serviceWorker.register('./sw.js?v=78',{updateViaCache:'none'})
         .then(reg => console.log('Service Worker registrado com sucesso!', reg))
         .catch(err => console.error('Erro ao registrar Service Worker:', err));
     });
@@ -1717,7 +1717,7 @@
 <script type="module" src="./admin-master.js?v=1"></script>
 <script type="module" src="./app-monitoring-dashboard.js?v=3"></script>
 <script type="module" src="./adm-auth-session-v1.js?v=7"></script>
-<script type="module" src="./adm-startup-stability-v1.js?v=6"></script>
+<script type="module" src="./adm-startup-stability-v1.js?v=10"></script>
 <script type="module" src="./adm-emergency-reconcile-20260826.js?v=4"></script>
 <script type="module" src="./adm-zero-points-restitution-20260827.js?v=1"></script>
 </body>
