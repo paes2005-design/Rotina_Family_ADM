@@ -63,11 +63,11 @@ function perfisVisiveis(dados){
 }
 function ocorrenciaPara(t,p,data,dados){
   const hist=dados.historico.find(h=>h.tarefaId===t.id&&registroDoPerfil(h,p)&&(h.data||h.dataExecucao)===data);
-  if(hist)return {...t,...hist,id:t.id,__historico:true};
+  if(hist)return {...t,...hist,id:t.id,__historico:true,__historicoId:hist.id||''};
   const hoje=data===hojeISO();
   const pertenceHoje=(t.dataExecucao||'')===data;
-  if(hoje&&((t.status==='Em andamento'&&pertenceHoje)||(t.horarioInicio&&pertenceHoje)))return {...t,__historico:false};
-  return {...t,status:'Pendente',horarioInicio:'',horarioTermino:'',inicioExecutadoEm:'',terminoExecutadoEm:'',pontosGanhos:0,percentualAplicado:null,faixaAtraso:'',toleranciaConsumidaSeg:null,toleranciaConsumidaMin:null,justificativaAtraso:'',justificativaRecusada:false,inicioAntecipado:false,__historico:false};
+  if(hoje&&((t.status==='Em andamento'&&pertenceHoje)||(t.horarioInicio&&pertenceHoje)))return {...t,__historico:false,__historicoId:''};
+  return {...t,status:'Pendente',horarioInicio:'',horarioTermino:'',inicioExecutadoEm:'',terminoExecutadoEm:'',pontosGanhos:0,percentualAplicado:null,faixaAtraso:'',toleranciaConsumidaSeg:null,toleranciaConsumidaMin:null,justificativaAtraso:'',justificativaRecusada:false,inicioAntecipado:false,__historico:false,__historicoId:''};
 }
 function detalheExecucao(x){
   const tolSeg=Math.max(0,Number(x.tempoLimite)||0)*60;
@@ -78,16 +78,49 @@ function detalheExecucao(x){
   const consumido=x.toleranciaConsumidaSeg!==undefined&&x.toleranciaConsumidaSeg!==null?Number(x.toleranciaConsumidaSeg):(x.toleranciaConsumidaMin!==undefined&&x.toleranciaConsumidaMin!==null?Number(x.toleranciaConsumidaMin)*60:null);
   return `Real: ${inicio} até ${fim} | Tol: ${formatarSegundos(tolSeg)}${consumido===null?'':` | Consumido: ${formatarSegundos(consumido)}`}`;
 }
+function botaoJustificativa(x,p,data,recusada=false){
+  const texto=recusada?'Usuário não quis justificar.':String(x.justificativaAtraso||'');
+  const rotulo=recusada?'Usuário não quis justificar':'🚩 texto';
+  const estilo=recusada?' style="color:#6c757d;border-color:#6c757d"':'';
+  return `<button type="button" class="mon-just-flag"${estilo} data-task-id="${esc(x.id||x.tarefaId||'')}" data-history-id="${esc(x.__historicoId||'')}" data-profile-id="${esc(p.id||'')}" data-task-name="${esc(x.nome||'Tarefa')}" data-user="${esc(p.nome||'')}" data-day="${esc(x.diaSemana||'')}" data-schedule="${esc(`${x.horaSugeridaInicio||''} - ${x.horaSugeridaFim||''}`)}" data-justification="${esc(texto)}" data-date="${esc(data)}" aria-label="Abrir justificativa">${rotulo}</button>`;
+}
 function linha(x,p,data,periodo){
   const status=String(x.status||'Pendente');
   const icon=x.icone?`<span class="task-icon-cell">${esc(x.icone)}</span>`:'';
   let detalhe=detalheExecucao(x);
-  if(x.justificativaAtraso)detalhe+=` <span class="tooltip-justificativa">🚩 texto<span class="tooltip-texto">${esc(x.justificativaAtraso)}</span></span>`;
-  if(x.justificativaRecusada===true)detalhe+=` <span class="tooltip-justificativa" style="color:#6c757d;border-color:#6c757d">Usuário não quis justificar<span class="tooltip-texto">Usuário não quis justificar.</span></span>`;
+  if(x.justificativaAtraso)detalhe+=` ${botaoJustificativa(x,p,data,false)}`;
+  if(x.justificativaRecusada===true)detalhe+=` ${botaoJustificativa(x,p,data,true)}`;
   const early=x.inicioAntecipado===true?`<button type="button" class="early-start-adm-badge" title="Ver motivo do início antecipado" data-task-name="${esc(x.nome||'')}" data-user="${esc(p.nome)}" data-date="${esc(x.data||x.dataExecucao||'')}" data-schedule="${esc(`${x.horaSugeridaInicio||''} - ${x.horaSugeridaFim||''}`)}" data-early-reason="${esc(x.motivoInicioAntecipado||'')}" data-early-minutes="${esc(x.antecipacaoMin||0)}">🔵 Início antecipado</button>`:'';
   const pontos=`${Number(x.pontosGanhos)||0} / ${Number(x.pontosMaximos)||0} pts`;
   const dataRotulo=periodo==='dia'?'':` · ${data.split('-').reverse().join('/')}`;
-  return `<tr data-history-source="${x.__historico?'historico':'programacao'}" data-history-date="${esc(data)}" data-family-task-id="${esc(x.id||x.tarefaId||'')}" data-family-task-group="${esc(x.tarefaGrupoId||'')}" data-family-task-name="${esc(x.nome||'Tarefa')}" data-family-task-day="${esc(x.diaSemana||'')}" data-family-task-time="${esc(x.horaSugeridaInicio||'')}" data-family-profile-id="${esc(p.id||'')}" data-family-profile-name="${esc(p.nome||'')}"><td><strong>${esc(x.horaSugeridaInicio||'--:--')} - ${esc(x.horaSugeridaFim||'--:--')}</strong><div style="font-size:11px;color:#555;margin-top:3px">${detalhe}</div></td><td>${icon}<strong>${esc(x.nome||'Tarefa')}</strong></td><td>${esc(p.nome)}</td><td>${esc(x.diaSemana||'')}${esc(dataRotulo)}</td><td><span class="badge ${badge(x)}">${esc(status)}</span>${early}</td><td>${esc(pontos)}</td></tr>`;
+  return `<tr data-history-source="${x.__historico?'historico':'programacao'}" data-history-date="${esc(data)}" data-family-task-id="${esc(x.id||x.tarefaId||'')}" data-family-task-group="${esc(x.tarefaGrupoId||'')}" data-family-task-name="${esc(x.nome||'Tarefa')}" data-family-task-day="${esc(x.diaSemana||'')}" data-family-task-time="${esc(x.horaSugeridaInicio||'')}" data-family-task-end="${esc(x.horaSugeridaFim||'')}" data-family-profile-id="${esc(p.id||'')}" data-family-profile-name="${esc(p.nome||'')}"><td><strong>${esc(x.horaSugeridaInicio||'--:--')} - ${esc(x.horaSugeridaFim||'--:--')}</strong><div style="font-size:11px;color:#555;margin-top:3px">${detalhe}</div></td><td>${icon}<strong>${esc(x.nome||'Tarefa')}</strong></td><td>${esc(p.nome)}</td><td>${esc(x.diaSemana||'')}${esc(dataRotulo)}</td><td><span class="badge ${badge(x)}">${esc(status)}</span>${early}</td><td>${esc(pontos)}</td></tr>`;
+}
+function contextoBotao(btn){
+  return {
+    id:btn.dataset.taskId||'',
+    perfilId:btn.dataset.profileId||'',
+    tarefa:btn.dataset.taskName||'',
+    usuario:btn.dataset.user||'',
+    dia:btn.dataset.day||'',
+    horario:btn.dataset.schedule||'',
+    justificativa:btn.dataset.justification||'',
+    data:btn.dataset.date||dataSelecionada()
+  };
+}
+function ligarBotoesJustificativa(tbody){
+  tbody.querySelectorAll('.mon-just-flag').forEach(btn=>{
+    btn.onclick=ev=>{
+      ev.preventDefault();
+      ev.stopPropagation();
+      const ctx=contextoBotao(btn);
+      window.rotinaLog?.('startup.adm_justificativa_clique',{temId:Boolean(ctx.id),data:ctx.data||''},'info');
+      if(typeof window.abrirRevisaoJustificativa!=='function'){
+        window.rotinaLog?.('startup.adm_justificativa_modulo_ausente',{temId:Boolean(ctx.id)},'error');
+        return;
+      }
+      window.abrirRevisaoJustificativa(ctx);
+    };
+  });
 }
 async function renderHistoricoMonitor(force=false){
   const meuToken=++renderToken;
@@ -117,6 +150,7 @@ async function renderHistoricoMonitor(force=false){
   if(meuToken!==renderToken)return;
   tbody.innerHTML=linhas.join('')||'<tr><td colspan="6" style="text-align:center;color:#777">Nenhum registro encontrado para os filtros e a data selecionada.</td></tr>';
   [...tbody.querySelectorAll('tr')].forEach(r=>[...r.children].forEach((td,i)=>td.dataset.label=['Horário','Tarefa','Integrante','Dia','Status','Pontos'][i]||''));
+  ligarBotoesJustificativa(tbody);
   window.dispatchEvent(new CustomEvent('rotina-monitor-history-rendered',{detail:{data,periodo,total:linhas.length}}));
 }
 function instalar(t=0){
