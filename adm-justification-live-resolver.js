@@ -1,7 +1,7 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getFirestore, doc, getDocFromServer } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-const VERSION = 1;
+const VERSION = 2;
 const SERVER_TIMEOUT_MS = 4500;
 let ultimoClique = null;
 
@@ -76,17 +76,27 @@ function comTimeout(promise, ms) {
 }
 
 async function buscarHistoricoDireto(ctx) {
-  if (!ctx.historicoId || !getApps().length) return null;
-  const banco = getFirestore(getApp());
+  if (!ctx.historicoId) return null;
   const started = performance.now();
   log('justificativa.history_direct_inicio', { historicoId: String(ctx.historicoId).slice(0, 80), data: ctx.data || '' });
+
+  if (typeof window.__rotinaQaHistoryReader === 'function') {
+    const valor = await comTimeout(Promise.resolve(window.__rotinaQaHistoryReader({ ...ctx })), SERVER_TIMEOUT_MS);
+    if (!valor) return null;
+    const h = { id: valor.id || ctx.historicoId, ...valor };
+    log('justificativa.history_direct_ok', { duracaoMs: Math.round(performance.now() - started), data: ctx.data || '', origem: 'qa-reader' });
+    return h;
+  }
+
+  if (!getApps().length) return null;
+  const banco = getFirestore(getApp());
   const snap = await comTimeout(getDocFromServer(doc(banco, 'historico', String(ctx.historicoId))), SERVER_TIMEOUT_MS);
   if (!snap.exists()) {
     log('justificativa.history_direct_inexistente', { duracaoMs: Math.round(performance.now() - started), data: ctx.data || '' }, 'warning');
     return null;
   }
   const h = { id: snap.id, ...snap.data() };
-  log('justificativa.history_direct_ok', { duracaoMs: Math.round(performance.now() - started), data: ctx.data || '' });
+  log('justificativa.history_direct_ok', { duracaoMs: Math.round(performance.now() - started), data: ctx.data || '', origem: 'firestore' });
   return h;
 }
 
