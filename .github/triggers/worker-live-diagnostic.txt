@@ -1,2 +1,2 @@
-run=post-modal-freeze-20260831-a
-reason=justification-opens-but-modal-cannot-close-after-startup-fix
+run=post-modal-freeze-20260831-b
+reason=capture-latest-justification-close-failure-after-close-fix-v1
