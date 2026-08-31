@@ -2,6 +2,7 @@ import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/fireb
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import './runtime-build-info.js?v=20260831.2';
 import './adm-justification-review.js?v=9';
+import './adm-justification-close-fix.js?v=1';
 import './adm-monitor-history-fix.js?v=4';
 import './mobile-app-ui.js';
 
