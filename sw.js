@@ -1,7 +1,7 @@
-const CACHE_NAME='rotina-family-adm-v79-startup-stable';
+const CACHE_NAME='rotina-family-adm-v79-startup-stable-close-v2';
 const ROTINA_SW_VERSION='79';
 const ROTINA_BUILD_ID='20260831.2';
-const APP_SHELL=['./','./index.html','./index-ADMIN-v8.html','./manifest.json?v=34','./icon-administrador-192.png','./icon-administrador-512.png','./admin-push-onesignal.js','./admin-master.js','./admin-master-integrity-fix.js','./app-monitoring.js','./app-monitoring-dashboard.js','./commercial-access-admin.js','./master-family-tree.js','./dashboard-ranking-pro.css','./dashboard-ranking-pro.js','./monitor-pro.css','./monitor-pro.js','./rewards-admin-ui-v2.js','./reward-redemption-notifications.js','./manage-pro.css','./manage-pro.js','./mobile-app-ui.css','./mobile-app-ui.js','./adm-justification-review.js','./adm-zero-points-restitution-20260827.js','./adm-early-start-ui.js','./adm-score-history-cards.js','./adm-monitor-history-fix.js','./family-alarm-admin.js','./alarm-date-core.js','./runtime-build-info.js','./reset-cache.html'];
+const APP_SHELL=['./','./index.html','./index-ADMIN-v8.html','./manifest.json?v=34','./icon-administrador-192.png','./icon-administrador-512.png','./admin-push-onesignal.js','./admin-master.js','./admin-master-integrity-fix.js','./app-monitoring.js','./app-monitoring-dashboard.js','./commercial-access-admin.js','./master-family-tree.js','./dashboard-ranking-pro.css','./dashboard-ranking-pro.js','./monitor-pro.css','./monitor-pro.js','./rewards-admin-ui-v2.js','./reward-redemption-notifications.js','./manage-pro.css','./manage-pro.js','./mobile-app-ui.css','./mobile-app-ui.js','./adm-justification-review.js','./adm-justification-close-fix.js','./adm-zero-points-restitution-20260827.js','./adm-early-start-ui.js','./adm-score-history-cards.js','./adm-monitor-history-fix.js','./family-alarm-admin.js','./alarm-date-core.js','./runtime-build-info.js','./reset-cache.html'];
 const MODULE_ROOTS=['https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js'];
 const APP_MAIN_URL=new URL('./index-ADMIN-v8.html',self.location.href).href;
 const APP_MAIN_PATH=new URL(APP_MAIN_URL).pathname;
@@ -14,6 +14,7 @@ async function respostaComAddons(response){
   let html=await response.text();
   const faltantes=[];
   if(!html.includes('adm-justification-review.js'))faltantes.push('<script type="module" src="./adm-justification-review.js?v=9"><\/script>');
+  if(!html.includes('adm-justification-close-fix.js'))faltantes.push('<script src="./adm-justification-close-fix.js?v=2"><\/script>');
   if(!html.includes('adm-score-history-cards.js'))faltantes.push('<script type="module" src="./adm-score-history-cards.js?v=2"><\/script>');
   if(!html.includes('adm-monitor-history-fix.js'))faltantes.push('<script type="module" src="./adm-monitor-history-fix.js?v=4"><\/script>');
   if(!html.includes('family-alarm-admin.js'))faltantes.push('<script type="module" src="./family-alarm-admin.js?v=6"><\/script>');

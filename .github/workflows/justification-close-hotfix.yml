@@ -1,0 +1,79 @@
+name: Justification close hotfix QA
+on:
+  push:
+    branches:
+      - hotfix-justificativa-fechamento-20260831
+    paths:
+      - 'adm-justification-close-fix.js'
+      - 'sw.js'
+      - '.github/workflows/justification-close-hotfix.yml'
+permissions:
+  contents: read
+jobs:
+  close-modal-mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Auditar integração do hotfix
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          close=Path('adm-justification-close-fix.js').read_text()
+          sw=Path('sw.js').read_text()
+          assert "const VERSION=2" in close
+          assert "__rotinaJustificationCloseFixInstalled" in close
+          assert "justificativa.close_fix_pronto" in close
+          assert "justificativa.fechar_tentativa" in close
+          assert "justificativa.fechar_ok" in close
+          assert "pointerdown" in close and "keydown" in close
+          assert "'./adm-justification-close-fix.js'" in sw
+          assert 'adm-justification-close-fix.js?v=2' in sw
+          assert 'startup-stable-close-v2' in sw
+          print('STATIC_CLOSE_PIPELINE=PASS')
+          PY
+      - name: Criar harness isolado
+        shell: bash
+        run: |
+          cat > close-harness.html <<'HTML'
+          <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+          body{margin:0;font-family:sans-serif}#open{margin:20px;padding:12px}#admReviewJustModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center}.adm-review-card{position:relative;width:280px;height:240px;background:white}.adm-review-close{position:absolute;right:8px;top:8px}
+          </style></head><body><button id="open">Abrir</button><div id="admReviewJustModal"><div class="adm-review-card"><button type="button" class="adm-review-close">×</button></div></div><script>
+          window.__qaLogs=[];window.rotinaLog=(evento,detalhes={},nivel='info')=>window.__qaLogs.push({evento,detalhes,nivel});
+          document.getElementById('open').onclick=()=>{const m=document.getElementById('admReviewJustModal');m.removeAttribute('aria-hidden');m.style.display='flex'};
+          </script><script src="/adm-justification-close-fix.js"></script></body></html>
+          HTML
+      - name: Instalar Chromium
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Testar fechamento mobile real
+        shell: bash
+        run: |
+          python3 -m http.server 4173 >/tmp/close-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          cat > close-test.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+          const page=await context.newPage();
+          await page.goto('http://127.0.0.1:4173/close-harness.html',{waitUntil:'networkidle'});
+          const modal=page.locator('#admReviewJustModal');
+          const open=page.locator('#open');
+          await open.tap(); await modal.waitFor({state:'visible'});
+          await page.locator('.adm-review-close').tap(); await modal.waitFor({state:'hidden'});
+          await open.tap(); await modal.waitFor({state:'visible'});
+          await modal.tap({position:{x:8,y:8}}); await modal.waitFor({state:'hidden'});
+          await open.tap(); await modal.waitFor({state:'visible'});
+          await page.keyboard.press('Escape'); await modal.waitFor({state:'hidden'});
+          const state=await page.evaluate(()=>({version:window.__rotinaJustificationCloseFixInstalled,logs:window.__qaLogs}));
+          if(state.version!==2)throw new Error(`Versão do close fix incorreta: ${state.version}`);
+          const ok=state.logs.filter(x=>x.evento==='justificativa.fechar_ok');
+          if(ok.length<3)throw new Error(`Fechamentos confirmados insuficientes: ${ok.length}`);
+          if(!state.logs.some(x=>x.evento==='justificativa.close_fix_pronto'))throw new Error('Close fix não registrou inicialização');
+          console.log(JSON.stringify({result:'PASS',version:state.version,closeEvents:ok.map(x=>x.detalhes?.origem)},null,2));
+          await browser.close();
+          JS
+          node close-test.mjs
