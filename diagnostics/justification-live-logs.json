@@ -1,19 +1,127 @@
 {
-  "capturadoEm": "2026-08-31T22:21:36.625138+00:00",
+  "capturadoEm": "2026-08-31T22:41:41.016496+00:00",
   "http": "200",
   "workerStatus": "SAUDAVEL",
-  "lastLogAt": "2026-08-31T22:21:17.991Z",
+  "lastLogAt": "2026-08-31T22:39:24.253Z",
   "summary": {
-    "technicalLogs": 42,
-    "errors": 3,
+    "technicalLogs": 80,
+    "errors": 2,
     "warnings": 10,
     "slowOperations": 0,
     "http400": 0,
     "http429": 0,
     "ignoredClicks": 0
   },
-  "totalFiltrado": 35,
+  "totalFiltrado": 37,
   "logs": [
+    {
+      "aplicativo": "adm",
+      "evento": "startup.adm_sessao_pronta",
+      "nivel": "info",
+      "detalhes": {
+        "ms": 1748,
+        "startupStabilityVersion": 12
+      },
+      "clienteEm": "2026-08-31T22:39:10.401Z",
+      "pagina": "index-ADMIN-v8.html",
+      "navegador": "Chrome",
+      "online": true,
+      "visibilidade": "visible",
+      "instalado": true
+    },
+    {
+      "aplicativo": "adm",
+      "evento": "startup.adm_tela_protegida",
+      "nivel": "info",
+      "detalhes": {
+        "motivo": "auth-com-usuario",
+        "autenticado": true,
+        "startupStabilityVersion": 12
+      },
+      "clienteEm": "2026-08-31T22:39:09.055Z",
+      "pagina": "index-ADMIN-v8.html",
+      "navegador": "Chrome",
+      "online": true,
+      "visibilidade": "visible",
+      "instalado": true
+    },
+    {
+      "aplicativo": "adm",
+      "evento": "startup.adm_auth_resolvido",
+      "nivel": "info",
+      "detalhes": {
+        "autenticado": true,
+        "ms": 0,
+        "startupStabilityVersion": 12
+      },
+      "clienteEm": "2026-08-31T22:39:08.653Z",
+      "pagina": "index-ADMIN-v8.html",
+      "navegador": "Chrome",
+      "online": true,
+      "visibilidade": "visible",
+      "instalado": true
+    },
+    {
+      "aplicativo": "adm",
+      "evento": "startup.adm_sw_atualizacao_solicitada",
+      "nivel": "info",
+      "detalhes": {
+        "startupStabilityVersion": 12
+      },
+      "clienteEm": "2026-08-31T22:39:07.134Z",
+      "pagina": "index-ADMIN-v8.html",
+      "navegador": "Chrome",
+      "online": true,
+      "visibilidade": "visible",
+      "instalado": true
+    },
+    {
+      "aplicativo": "adm",
+      "evento": "startup.adm_sessao_pronta",
+      "nivel": "info",
+      "detalhes": {
+        "ms": 1313,
+        "startupStabilityVersion": 11
+      },
+      "clienteEm": "2026-08-31T22:21:52.623Z",
+      "pagina": "index-ADMIN-v8.html",
+      "navegador": "Chrome",
+      "online": true,
+      "visibilidade": "visible",
+      "instalado": true
+    },
+    {
+      "aplicativo": "adm",
+      "evento": "startup.adm_tela_protegida",
+      "nivel": "warning",
+      "detalhes": {
+        "motivo": "auth-com-usuario",
+        "autenticado": true,
+        "startupStabilityVersion": 11
+      },
+      "clienteEm": "2026-08-31T22:21:51.712Z",
+      "pagina": "index-ADMIN-v8.html",
+      "navegador": "Chrome",
+      "online": true,
+      "visibilidade": "visible",
+      "instalado": true
+    },
+    {
+      "aplicativo": "adm",
+      "evento": "startup.adm_auth_resolvido",
+      "nivel": "info",
+      "detalhes": {
+        "autenticado": true,
+        "ms": 0,
+        "startupStabilityVersion": 11
+      },
+      "clienteEm": "2026-08-31T22:21:51.310Z",
+      "pagina": "index-ADMIN-v8.html",
+      "navegador": "Chrome",
+      "online": true,
+      "visibilidade": "visible",
+      "instalado": true
+    },
     {
       "aplicativo": "adm",
       "evento": "startup.adm_sessao_pronta",
@@ -457,74 +565,6 @@
         "startupStabilityVersion": 10
       },
       "clienteEm": "2026-08-31T21:30:54.885Z",
-      "pagina": "index-ADMIN-v8.html",
-      "navegador": "Chrome",
-      "online": true,
-      "visibilidade": "visible",
-      "instalado": true
-    },
-    {
-      "aplicativo": "adm",
-      "evento": "startup.adm_auth_resolvido",
-      "nivel": "info",
-      "detalhes": {
-        "autenticado": true,
-        "ms": 0,
-        "startupStabilityVersion": 10
-      },
-      "clienteEm": "2026-08-31T21:30:54.481Z",
-      "pagina": "index-ADMIN-v8.html",
-      "navegador": "Chrome",
-      "online": true,
-      "visibilidade": "visible",
-      "instalado": true
-    },
-    {
-      "aplicativo": "adm",
-      "evento": "startup.adm_sw_atualizacao_solicitada",
-      "nivel": "info",
-      "detalhes": {
-        "startupStabilityVersion": 10
-      },
-      "clienteEm": "2026-08-31T21:30:53.954Z",
-      "pagina": "index-ADMIN-v8.html",
-      "navegador": "Chrome",
-      "online": true,
-      "visibilidade": "visible",
-      "instalado": true
-    },
-    {
-      "aplicativo": "adm",
-      "evento": "startup.adm_justificativa_ok",
-      "nivel": "info",
-      "detalhes": {
-        "duracaoMs": 5
-      },
-      "clienteEm": "2026-08-30T22:08:08.966Z",
-      "pagina": "index-ADMIN-v8.html",
-      "navegador": "Chrome",
-      "online": true,
-      "visibilidade": "visible",
-      "instalado": true
-    },
-    {
-      "aplicativo": "adm",
-      "evento": "startup.adm_justificativa_abertura",
-      "nivel": "info",
-      "detalhes": {},
-      "clienteEm": "2026-08-30T22:08:08.960Z",
-      "pagina": "index-ADMIN-v8.html",
-      "navegador": "Chrome",
-      "online": true,
-      "visibilidade": "visible",
-      "instalado": true
-    },
-    {
-      "aplicativo": "adm",
-      "evento": "startup.adm_justificativa_clique",
-      "nivel": "info",
-      "detalhes": {},
-      "clienteEm": "2026-08-30T22:08:08.959Z",
       "pagina": "index-ADMIN-v8.html",
       "navegador": "Chrome",
       "online": true,
