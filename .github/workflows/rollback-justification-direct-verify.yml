@@ -1,0 +1,62 @@
+name: Verify justification direct rollback
+on:
+  push:
+    branches: [rollback-justificativa-direta-20260831]
+    paths:
+      - '.github/workflows/rollback-justification-direct-verify.yml'
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: rollback-justificativa-direta-20260831
+          fetch-depth: 0
+      - name: Alinhar HTML da branch de teste
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('index-ADMIN-v8.html')
+          s=p.read_text(encoding='utf-8')
+          old='<script type="module" src="./adm-startup-stability-v1.js?v=10"></script>'
+          new='<script type="module" src="./adm-startup-stability-v1.js?v=11"></script>'
+          if old not in s and new not in s:
+              raise SystemExit('entrada de startup não encontrada')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+      - name: Validar restauração direta
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check adm-justification-review.js
+          node --check adm-startup-stability-v1.js
+          node --check sw.js
+          node --check runtime-build-info.js
+          HASH=$(git hash-object adm-justification-review.js)
+          echo "JUSTIFICATION_BLOB=$HASH"
+          test "$HASH" = '71cf858596170c73bf898d1ba117a7ee5830a09f'
+          grep -q 'getFirestore,collection,query,where,getDocs,doc,getDoc,writeBatch,deleteField' adm-justification-review.js
+          ! grep -q 'rotinaAdmCacheSnapshot' adm-justification-review.js
+          ! grep -q 'adm-justification-live-resolver' adm-startup-stability-v1.js
+          ! grep -q 'adm-justification-live-resolver' sw.js
+          grep -q "build:'20260831.1'" runtime-build-info.js
+          grep -q "ROTINA_BUILD_ID='20260831.1'" sw.js
+          grep -q 'entry=20260831.1' index.html
+          grep -q 'adm-startup-stability-v1.js?v=11' index-ADMIN-v8.html
+          grep -q "runtime-build-info.js?v=20260831.1" adm-startup-stability-v1.js
+          grep -q "adm-justification-review.js?v=9" adm-startup-stability-v1.js
+          grep -q "ROTINA_SW_VERSION='78'" sw.js
+          grep -q 'window.abrirRevisaoJustificativa(ctx)' mobile-app-ui.js
+          grep -q 'data-task-id' adm-monitor-history-fix.js
+          echo 'ROLLBACK_DIRECT_JUSTIFICATION=PASS'
+      - name: Persistir somente alinhamento do HTML
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'rollback-verify-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index-ADMIN-v8.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Alinhar entrada do rollback direto da justificativa'
+          git push origin HEAD:rollback-justificativa-direta-20260831
