@@ -1,12 +1,11 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import './runtime-build-info.js?v=20260830.8';
+import './runtime-build-info.js?v=20260831.1';
 import './adm-justification-review.js?v=9';
 import './adm-monitor-history-fix.js?v=4';
 import './mobile-app-ui.js';
-import './adm-justification-live-resolver.js?v=2';
 
-const VERSION = 10;
+const VERSION = 11;
 const MAX_RETRIES = 1;
 let flowStartedAt = performance.now();
 const flowElapsed = () => Math.max(0, Math.round(performance.now() - flowStartedAt));
