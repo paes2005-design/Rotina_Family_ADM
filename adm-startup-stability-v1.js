@@ -1,18 +1,16 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import './runtime-build-info.js?v=20260831.1';
+import './runtime-build-info.js?v=20260831.2';
 import './adm-justification-review.js?v=9';
 import './adm-monitor-history-fix.js?v=4';
 import './mobile-app-ui.js';
 
-const VERSION = 11;
-const MAX_RETRIES = 1;
+const VERSION = 12;
 let flowStartedAt = performance.now();
 const flowElapsed = () => Math.max(0, Math.round(performance.now() - flowStartedAt));
 let authenticated = false;
 let sessionReady = false;
 let blankSince = 0;
-let retryCount = 0;
 let authGeneration = 0;
 
 const log = (event, details = {}, level = 'info') => {
@@ -22,9 +20,9 @@ const log = (event, details = {}, level = 'info') => {
 async function atualizarServiceWorkerCedo() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const reg = await navigator.serviceWorker.register('./sw.js?v=78', { updateViaCache: 'none' });
+    const reg = await navigator.serviceWorker.register('./sw.js?v=79', { updateViaCache: 'none' });
     await reg.update().catch(() => {});
-    log('startup.adm_sw_atualizacao_solicitada', { alvo: '78' });
+    log('startup.adm_sw_atualizacao_solicitada', { alvo: '79' });
   } catch (error) {
     log('startup.adm_sw_atualizacao_falhou', { mensagem: String(error?.message || error).slice(0, 140) }, 'warning');
   }
@@ -43,7 +41,7 @@ function shield() {
 }
 
 function show(text = 'Carregando painel...') {
-  if(sessionReady && authenticated){hide();return;}
+  if (sessionReady && authenticated) { hide(); return; }
   const el = shield();
   const label = el.querySelector('#admStartupText');
   if (label) label.textContent = text;
@@ -98,13 +96,12 @@ function ensureSomethingVisible(reason = 'check') {
 
   if (!blankSince) blankSince = performance.now();
   show(authenticated ? 'Restaurando seu painel...' : 'Preparando acesso...');
-  log('startup.adm_tela_protegida', { motivo: reason, autenticado: authenticated, sessaoPronta: sessionReady }, 'warning');
+  log('startup.adm_tela_protegida', { motivo: reason, autenticado: authenticated, sessaoPronta: sessionReady }, 'info');
 }
 
 function markSessionReady(event) {
   sessionReady = true;
   authenticated = true;
-  retryCount = 0;
   const elapsed = flowElapsed();
   log('startup.adm_sessao_pronta', { ms: elapsed, grupoId: String(event?.detail?.grupoId || '').slice(0, 32) });
   requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -116,38 +113,24 @@ function markSessionReady(event) {
   }));
 }
 
-function requestRetry(auth, generation) {
-  if (generation !== authGeneration || sessionReady || !auth.currentUser) return;
-  if (visible(document.getElementById('sistemaPrincipal'))) {
-    log('startup.adm_sync_lenta_interface_ativa', { ms: flowElapsed() }, 'warning');
-    hide();
-    return;
-  }
-  if (retryCount >= MAX_RETRIES) return;
-  retryCount += 1;
-  show(`Restaurando seu painel... (${retryCount}/${MAX_RETRIES})`);
-  log('startup.adm_retry_solicitado', {
-    tentativa: retryCount,
-    ms: flowElapsed(),
-    uid: String(auth.currentUser.uid || '').slice(0, 24)
-  }, 'warning');
-  window.dispatchEvent(new CustomEvent('rotina-adm-auth-retry-requested', {
-    detail: { version: VERSION, tentativa: retryCount, reason: 'startup-guard' }
-  }));
-}
-
 function scheduleRecovery(auth, generation) {
-  setTimeout(() => requestRetry(auth, generation), 6500);
   setTimeout(() => {
     if (generation !== authGeneration || sessionReady || !auth.currentUser) return;
     const main = document.getElementById('sistemaPrincipal');
     if (visible(main)) {
-      log('startup.adm_sync_lenta_sem_logout', { tentativas: retryCount, ms: flowElapsed() }, 'warning');
       hide();
+      log('startup.adm_restauracao_pendente_interface_ativa', { ms: flowElapsed() }, 'info');
       return;
     }
-    log('startup.adm_painel_nao_exibido', { tentativas: retryCount, ms: flowElapsed() }, 'error');
-    show('Não foi possível exibir o painel. Atualize a página para tentar novamente.');
+    log('startup.adm_restauracao_lenta', { ms: flowElapsed() }, 'warning');
+  }, 6500);
+
+  setTimeout(() => {
+    if (generation !== authGeneration || sessionReady || !auth.currentUser) return;
+    const main = document.getElementById('sistemaPrincipal');
+    if (visible(main)) { hide(); return; }
+    log('startup.adm_restauracao_muito_lenta', { ms: flowElapsed() }, 'warning');
+    show('Restaurando seu painel...');
   }, 14000);
 }
 
@@ -169,7 +152,6 @@ function installAuthWatch(attempt = 0) {
       scheduleRecovery(auth, generation);
       setTimeout(() => ensureSomethingVisible('auth-com-usuario'), 400);
     } else {
-      retryCount = 0;
       showLogin();
     }
   });
