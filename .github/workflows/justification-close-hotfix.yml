@@ -36,7 +36,7 @@ jobs:
       - name: Criar harness isolado
         shell: bash
         run: |
-          cat > /tmp/close-harness.html <<'HTML'
+          cat > close-harness.html <<'HTML'
           <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>
           body{margin:0;font-family:sans-serif}#open{margin:20px;padding:12px}#admReviewJustModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center}.adm-review-card{position:relative;width:280px;height:240px;background:white}.adm-review-close{position:absolute;right:8px;top:8px}
           </style></head><body><button id="open">Abrir</button><div id="admReviewJustModal"><div class="adm-review-card"><button type="button" class="adm-review-close">×</button></div></div><script>
@@ -51,11 +51,10 @@ jobs:
       - name: Testar fechamento mobile real
         shell: bash
         run: |
-          cp /tmp/close-harness.html ./close-harness.html
           python3 -m http.server 4173 >/tmp/close-http.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID || true' EXIT
-          cat > /tmp/close-test.mjs <<'JS'
+          cat > close-test.mjs <<'JS'
           import { chromium } from 'playwright';
           const browser=await chromium.launch({headless:true});
           const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
@@ -77,4 +76,4 @@ jobs:
           console.log(JSON.stringify({result:'PASS',version:state.version,closeEvents:ok.map(x=>x.detalhes?.origem)},null,2));
           await browser.close();
           JS
-          node /tmp/close-test.mjs
+          node close-test.mjs
