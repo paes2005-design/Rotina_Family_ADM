@@ -1,2 +1,2 @@
-run=2026-08-31T19:12:00-03:00
-reason=apply-startup-cache-restore-without-concurrent-auth-retry
+run=post-modal-freeze-20260831-a
+reason=justification-opens-but-modal-cannot-close-after-startup-fix
