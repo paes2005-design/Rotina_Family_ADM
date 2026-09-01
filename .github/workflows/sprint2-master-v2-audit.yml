@@ -1,0 +1,99 @@
+name: Sprint 2 Master V2 audit
+
+on:
+  push:
+    paths:
+      - 'sprint2-master-preview-v2.html'
+      - 'sprint2-teste-bootstrap.js'
+      - '.github/workflows/sprint2-master-v2-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Estrutura e continuidade
+        shell: python
+        run: |
+          from pathlib import Path
+          h=Path('sprint2-master-preview-v2.html').read_text(encoding='utf-8')
+          b=Path('sprint2-teste-bootstrap.js').read_text(encoding='utf-8')
+          checks={
+            'master_v2_existe':'Master Preview V2' in h,
+            'tres_modos':h.count('class="master-tab')==3,
+            'visao_sem_estado_grupos':'id="overviewGroups"' not in h,
+            'andon_presente':'Andon técnico' in h,
+            'andon_verde':'lamp green' in h,
+            'andon_amarelo':'lamp yellow' in h,
+            'andon_vermelho':'lamp red' in h,
+            'acessos_grupos':'Acessos e grupos' in h,
+            'diagnostico':'id="pane-diagnostic"' in h,
+            'pane_persistente':'rf-sprint2-master-pane' in h,
+            'telemetria_v2':'sprint2-master-preview-v2.html' in h and '/app-log' in h,
+            'bootstrap_master_v2':'goMasterPreview' in b and 'sprint2-master-preview-v2.html' in b,
+            'sem_iframe':'<iframe' not in h.lower(),
+          }
+          bad=[k for k,v in checks.items() if not v]
+          print('MASTER_V2_CHECKS=',checks)
+          print('MASTER_V2_RESULT=',f"{len(checks)-len(bad)}/{len(checks)}")
+          if bad: raise SystemExit('Falhas: '+', '.join(bad))
+
+      - name: JavaScript embutido válido
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          h=Path('sprint2-master-preview-v2.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script>(.*?)</script>',h,re.S)
+          Path('/tmp/master-v2.js').write_text('\n'.join(scripts),encoding='utf-8')
+          PY
+          node --check /tmp/master-v2.js
+          node --check sprint2-teste-bootstrap.js
+
+      - name: Página pública publicada
+        run: |
+          set -e
+          URL='https://paes2005-design.github.io/Rotina_Family_ADM/sprint2-master-preview-v2.html'
+          for i in $(seq 1 15); do
+            body=$(curl -fsSL --max-time 20 "$URL" || true)
+            if echo "$body" | grep -q 'Master Preview V2'; then
+              echo 'PUBLIC_PAGE=OK'
+              echo "$body" | grep -q 'Andon técnico'
+              echo "$body" | grep -q 'Acessos e grupos'
+              exit 0
+            fi
+            sleep 4
+          done
+          echo 'PUBLIC_PAGE=NOT_READY'
+          exit 1
+
+      - name: Ler logs vivos relacionados à Master
+        run: |
+          set -e
+          URL='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/diagnostico-tecnico?limit=400'
+          curl -fsSL --max-time 25 "$URL" -o /tmp/diag.json
+          python - <<'PY'
+          import json
+          d=json.load(open('/tmp/diag.json',encoding='utf-8'))
+          logs=d.get('logs',[]) or []
+          related=[]
+          for x in logs:
+            e=str(x.get('evento',''))
+            p=str(x.get('pagina',''))
+            app=str(x.get('aplicativo',''))
+            if e.startswith('master.') or 'sprint2-master-preview' in p or app=='master':
+              related.append(x)
+          errors=[x for x in related if str(x.get('nivel','')).lower()=='error' or str(x.get('evento','')).endswith('_erro')]
+          print('DIAG_STATUS=',d.get('status'))
+          print('MASTER_RELATED_COUNT=',len(related))
+          print('MASTER_RELATED_ERRORS=',len(errors))
+          for x in related[:20]:
+            print('MASTER_LOG=',json.dumps({'clienteEm':x.get('clienteEm'),'evento':x.get('evento'),'nivel':x.get('nivel'),'pagina':x.get('pagina'),'detalhes':x.get('detalhes',{})},ensure_ascii=False))
+          if str(d.get('status','')).upper() in ('DEGRADADO','ERRO_DIAGNOSTICO'):
+            raise SystemExit('Diagnóstico vivo degradado')
+          PY
