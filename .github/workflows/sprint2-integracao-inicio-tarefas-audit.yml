@@ -1,0 +1,41 @@
+name: Sprint 2 Integracao Inicio Tarefas audit
+on:
+  push:
+    branches:
+      - sprint2-integracao-inicio-tarefas
+    paths:
+      - 'sprint2-integracao-inicio-tarefas.html'
+      - 'sprint2-integracao-inicio-tarefas.js'
+      - '.github/workflows/sprint2-integracao-inicio-tarefas-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Estrutura do incremento
+        shell: python
+        run: |
+          from pathlib import Path
+          h=Path('sprint2-integracao-inicio-tarefas.html').read_text(encoding='utf-8')
+          j=Path('sprint2-integracao-inicio-tarefas.js').read_text(encoding='utf-8')
+          checks={
+            'inicio': 'id="view-inicio"' in h,
+            'tarefas': 'id="view-tarefas"' in h,
+            'hoje': 'data-pane="today"' in h,
+            'analise': 'data-pane="analysis"' in h,
+            'sem_relatorios': 'Relatórios' not in h,
+            'duas_rotas': h.count('data-route=')==2,
+            'persistencia_aba': 'rf-sprint2-integration-home-pane' in j,
+            'telemetria': '/app-log' in j,
+            'selftest': 'function selfTest()' in j,
+            'sem_iframe': '<iframe' not in h.lower(),
+          }
+          bad=[k for k,v in checks.items() if not v]
+          print('CHECKS=',checks)
+          print('RESULT=',f"{len(checks)-len(bad)}/{len(checks)}")
+          if bad: raise SystemExit('Falhas: '+', '.join(bad))
+      - name: JavaScript valido
+        run: node --check sprint2-integracao-inicio-tarefas.js
