@@ -31,11 +31,11 @@ jobs:
           print('HEALTH_REASONS=',json.dumps(d.get('healthReasons',{}),ensure_ascii=False))
           PY
 
-      - name: Ler eventos vivos da Master
+      - name: Ler eventos vivos da Master e checkpoint de login
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 25 "$DIAG_URL?limit=400" -o /tmp/diag.json
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 25 "$DIAG_URL?limit=500" -o /tmp/diag.json
           python - <<'PY'
           import json
           d=json.load(open('/tmp/diag.json',encoding='utf-8'))
@@ -43,7 +43,9 @@ jobs:
           print('GENERATED_AT=',d.get('generatedAt'))
           print('SUMMARY=',json.dumps(d.get('summary',{}),ensure_ascii=False))
           logs=d.get('logs',[]) or []
+
           master=[]
+          auth=[]
           for x in logs:
               event=str(x.get('evento',''))
               page=str(x.get('pagina',''))
@@ -51,23 +53,44 @@ jobs:
               hay=(event+' '+page+' '+details).lower()
               if event.startswith('master.') or 'adminmaster' in hay or 'master.api_' in hay or 'master.botao_' in hay:
                   master.append(x)
+              if event.startswith('sprint2.auth_') or page == 'sprint2-login-checkpoint-v1.html':
+                  auth.append(x)
+
           print('MASTER_EVENT_COUNT=',len(master))
-          counts={}
+          mcounts={}
           for x in master:
               e=str(x.get('evento',''))
-              counts[e]=counts.get(e,0)+1
-          print('MASTER_EVENT_COUNTS=',json.dumps(counts,ensure_ascii=False,sort_keys=True))
-          for x in master[:80]:
+              mcounts[e]=mcounts.get(e,0)+1
+          print('MASTER_EVENT_COUNTS=',json.dumps(mcounts,ensure_ascii=False,sort_keys=True))
+
+          auth.sort(key=lambda x:str(x.get('clienteEm','')), reverse=True)
+          acounts={}
+          for x in auth:
+              e=str(x.get('evento',''))
+              acounts[e]=acounts.get(e,0)+1
+          print('LOGIN_EVENT_COUNT=',len(auth))
+          print('LOGIN_EVENT_COUNTS=',json.dumps(acounts,ensure_ascii=False,sort_keys=True))
+          for x in auth[:60]:
               safe={
                 'clienteEm':x.get('clienteEm'),
                 'evento':x.get('evento'),
                 'nivel':x.get('nivel'),
+                'grupoId':x.get('grupoId'),
                 'pagina':x.get('pagina'),
                 'detalhes':x.get('detalhes',{})
               }
-              print('MASTER_EVENT=',json.dumps(safe,ensure_ascii=False))
-          errs=[x for x in master if str(x.get('nivel','')).lower()=='error' or str(x.get('evento','')).endswith('_erro')]
-          print('MASTER_ERROR_COUNT=',len(errs))
+              print('LOGIN_EVENT=',json.dumps(safe,ensure_ascii=False))
+          success=sum(1 for x in auth if x.get('evento')=='sprint2.auth_login_sucesso')
+          restored=sum(1 for x in auth if x.get('evento')=='sprint2.auth_sessao_restaurada')
+          logout=sum(1 for x in auth if x.get('evento')=='sprint2.auth_logout')
+          errors=[x for x in auth if str(x.get('nivel','')).lower()=='error' or str(x.get('evento','')).endswith('_erro')]
+          print('LOGIN_SUCCESS_COUNT=',success)
+          print('SESSION_RESTORED_COUNT=',restored)
+          print('LOGOUT_COUNT=',logout)
+          print('LOGIN_ERROR_COUNT=',len(errors))
+
+          merrs=[x for x in master if str(x.get('nivel','')).lower()=='error' or str(x.get('evento','')).endswith('_erro')]
+          print('MASTER_ERROR_COUNT=',len(merrs))
           if str(d.get('status','')).upper().replace('Á','A') in ('ERRO_DIAGNOSTICO','DEGRADADO'):
               raise SystemExit('Diagnostico vivo nao esta saudavel')
           PY
