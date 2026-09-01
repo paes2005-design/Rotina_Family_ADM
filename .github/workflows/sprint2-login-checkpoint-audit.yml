@@ -1,0 +1,99 @@
+name: Sprint 2 Login checkpoint audit
+
+on:
+  pull_request:
+    paths:
+      - 'sprint2-login-checkpoint-v1.html'
+      - 'sprint2-login-checkpoint-v1.js'
+      - '.github/workflows/sprint2-login-checkpoint-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'sprint2-login-checkpoint-v1.html'
+      - 'sprint2-login-checkpoint-v1.js'
+      - '.github/workflows/sprint2-login-checkpoint-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Estrutura do checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          html='sprint2-login-checkpoint-v1.html'
+          js='sprint2-login-checkpoint-v1.js'
+          test -s "$html"
+          test -s "$js"
+          grep -q 'Checkpoint técnico' "$html"
+          grep -q 'Firebase Authentication' "$html"
+          grep -q 'Persistência' "$html"
+          grep -q 'signInWithEmailAndPassword' "$js"
+          grep -q 'signInWithCustomToken' "$js"
+          grep -q 'browserLocalPersistence' "$js"
+          grep -q 'onAuthStateChanged' "$js"
+          grep -q '/family-session/admin' "$js"
+          grep -q 'signOut' "$js"
+          grep -q 'sprint2.auth_login_sucesso' "$js"
+          grep -q 'sprint2.auth_sessao_restaurada' "$js"
+          ! grep -q 'createUserWithEmailAndPassword' "$js"
+          ! grep -q 'firebase-firestore' "$js"
+          echo 'Checkpoint somente autentica: sem cadastro e sem escrita Firestore.'
+
+      - name: Mesmo backend da versao atual
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "authDomain: 'sistema-de-metas-diarias.firebaseapp.com'" sprint2-login-checkpoint-v1.js
+          grep -q "projectId: 'sistema-de-metas-diarias'" sprint2-login-checkpoint-v1.js
+          grep -q 'sistema-de-metas-diarias.firebaseapp.com' index-ADMIN-v8.html
+          grep -q 'sistema-de-metas-diarias' index-ADMIN-v8.html
+          grep -q 'rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev' adm-auth-session-v1.js
+          grep -q 'rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev' sprint2-login-checkpoint-v1.js
+          echo 'Firebase e Worker coincidem com a versao atual.'
+
+      - name: JavaScript valido
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module --check < sprint2-login-checkpoint-v1.js
+
+      - name: Backend vivo
+        shell: bash
+        run: |
+          set -euo pipefail
+          monitor_code=$(curl -sS -o /tmp/monitor.json -w '%{http_code}' --max-time 12 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/monitoramento')
+          test "$monitor_code" = '200'
+          node -e "const x=require('/tmp/monitor.json'); if(!x.status) process.exit(1); console.log('Worker:',x.status)"
+          session_code=$(curl -sS -o /tmp/session.json -w '%{http_code}' --max-time 12 -X POST -H 'content-type: application/json' --data '{}' 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/family-session/admin')
+          if [[ "$session_code" != '401' && "$session_code" != '403' ]]; then
+            echo "Rota de sessao respondeu HTTP $session_code sem token; esperado 401/403."
+            cat /tmp/session.json || true
+            exit 1
+          fi
+          echo "Rota administrativa ativa e protegida: HTTP $session_code sem token."
+
+      - name: Producao preservada
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ '${{ github.event_name }}' == 'pull_request' ]]; then
+            git fetch origin '${{ github.base_ref }}' --depth=1
+            base='origin/${{ github.base_ref }}'
+          else
+            base='HEAD^'
+          fi
+          git diff --name-only "$base" HEAD > /tmp/changed.txt
+          cat /tmp/changed.txt
+          if grep -Eq '^(index\.html|index-ADMIN-v8\.html|sw\.js|manifest\.json)$' /tmp/changed.txt; then
+            echo 'Arquivo oficial de producao alterado no checkpoint.'
+            exit 1
+          fi
+          echo 'Versao oficial preservada.'
