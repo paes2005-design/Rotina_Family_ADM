@@ -1,3 +1,4 @@
+// Sprint 2: roteamento persistente entre Início unificado e Master V2.
 function goUnifiedHome(fromRoute){
   const from=encodeURIComponent(fromRoute||route||'teste');
   techLog('inicio_unificado_retorno',{de:fromRoute||route||'teste',build:'inicio-unificado-v1'});
