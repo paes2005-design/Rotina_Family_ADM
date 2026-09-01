@@ -1,137 +1,88 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Continuidade Sprint 2</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f7fb;color:#20243d;margin:0;padding:24px}main{max-width:1000px;margin:auto;background:#fff;border:1px solid #e6e8f0;border-radius:18px;padding:24px;box-shadow:0 15px 42px rgba(31,24,77,.08)}pre{white-space:pre-wrap;word-wrap:break-word;font:14px/1.55 Inter,system-ui,sans-serif;margin:0}</style></head><body><main><pre># CONTINUIDADE OFICIAL — ROTINA FAMILY — SPRINT 2
 
-Atualizado em: 29/08/2026
-Status: versão de teste isolada. Não integrar aos aplicativos oficiais sem aprovação explícita.
+Atualizado em: 01/09/2026
+Status: FASE DE INTEGRAÇÃO INCREMENTAL EM TESTE.
+Regra absoluta: a versão antiga permanece ligada e intocada até a versão nova estar totalmente integrada, auditada e aprovada pelo usuário.
 
-## LINKS OFICIAIS DO TESTE
-- Teste atual: https://paes2005-design.github.io/Rotina_Family_ADM/sprint2-teste-atual.html
+## LINKS
+- Teste antigo preservado: https://paes2005-design.github.io/Rotina_Family_ADM/sprint2-teste-atual.html
+- Início unificado aprovado: https://paes2005-design.github.io/Rotina_Family_ADM/sprint2-inicio-unificado-preview-v1.html
+- Master V2 validada visualmente: https://paes2005-design.github.io/Rotina_Family_ADM/sprint2-master-preview-v2.html
+- Integração 1 — Início + Tarefas: https://paes2005-design.github.io/Rotina_Family_ADM/sprint2-integracao-inicio-tarefas-v2.html
 - Continuidade: https://paes2005-design.github.io/Rotina_Family_ADM/sprint2-continuidade-atual.html
-- Auditoria: https://paes2005-design.github.io/Rotina_Family_ADM/sprint2-auditoria-atual.html
 
 ## REGRA DE RETOMADA
-Em nova conversa, abrir este documento e dizer: **“Leia a Continuidade Sprint 2 e prossiga do ponto atual. Não reconstrua nada por aproximação.”**
-Antes de alterar código, conferir teste e auditoria.
+Em nova conversa: “Leia a Continuidade Sprint 2 e prossiga do ponto atual. Leia os logs antes de mudar código. Não reconstrua nada por aproximação.”
 
-## MÉTODO DE TRABALHO
-Trabalhar com mentalidade de engenharia de produção e gestão operacional:
-- **PDCA:** planejar → executar no teste → checar por testes/uso/logs → agir corrigindo ou congelando.
-- **Toyotismo / Lean:** eliminar desperdício, retrabalho, duplicação e complexidade sem retirar informação útil à decisão.
-- **Teoria das Restrições:** localizar primeiro o gargalo/restrição que limita o resultado e priorizá-lo.
-- **Scrum:** incrementos pequenos e testáveis; revisão com o usuário antes de congelar.
-- **Indicadores e causa/efeito:** previsto x realizado, tendência e causa raiz antes de mudar regra consolidada.
-Regra prática: **desenvolver → testar → discutir → agir**.
+## MÉTODO CONSOLIDADO
+1. Ler logs reais quando existirem.
+2. Confirmar o estado/código atual.
+3. Integrar UMA tela por vez em ambiente isolado.
+4. Auditar estrutura, JavaScript, navegação, mobile e telemetria.
+5. Entregar ao usuário para teste de uso.
+6. Só após aprovação integrar a próxima tela.
+7. Não desligar/substituir a versão antiga antes do fechamento completo.
 
-## PRINCÍPIOS TÉCNICOS
-- Sprint 2 permanece separada da produção.
-- Não alterar `index.html`, `index-ADMIN-v8.html`, Cliente, Firebase ou Service Worker de produção sem aprovação explícita.
-- Código limpo, modular e leve; sem iframe, remendos, duplicação de regra ou scripts sobre scripts.
-- Web e mobile devem manter paridade funcional.
-- Módulo aprovado = congelado; só reabrir mediante solicitação explícita.
+## NÃO ALTERAR SEM AUTORIZAÇÃO EXPLÍCITA
+- index.html
+- index-ADMIN-v8.html
+- Cliente
+- Firebase dados/regras
+- Service Worker de produção
 
-# STATUS OFICIAL
-- Parte 1 — Tarefas + Monitor: ✅ APROVADA / CONGELADA
-- Parte 2 — Participantes: ✅ APROVADA / CONGELADA
-- Parte 3 — Início / Dashboard: 🧪 PREVIEW V5 EM TESTE
-- Parte 4 — Recompensas + Conquistas + Histórico: ✅ APROVADA / CONGELADA
+# TELAS/MÓDULOS JÁ DEFINIDOS
+- Tarefas + Monitor: APROVADOS / regras congeladas.
+- Participantes: APROVADO / regras congeladas.
+- Início: APROVADO como tela unificada com abas Hoje + Análise. Relatórios não é item separado do menu.
+- Recompensas + Conquistas + Histórico: APROVADOS / regras congeladas.
+- Master: Preview V2 revisada pelo usuário; Visão geral, Acessos e grupos e Diagnóstico/Andon considerados adequados para seguir à integração.
 
-# MÓDULOS CONGELADOS — RESUMO
-## Tarefas + Monitor
-Agenda por participante/Todos; horários, pontos, tolerância, status; ordem automática; edição inline web e cartão mobile; Detalhes apenas para dias/alarme/observação; bloqueio de sobreposição; Monitor com previstas, concluídas, em andamento e pendentes.
+# FASE ATUAL — COSTURA DAS TELAS
+A integração NÃO será feita toda de uma vez. Ordem planejada:
+1. Início + Tarefas — EM TESTE AGORA.
+2. Participantes — somente após aprovação do incremento 1.
+3. Monitor.
+4. Recompensas + Conquistas + Histórico.
+5. Master.
+6. Auditoria geral desktop/mobile/navegação/logs.
+7. Somente depois discutir substituição da versão antiga/integração ao ADM oficial.
 
-## Participantes
-Nome, tema e PIN de 4 a 6 dígitos; PIN nunca exibido em claro; avatar conforme tema.
+# INCREMENTO 1 — INÍCIO + TAREFAS
+Arquivo principal de teste: sprint2-integracao-inicio-tarefas-v2.html
+Script de integração: sprint2-integracao-inicio-tarefas-v2.js
+Commit publicado em main: 2ede5767b471c649ffd78a96d435f281099f7796
+PR: #13 — Sprint 2: integra Início e Tarefas no mesmo shell.
 
-## Recompensas + Conquistas + Histórico
-Recompensas livres com custo em pontos e resgates Pendente/Aprovado/Recusado. Conquistas usam regras fixas e validação ADM. Histórico reúne movimentações sem misturar regras. Layout web aprovado: Recompensas à esquerda, Conquistas à direita e Histórico abaixo; mobile em sequência vertical.
+## O QUE FOI INTEGRADO
+- Início e Tarefas vivem no mesmo shell/mesma aplicação de teste.
+- Início preserva Hoje + Análise.
+- A aba Hoje/Análise é preservada durante a ida e volta para Tarefas.
+- Tarefas NÃO foi reimplementada: reutiliza o núcleo aprovado existente.
+- Permanecem: edição inline web, cartões mobile, Detalhes, dias da semana, alarme, observação, ordenação automática e bloqueio de sobreposição.
+- Participantes, Monitor, Recompensas e Master aparecem como próximas etapas e não foram conectados nesta rodada.
+- Ações do Início cujo destino correto é Monitor não foram desviadas artificialmente para Tarefas; aguardam a etapa de integração do Monitor.
 
-# PARTE 3 — INÍCIO / DASHBOARD — PREVIEW V5
-## Estrutura atual
-O Dashboard continua híbrido e enxuto:
-1. **Gestão operacional do dia:** previstas, concluídas, em andamento, atrasadas/pendentes, pontos, percentual, Pendências contextuais e Resumo por participante.
-2. **Análise gerencial:** período Dia/Semana/Mês, data, classificação do grupo, indicadores, gráficos e análise por integrante.
+## AUDITORIA DO INCREMENTO 1
+Auditoria na branch antes da publicação: SUCESSO.
+Auditoria após merge em main: SUCESSO.
+Resultado estrutural: 14/14.
+JavaScript válido: sprint2-teste-core.js, sprint2-teste-participantes.js e sprint2-integracao-inicio-tarefas-v2.js.
+Critérios verificados: Início, Tarefas, Hoje/Análise, apenas duas rotas ativas, reutilização do core aprovado de Tarefas, edição inline, Detalhes, conflito de horários, persistência da aba, retorno no mesmo shell, telemetria própria, self-test e ausência de iframe.
 
-## REGRA CONSOLIDADA — GERAL x INDIVIDUAL
-A Preview V3 corrigiu a contaminação do ranking pelo filtro individual. Existem dois recortes independentes:
+Observação: workflows globais antigos do repositório podem continuar vermelhos por problemas históricos não relacionados a este incremento. A auditoria dedicada da integração é a referência desta etapa.
 
-### A. VISÃO GERAL DO GRUPO — NÃO RECEBE FILTRO INDIVIDUAL
-Usa todos os participantes do período/data e contém:
-- Líder geral do período;
-- 1º, 2º e 3º lugares;
-- Pódio;
-- gráfico de pontos por participante;
-- ranking geral detalhado.
+## TESTE DE USO QUE O USUÁRIO DEVE FAZER
+1. Abrir Integração 1.
+2. Alternar Hoje ↔ Análise.
+3. Entrar em Tarefas e voltar a Início várias vezes.
+4. Confirmar que a aba anterior do Início permanece.
+5. Testar filtro por participante, busca e ativo/inativo em Tarefas.
+6. Editar uma tarefa inline e abrir Detalhes.
+7. Verificar dias, alarme e observação.
+8. Tentar criar/editar horário sobreposto para confirmar o bloqueio.
+9. Conferir desktop e mobile.
+10. Após esse uso, ler logs reais antes de decidir a próxima integração.
 
-**Regra:** selecionar um integrante não pode mudar 1º/2º/3º nem reduzir o ranking. A classificação muda somente por alteração dos dados reais ou do período/data.
-
-### B. DESEMPENHO INDIVIDUAL — RECEBE FILTRO INDIVIDUAL
-O seletor de integrante altera somente:
-- pontos alcançados;
-- pontos resgatados;
-- % resgatado;
-- pontos pendentes;
-- pontualidade;
-- cumprimento das tarefas;
-- evolução do recorte escolhido.
-Quando “Todos” estiver selecionado, essa área apresenta o consolidado do grupo.
-
-## REGRA VISUAL CONSOLIDADA — PREVIEW V4
-O filtro deve ficar próximo daquilo que filtra. A ordem permanece:
-1. contexto global Dia/Semana/Mês + data;
-2. Visão Geral do Grupo;
-3. Desempenho Individual;
-4. filtro do integrante dentro da seção individual;
-5. resultado filtrado imediatamente abaixo.
-
-## ENXUGAMENTO LEAN — PREVIEW V5
-O Check da Preview V4 identificou desperdício de interface: a seção permanente **Atalhos** repetia destinos já disponíveis no menu lateral da web e na navegação do mobile, aumentava o comprimento do Dashboard e criava uma terceira forma de navegação sem ganho proporcional.
-
-A Preview V5 consolida a regra:
-- **não existe mais seção permanente de Atalhos no Dashboard**;
-- navegação genérica continua no menu próprio de cada plataforma;
-- um atalho só é permitido quando nasce de uma **informação real que exige ação** e reduz passos para resolver aquela situação;
-- o próprio cartão/ocorrência acionável faz a navegação contextual.
-
-### Ações contextuais atuais
-- **Tarefa atrasada:** a ocorrência mostra o participante e a tarefa; o clique abre o Monitor já filtrado naquele participante.
-- **Resgate aguardando aprovação:** o clique abre Recompensas já filtrando solicitações Pendentes.
-- **Conquista aguardando ADM:** o clique abre Conquistas já filtrando validações Pendentes.
-- **Sem pendências acionáveis:** nenhum botão artificial é exibido; aparece apenas estado neutro informando que nada exige ação do ADM.
-
-Princípio consolidado: **não duplicar navegação; aproximar ação da informação que justifica a ação**.
-
-## Teste lógico preservado
-Classificação geral do fixture:
-1. Lara Vitória — 15 pts;
-2. Maria Eduarda — 5 pts;
-3. Pedro — 5 pts.
-A classificação permanece igual ao alternar o filtro individual. Somente o desempenho individual muda.
-
-## Arquitetura atual V5
-- JS: `sprint2-inicio-v1.js`, build interno `inicio-v5`.
-- Commit da lógica contextual: `625d5d783f320845dfa38a05185752b30db30ac0`.
-- HTML de teste sem a seção Atalhos + cache-busting V5: commit `7d5554755a1260ea7811ad7b4c387ab8aa4c449a`.
-- Assets do Início no teste usam `?v=5` para evitar cache antigo durante validação.
-- Integração continua somente em `sprint2-teste-atual.html`.
-- Nenhum arquivo oficial de produção foi alterado.
-
-## Auditoria interna V5
-`RFInicio.audit()` contém 23 verificações, incluindo:
-- seção/botões de atalhos redundantes ausentes;
-- quantidade de ações contextuais coerente com pendências reais;
-- atrasos identificam participante;
-- resgate pendente possui ação contextual;
-- conquista pendente possui ação contextual;
-- filtro individual continua dentro da seção individual;
-- Visão Geral aparece antes do filtro individual;
-- líder geral permanece invariável ao filtro;
-- ranking geral continua com todos os participantes;
-- sem iframe e sem duplicação da timeline do Monitor.
-
-## LOGS / TELEMETRIA
-Eventos continuam isolados como `SPRINT2-PREVIEW`: `dashboard_render`, `dashboard_analysis_render` e `dashboard_audit`. `dashboard_render` também registra a quantidade de ações contextuais. Não enviar nome, PIN, e-mail, token, senha ou outros dados sensíveis nos detalhes.
-
-## PONTO EXATO DE RETOMADA
-Não mexer nas Partes 1, 2 ou 4 sem solicitação explícita.
-Ponto atual: **Parte 3 Preview V5 publicada para revisão visual e funcional.**
-Próximo Check: validar web/mobile verificando que a seção Atalhos desapareceu, a tela ficou mais curta e as ocorrências acionáveis levam diretamente ao contexto correto. Confirmar também que a estrutura geral x individual da V4 continua intacta. Depois aplicar o Act do PDCA: ajustar ou aprovar/congelar a Parte 3.
+## PRÓXIMO PASSO
+NÃO integrar Participantes ainda. Primeiro aguardar o teste do usuário no Incremento 1. Depois ler os logs dessa sessão. Se estiver aprovado, conectar Participantes ao mesmo shell e repetir o ciclo.
 </pre></main></body></html>
