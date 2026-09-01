@@ -1,0 +1,164 @@
+name: Sprint 2 realdata bridge fix
+
+on:
+  push:
+    paths:
+      - '.github/workflows/sprint2-realdata-bridge-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Aplicar ponte isolada e ampliar diagnostico
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          bridge = r'''"use strict";
+          (function(){
+            if (typeof state === 'undefined' || typeof renderTasks !== 'function' || typeof normalizeTasks !== 'function') {
+              throw new Error('Ponte realdata: nucleo de Tarefas indisponivel.');
+            }
+
+            function syncIntoCore(){
+              if (Object.prototype.hasOwnProperty.call(state,'taskParticipant')) taskParticipant=state.taskParticipant||'__ALL__';
+              if (Object.prototype.hasOwnProperty.call(state,'taskSearch')) taskSearch=state.taskSearch||'';
+              if (Object.prototype.hasOwnProperty.call(state,'taskFilter')) taskFilter=state.taskFilter||'all';
+              if (Object.prototype.hasOwnProperty.call(state,'editingTask')) editingTask=state.editingTask ?? null;
+              if (Object.prototype.hasOwnProperty.call(state,'openTask')) openTaskId=state.openTask ?? null;
+            }
+            function syncFromCore(){
+              state.taskParticipant=taskParticipant;
+              state.taskSearch=taskSearch;
+              state.taskFilter=taskFilter;
+              state.editingTask=editingTask;
+              state.openTask=openTaskId;
+            }
+            function wrap(fn){return (...args)=>{syncIntoCore();const out=fn(...args);syncFromCore();return out}}
+
+            window.RF_APP={
+              state,
+              normalizeState(){normalizeTasks();syncIntoCore();syncFromCore()},
+              renderTasks:wrap(renderTasks),
+              toast,
+              addTask:wrap(addTask),
+              editTask:wrap(editTask),
+              saveTask:wrap(saveTaskInline),
+              cancelTaskEdit:wrap(cancelTaskEdit),
+              removeTask:wrap(deleteTask),
+              toggleTaskDetails:wrap(toggleTaskDetails),
+              toggleTaskDay:wrap(toggleTaskDay),
+              setTaskDetail:wrap(setTaskDetail)
+            };
+
+            window.RF={
+              editTask:(...a)=>window.RF_APP.editTask(...a),
+              saveTask:(...a)=>window.RF_APP.saveTask(...a),
+              cancelTaskEdit:(...a)=>window.RF_APP.cancelTaskEdit(...a),
+              toggleTaskDetails:(...a)=>window.RF_APP.toggleTaskDetails(...a),
+              toggleTaskDay:(...a)=>window.RF_APP.toggleTaskDay(...a),
+              setTaskDetail:(...a)=>window.RF_APP.setTaskDetail(...a),
+              deleteTask:(...a)=>window.RF_APP.removeTask(...a)
+            };
+
+            techLog('realdata_bridge_ready',{bridge:1});
+          })();
+          '''
+          Path('sprint2-integracao-login-realdata-bridge-v1.js').write_text(bridge, encoding='utf-8')
+
+          html_path=Path('sprint2-integracao-login-realdata-v1.html')
+          html=html_path.read_text(encoding='utf-8')
+          old='<script src="sprint2-teste-core.js"></script><script src="sprint2-integracao-login-realdata-v1.js"></script>'
+          new='<script src="sprint2-teste-core.js"></script><script src="sprint2-integracao-login-realdata-bridge-v1.js"></script><script src="sprint2-integracao-login-realdata-v1.js"></script>'
+          if old in html:
+              html=html.replace(old,new,1)
+          elif new not in html:
+              raise SystemExit('Nao encontrei a sequencia de scripts esperada no HTML')
+          html_path.write_text(html,encoding='utf-8')
+
+          js_path=Path('sprint2-integracao-login-realdata-v1.js')
+          js=js_path.read_text(encoding='utf-8')
+          js=js.replace("  if(!runtime.groupId)return;\n",'',1)
+          js=js.replace("grupoId:runtime.groupId,perfilId:'',sessaoId:'sprint2-realdata'","grupoId:runtime.groupId||'SPRINT2-PREVIEW',perfilId:'',sessaoId:'sprint2-realdata'",1)
+
+          login_old="catch(e){console.warn('Login Sprint2 realdata:',e);await signOut(auth).catch(()=>{});setLoginMessage(friendlyError(e),true)}finally"
+          login_new="catch(e){console.warn('Login Sprint2 realdata:',e);await emitLog('sprint2.realdata_login_erro',{mensagem:String(e?.message||e).slice(0,80),codigo:String(e?.code||''),status:Number(e?.status)||0},'error');await signOut(auth).catch(()=>{});setLoginMessage(friendlyError(e),true)}finally"
+          if login_old in js:
+              js=js.replace(login_old,login_new,1)
+          elif login_new not in js:
+              raise SystemExit('Nao encontrei o catch de login esperado')
+
+          restore_old="catch(e){console.warn('Restauração Sprint2 realdata:',e);await signOut(auth).catch(()=>{});setLoginMessage(friendlyError(e),true)}finally"
+          restore_new="catch(e){console.warn('Restauração Sprint2 realdata:',e);await emitLog('sprint2.realdata_restauracao_erro',{mensagem:String(e?.message||e).slice(0,80),codigo:String(e?.code||''),status:Number(e?.status)||0},'error');await signOut(auth).catch(()=>{});setLoginMessage(friendlyError(e),true)}finally"
+          if restore_old in js:
+              js=js.replace(restore_old,restore_new,1)
+          elif restore_new not in js:
+              raise SystemExit('Nao encontrei o catch de restauracao esperado')
+
+          js_path.write_text(js,encoding='utf-8')
+          PY
+
+      - name: Validar sintaxe e contrato da ponte
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check sprint2-integracao-login-realdata-bridge-v1.js
+          node --check sprint2-integracao-login-realdata-v1.js
+          python - <<'PY'
+          from pathlib import Path
+          h=Path('sprint2-integracao-login-realdata-v1.html').read_text(encoding='utf-8')
+          j=Path('sprint2-integracao-login-realdata-v1.js').read_text(encoding='utf-8')
+          c=Path('sprint2-teste-core.js').read_text(encoding='utf-8')
+          b=Path('sprint2-integracao-login-realdata-bridge-v1.js').read_text(encoding='utf-8')
+          seq='<script src="sprint2-teste-core.js"></script><script src="sprint2-integracao-login-realdata-bridge-v1.js"></script><script src="sprint2-integracao-login-realdata-v1.js"></script>'
+          checks={
+            'ordem_scripts':seq in h,
+            'ponte_rf_app':'window.RF_APP' in b and 'window.RF=' in b,
+            'estado_core':'state,' in b and 'renderTasks:wrap(renderTasks)' in b,
+            'core_intocado':'window.RF_APP' not in c,
+            'log_pre_grupo':"runtime.groupId||'SPRINT2-PREVIEW'" in j,
+            'sem_return_log':'if(!runtime.groupId)return;' not in j,
+            'log_login_erro':'sprint2.realdata_login_erro' in j,
+            'log_restore_erro':'sprint2.realdata_restauracao_erro' in j,
+          }
+          for k,v in checks.items(): print(f'{k}={v}')
+          print(f'BRIDGE_FIX_RESULT={sum(checks.values())}/{len(checks)}')
+          if not all(checks.values()): raise SystemExit('Falha na auditoria estatica')
+          PY
+
+          node <<'NODE'
+          const fs=require('fs'),vm=require('vm');
+          global.window=global;
+          global.navigator={onLine:true};
+          global.fetch=()=>Promise.resolve({});
+          global.document={getElementById:()=>null,querySelectorAll:()=>[]};
+          window.addEventListener=()=>{};
+          vm.runInThisContext(fs.readFileSync('sprint2-teste-core.js','utf8'),{filename:'sprint2-teste-core.js'});
+          vm.runInThisContext(fs.readFileSync('sprint2-integracao-login-realdata-bridge-v1.js','utf8'),{filename:'bridge.js'});
+          if(!window.RF_APP)throw new Error('RF_APP ausente');
+          if(!window.RF)throw new Error('RF ausente');
+          if(window.RF_APP.state!==state)throw new Error('Estado nao compartilhado');
+          for(const fn of ['renderTasks','toggleTaskDetails','editTask','removeTask'])if(typeof window.RF_APP[fn]!=='function')throw new Error('Metodo ausente: '+fn);
+          console.log('BRIDGE_RUNTIME_RESULT=OK');
+          NODE
+
+      - name: Commit da correcao
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Nenhuma alteracao pendente.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add sprint2-integracao-login-realdata-v1.html sprint2-integracao-login-realdata-v1.js sprint2-integracao-login-realdata-bridge-v1.js
+          git commit -m 'Sprint 2: corrige ponte do login com nucleo de tarefas'
+          git push
