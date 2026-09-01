@@ -1,0 +1,79 @@
+name: Sprint 2 Login live log snapshot
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/sprint2-login-live-log-snapshot.yml'
+
+permissions:
+  contents: read
+
+env:
+  DIAG_URL: https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/diagnostico-tecnico
+  MON_URL: https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/monitoramento
+
+jobs:
+  login-logs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ler saude viva do Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 25 "$MON_URL" -o /tmp/monitor.json
+          python - <<'PY'
+          import json
+          d=json.load(open('/tmp/monitor.json',encoding='utf-8'))
+          print('MONITOR_STATUS=',d.get('status'))
+          print('LAST_RUN_AT=',d.get('lastRunAt'))
+          print('HEALTH_REASONS=',json.dumps(d.get('healthReasons',{}),ensure_ascii=False))
+          PY
+
+      - name: Ler eventos vivos do checkpoint de login
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 25 "$DIAG_URL?limit=500" -o /tmp/diag.json
+          python - <<'PY'
+          import json
+          d=json.load(open('/tmp/diag.json',encoding='utf-8'))
+          print('DIAG_STATUS=',d.get('status'))
+          print('GENERATED_AT=',d.get('generatedAt'))
+          print('SUMMARY=',json.dumps(d.get('summary',{}),ensure_ascii=False))
+          logs=d.get('logs',[]) or []
+          auth=[]
+          for x in logs:
+              event=str(x.get('evento',''))
+              page=str(x.get('pagina',''))
+              if event.startswith('sprint2.auth_') or page == 'sprint2-login-checkpoint-v1.html':
+                  auth.append(x)
+          auth.sort(key=lambda x:str(x.get('clienteEm','')), reverse=True)
+          print('LOGIN_EVENT_COUNT=',len(auth))
+          counts={}
+          for x in auth:
+              e=str(x.get('evento',''))
+              counts[e]=counts.get(e,0)+1
+          print('LOGIN_EVENT_COUNTS=',json.dumps(counts,ensure_ascii=False,sort_keys=True))
+          for x in auth[:60]:
+              safe={
+                'clienteEm':x.get('clienteEm'),
+                'evento':x.get('evento'),
+                'nivel':x.get('nivel'),
+                'grupoId':x.get('grupoId'),
+                'pagina':x.get('pagina'),
+                'detalhes':x.get('detalhes',{})
+              }
+              print('LOGIN_EVENT=',json.dumps(safe,ensure_ascii=False))
+          success=sum(1 for x in auth if x.get('evento')=='sprint2.auth_login_sucesso')
+          restored=sum(1 for x in auth if x.get('evento')=='sprint2.auth_sessao_restaurada')
+          logout=sum(1 for x in auth if x.get('evento')=='sprint2.auth_logout')
+          errors=[x for x in auth if str(x.get('nivel','')).lower()=='error' or str(x.get('evento','')).endswith('_erro')]
+          print('LOGIN_SUCCESS_COUNT=',success)
+          print('SESSION_RESTORED_COUNT=',restored)
+          print('LOGOUT_COUNT=',logout)
+          print('LOGIN_ERROR_COUNT=',len(errors))
+          status=str(d.get('status','')).upper().replace('Á','A')
+          if status in ('ERRO_DIAGNOSTICO','DEGRADADO'):
+              raise SystemExit('Diagnostico vivo nao esta saudavel')
+          PY
