@@ -31,7 +31,7 @@ jobs:
           page=Path('sprint2-inicio-unificado-preview-v1.html').read_text(encoding='utf-8')
           boot=Path('sprint2-teste-bootstrap.js').read_text(encoding='utf-8')
           checks={
-            'dois modos internos': len(re.findall(r'class="home-tab', page)) == 2,
+            'dois modos internos': len(re.findall(r'class="home-tab(?:\s|\")', page)) == 2,
             'Hoje presente': 'data-pane="today"' in page,
             'Analise presente': 'data-pane="analysis"' in page,
             'Relatorios fora do menu da preview': '📊</span>Relatórios' not in page,
