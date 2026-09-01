@@ -45,6 +45,11 @@ function browserFamily() {
   return 'Outro';
 }
 
+function normalizeGroup(role, groupId) {
+  const group = clean(groupId).toUpperCase();
+  return group || (role === 'master' ? 'SISTEMA' : '');
+}
+
 async function emitLog(evento, { grupoId = '', papel = '', restored = false } = {}, nivel = 'info') {
   if (!grupoId) return;
   const payload = {
@@ -92,24 +97,28 @@ function readableRole(role) {
 function showLogin(message = '') {
   sessionRenderKey = '';
   sessionPanel.classList.remove('active');
+  sessionPanel.dataset.role = '';
   loginPanel.classList.remove('hidden');
   if (message) setMessage(message, 'bad');
 }
 
 function showSession({ papel, grupoId, restored }) {
   const role = clean(papel);
-  const group = clean(grupoId).toUpperCase();
+  const group = normalizeGroup(role, grupoId);
   const key = `${role}|${group}|${restored}`;
   if (sessionRenderKey === key) return;
   sessionRenderKey = key;
 
+  sessionPanel.dataset.role = role;
   localStorage.setItem(GROUP_STORAGE_KEY, group);
   localStorage.setItem(RESTORE_MARKER, '1');
   loginPanel.classList.add('hidden');
   sessionPanel.classList.add('active');
   el('sessionRole').textContent = readableRole(role);
   el('sessionGroup').textContent = group || '—';
-  el('checkGroup').textContent = `${readableRole(role)} vinculado ao grupo ${group || '—'}.`;
+  el('checkGroup').textContent = role === 'master'
+    ? 'Conta Master reconhecida no escopo geral do sistema.'
+    : `${readableRole(role)} vinculado ao grupo ${group || '—'}.`;
 
   const persistenceCheck = el('persistenceCheck');
   if (restored) {
@@ -170,9 +179,10 @@ async function performLogin(email, password) {
     const idToken = await credential.user.getIdToken(true);
     const session = await workerSession(idToken);
     await signInWithCustomToken(auth, session.token);
+    const papel = clean(session.papel);
     return {
-      papel: clean(session.papel),
-      grupoId: clean(session.grupoId).toUpperCase()
+      papel,
+      grupoId: normalizeGroup(papel, session.grupoId)
     };
   } finally {
     await closeTemp(tempApp, tempAuth);
@@ -182,13 +192,13 @@ async function performLogin(email, password) {
 async function restoreSession(user) {
   const tokenResult = await user.getIdTokenResult();
   let papel = clean(tokenResult.claims?.papel);
-  let grupoId = clean(tokenResult.claims?.grupoId).toUpperCase();
+  let grupoId = normalizeGroup(papel, tokenResult.claims?.grupoId);
 
   if (!['adm_familia', 'adm_convidado', 'master'].includes(papel) || !grupoId) {
     const session = await workerSession(await user.getIdToken(true));
     await signInWithCustomToken(auth, session.token);
     papel = clean(session.papel);
-    grupoId = clean(session.grupoId).toUpperCase();
+    grupoId = normalizeGroup(papel, session.grupoId);
   }
 
   if (!['adm_familia', 'adm_convidado', 'master'].includes(papel) || !grupoId) {
@@ -242,7 +252,7 @@ el('reloadButton').addEventListener('click', () => location.reload());
 
 el('logoutButton').addEventListener('click', async () => {
   const group = clean(el('sessionGroup').textContent).toUpperCase();
-  const role = clean(el('sessionRole').textContent);
+  const role = clean(sessionPanel.dataset.role);
   await emitLog('sprint2.auth_logout', { grupoId: group, papel: role, restored: false });
   await signOut(auth);
   localStorage.removeItem(GROUP_STORAGE_KEY);
