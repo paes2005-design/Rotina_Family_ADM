@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - sprint2-integracao-inicio-tarefas
+      - main
     paths:
       - 'sprint2-integracao-inicio-tarefas-v2.html'
       - 'sprint2-integracao-inicio-tarefas-v2.js'
