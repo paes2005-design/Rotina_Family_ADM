@@ -1,0 +1,110 @@
+name: Sprint 2 Inicio unificado audit
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'sprint2-inicio-unificado-preview-v1.html'
+      - 'sprint2-teste-bootstrap.js'
+      - '.github/workflows/sprint2-inicio-unificado-audit.yml'
+
+permissions:
+  contents: read
+
+env:
+  LOG_URL: https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/app-log
+  DIAG_URL: https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/diagnostico-tecnico
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validar arquitetura unificada
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          page=Path('sprint2-inicio-unificado-preview-v1.html').read_text(encoding='utf-8')
+          boot=Path('sprint2-teste-bootstrap.js').read_text(encoding='utf-8')
+          checks={
+            'dois modos internos': len(re.findall(r'class="home-tab', page)) == 2,
+            'Hoje presente': 'data-pane="today"' in page,
+            'Analise presente': 'data-pane="analysis"' in page,
+            'Relatorios fora do menu da preview': '📊</span>Relatórios' not in page,
+            'sem iframe': not re.search(r'<iframe\b', page, re.I),
+            'retorno unificado configurado': 'function goUnifiedHome' in boot,
+            'botao Inicio redireciona': "b.dataset.route==='inicio'" in boot and 'goUnifiedHome(route)' in boot,
+            'Relatorios removido do menu consolidado': 'reportsBtn.remove()' in boot,
+            'startup Inicio abre unificado': "initialRoute==='inicio'" in boot and 'sprint2-inicio-unificado-preview-v1.html?from=startup' in boot,
+            'selftest nao trata Relatorios como rota ativa': "const routes=['tarefas','participantes','monitor','recompensas','master']" in boot,
+            'log de retorno configurado': "techLog('inicio_unificado_retorno'" in boot,
+            'log de redirect startup configurado': "techLog('inicio_unificado_redirect'" in boot,
+          }
+          failed=[k for k,v in checks.items() if not v]
+          for k,v in checks.items(): print(('OK ' if v else 'FALHA ')+k)
+          if failed: raise SystemExit('Falhas: '+', '.join(failed))
+          print(f'ARQUITETURA {len(checks)}/{len(checks)}')
+          PY
+
+      - name: Validar sintaxe JavaScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check sprint2-teste-bootstrap.js
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          page=Path('sprint2-inicio-unificado-preview-v1.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script>([\s\S]*?)</script>', page)
+          if len(scripts)!=1: raise SystemExit(f'Esperado 1 script inline; encontrados {len(scripts)}')
+          Path('/tmp/unified.js').write_text(scripts[0],encoding='utf-8')
+          PY
+          node --check /tmp/unified.js
+          echo 'JAVASCRIPT OK'
+
+      - name: Ler saude e logs reais
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 25 "$DIAG_URL?limit=160" -o /tmp/diag-before.json
+          python - <<'PY'
+          import json
+          d=json.load(open('/tmp/diag-before.json',encoding='utf-8'))
+          print('STATUS_WORKER=',d.get('status'))
+          print('SUMMARY=',json.dumps(d.get('summary',{}),ensure_ascii=False))
+          logs=d.get('logs',[]) or []
+          real=[x for x in logs if 'inicio_unificado' in str(x.get('evento','')) or 'sprint2-inicio-unificado-preview-v1' in str(x.get('pagina',''))]
+          print('LOGS_INICIO_UNIFICADO_EXISTENTES=',len(real))
+          for x in real[:25]:
+              print(json.dumps({'clienteEm':x.get('clienteEm'),'evento':x.get('evento'),'nivel':x.get('nivel'),'pagina':x.get('pagina'),'detalhes':x.get('detalhes',{})},ensure_ascii=False))
+          if d.get('status') in ('ERRO_DIAGNOSTICO','DEGRADADO'):
+              raise SystemExit('Worker nao esta saudavel')
+          PY
+
+      - name: Validar escrita e leitura da telemetria
+        shell: bash
+        run: |
+          set -euo pipefail
+          MARKER="sprint2-unified-ci-${GITHUB_RUN_ID}"
+          cat >/tmp/payload.json <<JSON
+          {"evento":"operacao.sprint2_unified.audit_smoke","pagina":"sprint2-inicio-unificado-preview-v1.html","versaoMonitor":6,"ts":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","dados":{"marker":"$MARKER","source":"github_actions"}}
+          JSON
+          CODE=$(curl -sS -o /tmp/post.out -w '%{http_code}' -X POST -H 'content-type: application/json' --data-binary @/tmp/payload.json "$LOG_URL")
+          case "$CODE" in 2*) ;; *) echo "POST telemetry falhou: $CODE"; cat /tmp/post.out; exit 1;; esac
+          sleep 2
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 25 "$DIAG_URL?limit=200" -o /tmp/diag-after.json
+          export MARKER
+          python - <<'PY'
+          import json,os
+          text=open('/tmp/diag-after.json',encoding='utf-8').read()
+          marker=os.environ['MARKER']
+          print('MARKER_VISIVEL=',marker in text)
+          if marker not in text: raise SystemExit('Evento sintetico nao apareceu no diagnostico')
+          d=json.loads(text)
+          if d.get('status') in ('ERRO_DIAGNOSTICO','DEGRADADO'): raise SystemExit('Worker degradado apos telemetria')
+          PY
+          echo 'TELEMETRIA OK'
