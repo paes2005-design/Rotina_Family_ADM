@@ -90,21 +90,30 @@ jobs:
         run: |
           set -euo pipefail
           MARKER="sprint2-unified-ci-${GITHUB_RUN_ID}"
+          NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           cat >/tmp/payload.json <<JSON
-          {"evento":"operacao.sprint2_unified.audit_smoke","pagina":"sprint2-inicio-unificado-preview-v1.html","versaoMonitor":6,"ts":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","dados":{"marker":"$MARKER","source":"github_actions"}}
+          {"events":[{"aplicativo":"adm","versaoMonitor":6,"evento":"operacao.sprint2_test.inicio_unificado_audit_smoke","nivel":"info","detalhes":{"operacao":"inicio_unificado_audit_smoke","resultado":"ok","versao":6,"marker":"$MARKER","source":"github_actions"},"grupoId":"SPRINT2-PREVIEW","perfilId":"","sessaoId":"$MARKER","clienteEm":"$NOW","pagina":"sprint2-inicio-unificado-preview-v1.html","navegador":"github-actions","online":true,"visibilidade":"visible","instalado":false}]}
           JSON
           CODE=$(curl -sS -o /tmp/post.out -w '%{http_code}' -X POST -H 'content-type: application/json' --data-binary @/tmp/payload.json "$LOG_URL")
           case "$CODE" in 2*) ;; *) echo "POST telemetry falhou: $CODE"; cat /tmp/post.out; exit 1;; esac
-          sleep 2
-          curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 25 "$DIAG_URL?limit=200" -o /tmp/diag-after.json
-          export MARKER
+          echo "POST_HTTP=$CODE"
+          FOUND=0
+          for attempt in 1 2 3 4 5; do
+            sleep 2
+            curl --fail --silent --show-error --retry 2 --retry-delay 1 --max-time 25 "$DIAG_URL?limit=200" -o /tmp/diag-after.json
+            if grep -Fq "$MARKER" /tmp/diag-after.json; then FOUND=1; break; fi
+            echo "marker ainda nao visivel; tentativa $attempt/5"
+          done
+          export MARKER FOUND
           python - <<'PY'
           import json,os
-          text=open('/tmp/diag-after.json',encoding='utf-8').read()
-          marker=os.environ['MARKER']
-          print('MARKER_VISIVEL=',marker in text)
-          if marker not in text: raise SystemExit('Evento sintetico nao apareceu no diagnostico')
-          d=json.loads(text)
+          d=json.load(open('/tmp/diag-after.json',encoding='utf-8'))
+          print('MARKER_VISIVEL=',os.environ['FOUND']=='1')
+          if os.environ['FOUND']!='1': raise SystemExit('Evento sintetico no formato real nao apareceu no diagnostico')
           if d.get('status') in ('ERRO_DIAGNOSTICO','DEGRADADO'): raise SystemExit('Worker degradado apos telemetria')
+          marker=os.environ['MARKER']
+          matches=[x for x in (d.get('logs',[]) or []) if marker in json.dumps(x,ensure_ascii=False)]
+          print('EVENTOS_MARKER=',len(matches))
+          for x in matches[:3]: print(json.dumps({'evento':x.get('evento'),'nivel':x.get('nivel'),'pagina':x.get('pagina'),'detalhes':x.get('detalhes',{})},ensure_ascii=False))
           PY
           echo 'TELEMETRIA OK'
