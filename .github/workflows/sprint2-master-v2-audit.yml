@@ -21,11 +21,13 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
           h=Path('sprint2-master-preview-v2.html').read_text(encoding='utf-8')
           b=Path('sprint2-teste-bootstrap.js').read_text(encoding='utf-8')
+          tabs=re.findall(r'<button class="master-tab(?: active)?" data-pane="(?:overview|access|diagnostic)"', h)
           checks={
             'master_v2_existe':'Master Preview V2' in h,
-            'tres_modos':h.count('class="master-tab')==3,
+            'tres_modos':len(tabs)==3,
             'visao_sem_estado_grupos':'id="overviewGroups"' not in h,
             'andon_presente':'Andon técnico' in h,
             'andon_verde':'lamp green' in h,
@@ -39,6 +41,7 @@ jobs:
             'sem_iframe':'<iframe' not in h.lower(),
           }
           bad=[k for k,v in checks.items() if not v]
+          print('MASTER_V2_TABS=',len(tabs))
           print('MASTER_V2_CHECKS=',checks)
           print('MASTER_V2_RESULT=',f"{len(checks)-len(bad)}/{len(checks)}")
           if bad: raise SystemExit('Falhas: '+', '.join(bad))
