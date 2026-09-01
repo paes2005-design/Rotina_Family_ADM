@@ -77,3 +77,6 @@ jobs:
           if status in ('ERRO_DIAGNOSTICO','DEGRADADO'):
               raise SystemExit('Diagnostico vivo nao esta saudavel')
           PY
+
+      - name: Snapshot executado
+        run: echo "Leitura viva concluida"
