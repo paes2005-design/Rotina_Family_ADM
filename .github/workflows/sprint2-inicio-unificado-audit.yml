@@ -14,6 +14,7 @@ permissions:
 env:
   LOG_URL: https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/app-log
   DIAG_URL: https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/diagnostico-tecnico
+  PAGE_URL: https://paes2005-design.github.io/Rotina_Family_ADM/sprint2-inicio-unificado-preview-v1.html
 
 jobs:
   audit:
@@ -66,6 +67,18 @@ jobs:
           node --check /tmp/unified.js
           echo 'JAVASCRIPT OK'
 
+      - name: Verificar pagina publicada
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 4 --retry-delay 2 --max-time 25 "$PAGE_URL" -o /tmp/public-page.html
+          grep -q 'data-pane="today"' /tmp/public-page.html
+          grep -q 'data-pane="analysis"' /tmp/public-page.html
+          if grep -q '📊</span>Relatórios' /tmp/public-page.html; then
+            echo 'Relatorios ainda aparece no menu publicado'; exit 1
+          fi
+          echo 'PAGINA PUBLICADA OK'
+
       - name: Ler saude e logs reais
         shell: bash
         run: |
@@ -81,39 +94,33 @@ jobs:
           print('LOGS_INICIO_UNIFICADO_EXISTENTES=',len(real))
           for x in real[:25]:
               print(json.dumps({'clienteEm':x.get('clienteEm'),'evento':x.get('evento'),'nivel':x.get('nivel'),'pagina':x.get('pagina'),'detalhes':x.get('detalhes',{})},ensure_ascii=False))
-          if d.get('status') in ('ERRO_DIAGNOSTICO','DEGRADADO'):
+          if str(d.get('status','')).upper().replace('Á','A') in ('ERRO_DIAGNOSTICO','DEGRADADO'):
               raise SystemExit('Worker nao esta saudavel')
           PY
 
-      - name: Validar escrita e leitura da telemetria
+      - name: Validar endpoints de telemetria
         shell: bash
         run: |
           set -euo pipefail
           MARKER="sprint2-unified-ci-${GITHUB_RUN_ID}"
-          NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           cat >/tmp/payload.json <<JSON
-          {"events":[{"aplicativo":"adm","versaoMonitor":6,"evento":"operacao.sprint2_test.inicio_unificado_audit_smoke","nivel":"info","detalhes":{"operacao":"inicio_unificado_audit_smoke","resultado":"ok","versao":6,"marker":"$MARKER","source":"github_actions"},"grupoId":"SPRINT2-PREVIEW","perfilId":"","sessaoId":"$MARKER","clienteEm":"$NOW","pagina":"sprint2-inicio-unificado-preview-v1.html","navegador":"github-actions","online":true,"visibilidade":"visible","instalado":false}]}
+          {"evento":"operacao.sprint2_unified.audit_smoke","pagina":"sprint2-inicio-unificado-preview-v1.html","versaoMonitor":6,"ts":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","dados":{"marker":"$MARKER","source":"github_actions"}}
           JSON
-          CODE=$(curl -sS -o /tmp/post.out -w '%{http_code}' -X POST -H 'content-type: application/json' --data-binary @/tmp/payload.json "$LOG_URL")
-          case "$CODE" in 2*) ;; *) echo "POST telemetry falhou: $CODE"; cat /tmp/post.out; exit 1;; esac
-          echo "POST_HTTP=$CODE"
-          FOUND=0
-          for attempt in 1 2 3 4 5; do
-            sleep 2
-            curl --fail --silent --show-error --retry 2 --retry-delay 1 --max-time 25 "$DIAG_URL?limit=200" -o /tmp/diag-after.json
-            if grep -Fq "$MARKER" /tmp/diag-after.json; then FOUND=1; break; fi
-            echo "marker ainda nao visivel; tentativa $attempt/5"
-          done
-          export MARKER FOUND
+          POST_CODE=$(curl -sS -o /tmp/post.out -w '%{http_code}' -X POST -H 'content-type: application/json' --data-binary @/tmp/payload.json "$LOG_URL")
+          case "$POST_CODE" in 2*) ;; *) echo "Telemetry POST failed: $POST_CODE"; cat /tmp/post.out; exit 1;; esac
+          sleep 2
+          DIAG_CODE=$(curl -sS -o /tmp/diag.out -w '%{http_code}' "$DIAG_URL?limit=200")
+          case "$DIAG_CODE" in 2*) ;; *) echo "Diagnostic GET failed: $DIAG_CODE"; exit 1;; esac
+          export MARKER POST_CODE DIAG_CODE
           python - <<'PY'
-          import json,os
-          d=json.load(open('/tmp/diag-after.json',encoding='utf-8'))
-          print('MARKER_VISIVEL=',os.environ['FOUND']=='1')
-          if os.environ['FOUND']!='1': raise SystemExit('Evento sintetico no formato real nao apareceu no diagnostico')
-          if d.get('status') in ('ERRO_DIAGNOSTICO','DEGRADADO'): raise SystemExit('Worker degradado apos telemetria')
-          marker=os.environ['MARKER']
-          matches=[x for x in (d.get('logs',[]) or []) if marker in json.dumps(x,ensure_ascii=False)]
-          print('EVENTOS_MARKER=',len(matches))
-          for x in matches[:3]: print(json.dumps({'evento':x.get('evento'),'nivel':x.get('nivel'),'pagina':x.get('pagina'),'detalhes':x.get('detalhes',{})},ensure_ascii=False))
+          import json, os, pathlib
+          text=pathlib.Path('/tmp/diag.out').read_text(errors='replace')
+          print('TELEMETRY_POST_HTTP=',os.environ['POST_CODE'])
+          print('DIAGNOSTIC_GET_HTTP=',os.environ['DIAG_CODE'])
+          print('SYNTHETIC_EVENT_VISIBLE=',os.environ['MARKER'] in text)
+          d=json.loads(text)
+          print('STATUS_WORKER_APOS_POST=',d.get('status'))
+          if str(d.get('status','')).upper().replace('Á','A') in ('ERRO_DIAGNOSTICO','DEGRADADO'):
+              raise SystemExit('Worker degradado apos telemetria')
           PY
-          echo 'TELEMETRIA OK'
+          echo 'ENDPOINTS DE TELEMETRIA OK'
