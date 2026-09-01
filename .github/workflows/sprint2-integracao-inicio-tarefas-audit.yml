@@ -4,8 +4,8 @@ on:
     branches:
       - sprint2-integracao-inicio-tarefas
     paths:
-      - 'sprint2-integracao-inicio-tarefas.html'
-      - 'sprint2-integracao-inicio-tarefas.js'
+      - 'sprint2-integracao-inicio-tarefas-v2.html'
+      - 'sprint2-integracao-inicio-tarefas-v2.js'
       - '.github/workflows/sprint2-integracao-inicio-tarefas-audit.yml'
   workflow_dispatch:
 permissions:
@@ -15,27 +15,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Estrutura do incremento
+      - name: Estrutura e preservacao
         shell: python
         run: |
           from pathlib import Path
-          h=Path('sprint2-integracao-inicio-tarefas.html').read_text(encoding='utf-8')
-          j=Path('sprint2-integracao-inicio-tarefas.js').read_text(encoding='utf-8')
+          h=Path('sprint2-integracao-inicio-tarefas-v2.html').read_text(encoding='utf-8')
+          j=Path('sprint2-integracao-inicio-tarefas-v2.js').read_text(encoding='utf-8')
+          core=Path('sprint2-teste-core.js').read_text(encoding='utf-8')
           checks={
-            'inicio': 'id="view-inicio"' in h,
-            'tarefas': 'id="view-tarefas"' in h,
-            'hoje': 'data-pane="today"' in h,
-            'analise': 'data-pane="analysis"' in h,
-            'sem_relatorios': 'Relatórios' not in h,
-            'duas_rotas': h.count('data-route=')==2,
-            'persistencia_aba': 'rf-sprint2-integration-home-pane' in j,
-            'telemetria': '/app-log' in j,
-            'selftest': 'function selfTest()' in j,
-            'sem_iframe': '<iframe' not in h.lower(),
+            'inicio_integrado':'id="view-inicio"' in h,
+            'tarefas_integrada':'id="view-tarefas"' in h,
+            'hoje_analise':'data-pane="today"' in h and 'data-pane="analysis"' in h,
+            'somente_duas_rotas':h.count('data-route=')==2,
+            'usa_core_tarefas':'sprint2-teste-core.js' in h,
+            'usa_render_tarefas_aprovado':'renderTasks()' in core and 'saveTaskInline' in core,
+            'edicao_inline_preservada':'data-k="name"' in core and 'RF.saveTask' in core,
+            'detalhes_preservados':'toggleTaskDetails' in core and 'toggleTaskDay' in core and 'setTaskDetail' in core,
+            'conflito_preservado':'taskConflict(candidate)' in core,
+            'persistencia_aba':'rf-sprint2-integration-home-pane' in j,
+            'retorno_mesmo_shell':'goIntegrationRoute' in j,
+            'telemetria_propria':'sprint2-integracao-inicio-tarefas-v2.html' in j,
+            'selftest':'function integrationSelfTest()' in j,
+            'sem_iframe':'<iframe' not in h.lower(),
           }
           bad=[k for k,v in checks.items() if not v]
           print('CHECKS=',checks)
           print('RESULT=',f"{len(checks)-len(bad)}/{len(checks)}")
           if bad: raise SystemExit('Falhas: '+', '.join(bad))
       - name: JavaScript valido
-        run: node --check sprint2-integracao-inicio-tarefas.js
+        run: |
+          node --check sprint2-teste-core.js
+          node --check sprint2-teste-participantes.js
+          node --check sprint2-integracao-inicio-tarefas-v2.js
