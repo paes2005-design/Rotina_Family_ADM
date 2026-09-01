@@ -1,1 +1,55 @@
-# placeholder
+name: Sprint 2 Integracao login realdata audit
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'sprint2-integracao-login-realdata-v1.html'
+      - 'sprint2-integracao-login-realdata-v1.js'
+      - '.github/workflows/sprint2-integracao-login-realdata-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar sintaxe JavaScript
+        run: node --check sprint2-integracao-login-realdata-v1.js
+      - name: Auditar arquitetura e modo leitura
+        shell: python
+        run: |
+          from pathlib import Path
+          h=Path('sprint2-integracao-login-realdata-v1.html').read_text(encoding='utf-8')
+          j=Path('sprint2-integracao-login-realdata-v1.js').read_text(encoding='utf-8')
+          checks={
+            'login_gate':'loginForm' in h and 'loginEmail' in h and 'loginSenha' in h,
+            'inicio_tarefas':'view-inicio' in h and 'view-tarefas' in h,
+            'mesmo_firebase':'sistema-de-metas-diarias' in j,
+            'worker_admin':'/family-session/admin' in j,
+            'leituras_grupo':all(x in j for x in ["collection(db,'perfis')","collection(db,'tarefas')","collection(db,'historico')","where('grupoId','==',groupId)"]),
+            'sem_gravacao_firestore':not any(x in j for x in ['addDoc(','updateDoc(','deleteDoc(','writeBatch(','setDoc(']),
+            'sem_dados_demo':not any(x in h+j for x in ['Lara Vitória','Maria Eduarda','Pedro</']),
+            'sem_core_init':'RF_APP.init(' not in j,
+            'sobrescreve_estado_real':'mapRealDataToState()' in j,
+            'bloqueia_edicao':all(x in j for x in ['RF_APP.editTask=readOnlyToast','RF_APP.removeTask=readOnlyToast','RF_APP.setTaskDetail=readOnlyToast']),
+            'sessao_persistente':'browserLocalPersistence' in j and 'onAuthStateChanged' in j,
+            'telemetria_sem_credencial':'sprint2.realdata_sync_sucesso' in j and 'email|senha|password|token|pin' in j,
+          }
+          for k,v in checks.items(): print(f'{k}={v}')
+          print(f'RESULT={sum(checks.values())}/{len(checks)}')
+          if not all(checks.values()): raise SystemExit('Falha na auditoria estrutural')
+      - name: Confirmar backend vivo
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 20 'https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev/monitoramento' -o /tmp/mon.json
+          python - <<'PY'
+          import json
+          d=json.load(open('/tmp/mon.json',encoding='utf-8'))
+          print('WORKER_STATUS=',d.get('status'))
+          print('LAST_RUN_AT=',d.get('lastRunAt'))
+          if str(d.get('status','')).upper() in ('DEGRADADO','ERRO_DIAGNOSTICO'): raise SystemExit('Worker degradado')
+          PY
