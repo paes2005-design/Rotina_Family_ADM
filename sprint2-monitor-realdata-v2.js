@@ -365,7 +365,7 @@ function modalBase(title,body){
   m.innerHTML=`<div class="mv2-modal-card"><button class="mv2-close" type="button">×</button><h2>${title}</h2>${body}</div>`;
   document.body.appendChild(m);m.querySelector('.mv2-close').onclick=closeModal;m.onclick=e=>{if(e.target===m)closeModal()};return m;
 }
-function alarmKey(g,p,t,date){return[g,p,t,date].map(v=>clean(v).replaceAll('/','_')).join('__')}
+function alarmKey(g,p,t){return[g,p,t].map(v=>clean(v).replaceAll('/','_')).join('__')}
 function alarmSchedule(x){
   const date=x.__date,start=clean(x.__task.start),end=clean(x.__task.end),week=dateLocal(date);week.setHours(0,0,0,0);week.setDate(week.getDate()+(week.getDay()===0?-6:1-week.getDay()));
   const weekIso=isoLocal(week);let endDate=date;if(start&&end&&end<=start)endDate=addDays(date,1);return{semanaInicio:weekIso,inicioEm:start?`${date}T${start}:00`:'',fimEm:end?`${endDate}T${end}:00`:''};
@@ -381,7 +381,7 @@ async function openAlarm(x){
       if(!await firebaseReady())throw new Error('Firebase indisponível');
       const v=m.querySelector('#mv2AlarmMoment').value,momentos=v==='ambos'?['inicio','fim']:[v],now=new Date().toISOString();
       const payload={grupoId:groupId(),perfilId:x.__pid,perfilNome:participantName(x.__pid),tarefaId:x.__sourceId,tarefaGrupoId:clean(x.tarefaGrupoId),nomeTarefa:x.__task.name,diaSemana:dayFullFor(x.__date),dataAgendada:x.__date,horaSugeridaInicio:x.__task.start,horaSugeridaFim:x.__task.end,...alarmSchedule(x),momentos,versaoAgenda:3,ativo,origem:'ADM',bloqueado:ativo,schedulerPendente:true,schedulerVersao:1,schedulerSolicitadoEm:now,atualizadoEm:now,...(ativo?{acionadoEm:now,acionadoPor:'ADM'}:{encerradoEm:now,encerradoPor:'ADM'})};
-      await fs.setDoc(fs.doc(db,'despertadores',alarmKey(groupId(),x.__pid,x.__sourceId,x.__date)),payload,{merge:true});
+      await fs.setDoc(fs.doc(db,'despertadores',alarmKey(groupId(),x.__pid,x.__sourceId)),payload,{merge:true});
       await fs.addDoc(fs.collection(db,'despertadorHistorico'),{...payload,evento:ativo?'ativado-na-data':'retirado-da-data',criadoEm:fs.serverTimestamp()});
       await log(ativo?'sprint2.monitor_v3_alarme_ativado':'sprint2.monitor_v3_alarme_retirado',{tarefaIdentificada:!!x.__sourceId});
       msg.textContent=ativo?'Alarme ativado.':'Alarme retirado.';lastLoadAt=0;setTimeout(()=>{closeModal();render(true)},350);
