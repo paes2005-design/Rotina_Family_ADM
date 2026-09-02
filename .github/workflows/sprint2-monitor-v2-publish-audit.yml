@@ -1,0 +1,77 @@
+name: Sprint 2 Monitor V2 publish audit
+
+on:
+  push:
+    paths:
+      - '.github/workflows/sprint2-monitor-v2-publish-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gerar página V2 isolada
+        shell: python
+        run: |
+          from pathlib import Path
+          src=Path('sprint2-integracao-monitor-v1.html').read_text(encoding='utf-8')
+          out=src.replace('Rotina Family — Sprint 2 • Login + Início + Tarefas + Monitor','Rotina Family — Sprint 2 • Monitor V2')
+          out=out.replace('sprint2-monitor-realdata-v1.js','sprint2-monitor-realdata-v2.js')
+          old='<button data-route="tarefas"><span class="ico">📝</span>Tarefas</button><button class="next-stage" disabled><span class="ico">👥</span>Participantes</button><button id="monitorNavButton"><span class="ico">👁️</span>Monitor</button>'
+          new='<button data-route="tarefas"><span class="ico">📝</span>Tarefas</button><button id="monitorNavButton"><span class="ico">👁️</span>Monitor</button><button class="next-stage" disabled><span class="ico">👥</span>Participantes</button>'
+          if old not in out:
+              raise SystemExit('ERRO: sequência antiga do menu não encontrada')
+          out=out.replace(old,new,1)
+          out=out.replace('Sprint 2 • Integração 3 • Monitor real','Sprint 2 • Monitor V2 completo')
+          Path('sprint2-integracao-monitor-v2.html').write_text(out,encoding='utf-8')
+      - name: Auditar Monitor V2
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check sprint2-monitor-realdata-v2.js
+          test -s sprint2-integracao-monitor-v2.html
+          grep -q 'sprint2-monitor-realdata-v2.js' sprint2-integracao-monitor-v2.html
+          grep -q "sprint2.monitor_v2_aberto" sprint2-monitor-realdata-v2.js
+          grep -q "sprint2.monitor_v2_render" sprint2-monitor-realdata-v2.js
+          grep -q "sprint2.monitor_v2_alarme_ativado" sprint2-monitor-realdata-v2.js
+          grep -q "sprint2.monitor_v2_justificativa_decisao" sprint2-monitor-realdata-v2.js
+          grep -q "percentualAplicado" sprint2-monitor-realdata-v2.js
+          grep -q "faixaAtraso" sprint2-monitor-realdata-v2.js
+          grep -q "toleranciaConsumidaSeg" sprint2-monitor-realdata-v2.js
+          grep -q "justificativaAtraso" sprint2-monitor-realdata-v2.js
+          grep -q "despertadores" sprint2-monitor-realdata-v2.js
+          ! grep -q "collection(db,'tarefas').*addDoc\|deleteDoc(.*tarefas\|setDoc(.*tarefas" sprint2-monitor-realdata-v2.js
+          python - <<'PY'
+          from pathlib import Path
+          h=Path('sprint2-integracao-monitor-v2.html').read_text(encoding='utf-8')
+          a=h.index('>Tarefas</button>'); b=h.index('>Monitor</button>'); c=h.index('>Participantes</button>')
+          assert a < b < c, (a,b,c)
+          j=Path('sprint2-monitor-realdata-v2.js').read_text(encoding='utf-8')
+          checks={
+            '100/75/50/0':all(x in j for x in ["pct===75","pct===50","pct===0","pct===100"]),
+            'alarme':all(x in j for x in ["despertadores","despertadorHistorico","mv2-alarm"]),
+            'justificativa':all(x in j for x in ["justificativaAtraso","writeBatch","mv2-just-open"]),
+            'telemetria':all(x in j for x in ["monitor_v2_aberto","monitor_v2_render","monitor_v2_dados_erro"]),
+          }
+          assert all(checks.values()), checks
+          print('MONITOR_V2_AUDIT=OK',checks)
+          PY
+      - name: Publicar página V2
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- sprint2-integracao-monitor-v2.html && git ls-files --error-unmatch sprint2-integracao-monitor-v2.html >/dev/null 2>&1; then
+            echo 'Página V2 já está atualizada.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add sprint2-integracao-monitor-v2.html
+          git commit -m 'Sprint 2: publica Monitor V2 operacional'
+          git push
