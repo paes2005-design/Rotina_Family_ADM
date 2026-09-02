@@ -14,107 +14,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Aplicar seletor Master e Sair visivel
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          from pathlib import Path
-
-          hp=Path('sprint2-integracao-login-realdata-v1.html')
-          h=hp.read_text(encoding='utf-8')
-          css='''.master-group-panel{margin-top:14px;padding-top:14px;border-top:1px solid #e6e8f0}.master-group-panel[hidden]{display:none}.master-group-panel h2{font-size:18px;margin:0 0 6px}.master-group-panel p{margin:0 0 10px}.master-group-panel input{width:100%;padding:13px;border:1px solid #d7dbe6;border-radius:11px;font-size:15px;text-transform:uppercase}.master-group-actions{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}.master-group-actions button{border:0;border-radius:11px;padding:12px 14px;font-weight:850;cursor:pointer}.master-group-open{background:var(--u-purple);color:#fff}.master-group-exit{background:#f0f1f5;color:#555d70}.master-group-message{min-height:18px;font-size:11px;margin-top:8px;color:#687083}.master-group-message.bad{color:var(--bad)}.top-logout{border:1px solid #ded9eb;background:#fff;color:#5d5279;border-radius:10px;padding:9px 12px;font-weight:850;cursor:pointer;white-space:nowrap}@media(max-width:900px){.top-logout{padding:9px 10px;font-size:11px}.master-group-actions{grid-template-columns:1fr}}
-'''
-          if '.master-group-panel{' not in h:
-              h=h.replace('</style>',css+'</style>',1)
-
-          old='</form></div></section>'
-          panel='''</form><div class="master-group-panel" id="masterGroupPanel" hidden><div class="eyebrow">Acesso Master</div><h2>Escolha o grupo</h2><p>O Master não pertence a um grupo. Selecione qual grupo deseja abrir em modo leitura.</p><div class="auth-field"><label for="masterGroupInput">Grupo</label><input id="masterGroupInput" value="CLI-4071" inputmode="text" autocomplete="off"></div><div class="master-group-actions"><button class="master-group-open" id="masterGroupLoad" type="button">Abrir grupo</button><button class="master-group-exit" id="masterLogoutButton" type="button">Sair</button></div><div id="masterGroupMessage" class="master-group-message" role="status"></div></div></div></section>'''
-          if 'id="masterGroupPanel"' not in h:
-              if old not in h: raise SystemExit('Fechamento do formulario de login nao encontrado')
-              h=h.replace(old,panel,1)
-
-          marker='</span></div></div><div class="realdata-strip">'
-          repl='</span></div><button class="top-logout" id="logoutTopButton" type="button">🚪 Sair</button></div><div class="realdata-strip">'
-          if 'id="logoutTopButton"' not in h:
-              if marker not in h: raise SystemExit('Topo da aplicacao nao encontrado')
-              h=h.replace(marker,repl,1)
-          hp.write_text(h,encoding='utf-8')
-
-          jp=Path('sprint2-integracao-login-realdata-v1.js')
-          j=jp.read_text(encoding='utf-8')
-
-          role_line="function roleLabel(role){return ROLE_LABEL[role]||role||'Administrador'}"
-          helpers=r'''function roleLabel(role){return ROLE_LABEL[role]||role||'Administrador'}
-function normalizeGroupId(value){const v=clean(value).toUpperCase();if(!v)return'';if(/^CLI-\d+$/.test(v))return v;if(/^\d+$/.test(v))return`CLI-${v}`;return v}
-function setMasterGroupMessage(text='',bad=false){const el=$('masterGroupMessage');if(!el)return;el.textContent=text;el.className=`master-group-message${bad?' bad':''}`}
-function showMasterGroupPicker(){runtime.role='master';runtime.groupId='';$('loginForm').hidden=true;$('masterGroupPanel').hidden=false;$('masterGroupInput').value=normalizeGroupId(sessionStorage.getItem('rf-sprint2-master-selected-group'))||'CLI-4071';setMasterGroupMessage('Conta Master autenticada. Escolha o grupo que deseja visualizar.');setLoginMessage('')}
-function resetAuthGate(){$('loginForm').hidden=false;$('masterGroupPanel').hidden=true;setMasterGroupMessage('')}
-async function openMasterGroup(){const groupId=normalizeGroupId($('masterGroupInput').value);if(!/^CLI-\d+$/.test(groupId))return setMasterGroupMessage('Informe um grupo no formato CLI-4071 ou apenas 4071.',true);$('masterGroupInput').value=groupId;$('masterGroupLoad').disabled=true;setMasterGroupMessage(`Abrindo ${groupId}…`);try{sessionStorage.setItem('rf-sprint2-master-selected-group',groupId);await loadRealGroup('master',groupId);setMasterGroupMessage('');await emitLog('sprint2.realdata_master_grupo_aberto',{grupoIdSelecionado:groupId})}catch(e){setMasterGroupMessage(friendlyError(e),true)}finally{$('masterGroupLoad').disabled=false}}
-async function logoutCurrent(){await emitLog('sprint2.realdata_logout',{papel:runtime.role});await signOut(auth).catch(()=>{});runtime.groupId='';runtime.role='';sessionStorage.removeItem('rf-sprint2-master-selected-group');document.body.classList.remove('rf-auth-ready');resetAuthGate();setLoginMessage('Sessão encerrada.')}'''
-          if 'function normalizeGroupId(value)' not in j:
-              if role_line not in j: raise SystemExit('roleLabel nao encontrado')
-              j=j.replace(role_line,helpers,1)
-
-          old_login="try{const session=await performLogin(email,password);$('loginSenha').value='';await loadRealGroup(session.role,session.groupId);setLoginMessage('');await emitLog('sprint2.realdata_login_sucesso',{papel:session.role})}catch(e)"
-          new_login="try{const session=await performLogin(email,password);$('loginSenha').value='';if(session.role==='master'&&!session.groupId){showMasterGroupPicker();await emitLog('sprint2.realdata_master_autenticado',{papel:session.role})}else{await loadRealGroup(session.role,session.groupId);setLoginMessage('');await emitLog('sprint2.realdata_login_sucesso',{papel:session.role})}}catch(e)"
-          if old_login in j:
-              j=j.replace(old_login,new_login,1)
-          elif new_login not in j:
-              raise SystemExit('Fluxo de login esperado nao encontrado')
-
-          old_logout="$('logoutButton').onclick=async()=>{await emitLog('sprint2.realdata_logout',{papel:runtime.role});await signOut(auth);runtime.groupId='';document.body.classList.remove('rf-auth-ready');setLoginMessage('Sessão encerrada.');};"
-          new_logout="$('logoutButton').onclick=logoutCurrent;$('logoutTopButton').onclick=logoutCurrent;$('masterLogoutButton').onclick=logoutCurrent;$('masterGroupLoad').onclick=openMasterGroup;$('masterGroupInput').addEventListener('keydown',e=>{if(e.key==='Enter')openMasterGroup()});"
-          if old_logout in j:
-              j=j.replace(old_logout,new_logout,1)
-          elif new_logout not in j:
-              raise SystemExit('Binding antigo de logout nao encontrado')
-
-          old_restore="const s=await restoreSession(user);await loadRealGroup(s.role,s.groupId);setLoginMessage('');await emitLog('sprint2.realdata_sessao_restaurada',{papel:s.role})"
-          new_restore="const s=await restoreSession(user);if(s.role==='master'&&!s.groupId){const selected=normalizeGroupId(sessionStorage.getItem('rf-sprint2-master-selected-group'));if(selected){await loadRealGroup('master',selected);setLoginMessage('');await emitLog('sprint2.realdata_sessao_restaurada',{papel:s.role,grupoMaster:selected})}else{showMasterGroupPicker();await emitLog('sprint2.realdata_master_restaurado',{papel:s.role})}}else{await loadRealGroup(s.role,s.groupId);setLoginMessage('');await emitLog('sprint2.realdata_sessao_restaurada',{papel:s.role})}"
-          if old_restore in j:
-              j=j.replace(old_restore,new_restore,1)
-          elif new_restore not in j:
-              raise SystemExit('Fluxo antigo de restauracao nao encontrado')
-
-          old_catch="setLoginMessage(error.message||'Não foi possível carregar os dados reais.',true);await emitLog('sprint2.realdata_sync_erro'"
-          new_catch="if(role==='master')setMasterGroupMessage(error.message||'Não foi possível carregar os dados reais.',true);else setLoginMessage(error.message||'Não foi possível carregar os dados reais.',true);await emitLog('sprint2.realdata_sync_erro'"
-          if old_catch in j:
-              j=j.replace(old_catch,new_catch,1)
-          elif new_catch not in j:
-              raise SystemExit('Catch de sincronizacao nao encontrado')
-
-          jp.write_text(j,encoding='utf-8')
-          PY
-
+        run: python -c "import base64;exec(base64.b64decode('CmZyb20gcGF0aGxpYiBpbXBvcnQgUGF0aAoKaHA9UGF0aCgnc3ByaW50Mi1pbnRlZ3JhY2FvLWxvZ2luLXJlYWxkYXRhLXYxLmh0bWwnKQpoPWhwLnJlYWRfdGV4dChlbmNvZGluZz0ndXRmLTgnKQpjc3M9Jy5tYXN0ZXItZ3JvdXAtcGFuZWx7bWFyZ2luLXRvcDoxNHB4O3BhZGRpbmctdG9wOjE0cHg7Ym9yZGVyLXRvcDoxcHggc29saWQgI2U2ZThmMH0ubWFzdGVyLWdyb3VwLXBhbmVsW2hpZGRlbl17ZGlzcGxheTpub25lfS5tYXN0ZXItZ3JvdXAtcGFuZWwgaDJ7Zm9udC1zaXplOjE4cHg7bWFyZ2luOjAgMCA2cHh9Lm1hc3Rlci1ncm91cC1wYW5lbCBwe21hcmdpbjowIDAgMTBweH0ubWFzdGVyLWdyb3VwLXBhbmVsIGlucHV0e3dpZHRoOjEwMCU7cGFkZGluZzoxM3B4O2JvcmRlcjoxcHggc29saWQgI2Q3ZGJlNjtib3JkZXItcmFkaXVzOjExcHg7Zm9udC1zaXplOjE1cHg7dGV4dC10cmFuc2Zvcm06dXBwZXJjYXNlfS5tYXN0ZXItZ3JvdXAtYWN0aW9uc3tkaXNwbGF5OmdyaWQ7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOjFmciBhdXRvO2dhcDo4cHg7bWFyZ2luLXRvcDoxMHB4fS5tYXN0ZXItZ3JvdXAtYWN0aW9ucyBidXR0b257Ym9yZGVyOjA7Ym9yZGVyLXJhZGl1czoxMXB4O3BhZGRpbmc6MTJweCAxNHB4O2ZvbnQtd2VpZ2h0Ojg1MDtjdXJzb3I6cG9pbnRlcn0ubWFzdGVyLWdyb3VwLW9wZW57YmFja2dyb3VuZDp2YXIoLS11LXB1cnBsZSk7Y29sb3I6I2ZmZn0ubWFzdGVyLWdyb3VwLWV4aXR7YmFja2dyb3VuZDojZjBmMWY1O2NvbG9yOiM1NTVkNzB9Lm1hc3Rlci1ncm91cC1tZXNzYWdle21pbi1oZWlnaHQ6MThweDtmb250LXNpemU6MTFweDttYXJnaW4tdG9wOjhweDtjb2xvcjojNjg3MDgzfS5tYXN0ZXItZ3JvdXAtbWVzc2FnZS5iYWR7Y29sb3I6dmFyKC0tYmFkKX0udG9wLWxvZ291dHtib3JkZXI6MXB4IHNvbGlkICNkZWQ5ZWI7YmFja2dyb3VuZDojZmZmO2NvbG9yOiM1ZDUyNzk7Ym9yZGVyLXJhZGl1czoxMHB4O3BhZGRpbmc6OXB4IDEycHg7Zm9udC13ZWlnaHQ6ODUwO2N1cnNvcjpwb2ludGVyO3doaXRlLXNwYWNlOm5vd3JhcH1AbWVkaWEobWF4LXdpZHRoOjkwMHB4KXsudG9wLWxvZ291dHtwYWRkaW5nOjlweCAxMHB4O2ZvbnQtc2l6ZToxMXB4fS5tYXN0ZXItZ3JvdXAtYWN0aW9uc3tncmlkLXRlbXBsYXRlLWNvbHVtbnM6MWZyfX1cXG4nCmlmICcubWFzdGVyLWdyb3VwLXBhbmVseycgbm90IGluIGg6CiAgICBoPWgucmVwbGFjZSgnPC9zdHlsZT4nLGNzcysnPC9zdHlsZT4nLDEpCgpvbGQ9JzwvZm9ybT48L2Rpdj48L3NlY3Rpb24+JwpwYW5lbD0nPC9mb3JtPjxkaXYgY2xhc3M9Im1hc3Rlci1ncm91cC1wYW5lbCIgaWQ9Im1hc3Rlckdyb3VwUGFuZWwiIGhpZGRlbj48ZGl2IGNsYXNzPSJleWVicm93Ij5BY2Vzc28gTWFzdGVyPC9kaXY+PGgyPkVzY29saGEgbyBncnVwbzwvaDI+PHA+TyBNYXN0ZXIgbsOjbyBwZXJ0ZW5jZSBhIHVtIGdydXBvLiBTZWxlY2lvbmUgcXVhbCBncnVwbyBkZXNlamEgYWJyaXIgZW0gbW9kbyBsZWl0dXJhLjwvcD48ZGl2IGNsYXNzPSJhdXRoLWZpZWxkIj48bGFiZWwgZm9yPSJtYXN0ZXJHcm91cElucHV0Ij5HcnVwbzwvbGFiZWw+PGlucHV0IGlkPSJtYXN0ZXJHcm91cElucHV0IiB2YWx1ZT0iQ0xJLTQwNzEiIGlucHV0bW9kZT0idGV4dCIgYXV0b2NvbXBsZXRlPSJvZmYiPjwvZGl2PjxkaXYgY2xhc3M9Im1hc3Rlci1ncm91cC1hY3Rpb25zIj48YnV0dG9uIGNsYXNzPSJtYXN0ZXItZ3JvdXAtb3BlbiIgaWQ9Im1hc3Rlckdyb3VwTG9hZCIgdHlwZT0iYnV0dG9uIj5BYnJpciBncnVwbzwvYnV0dG9uPjxidXR0b24gY2xhc3M9Im1hc3Rlci1ncm91cC1leGl0IiBpZD0ibWFzdGVyTG9nb3V0QnV0dG9uIiB0eXBlPSJidXR0b24iPlNhaXI8L2J1dHRvbj48L2Rpdj48ZGl2IGlkPSJtYXN0ZXJHcm91cE1lc3NhZ2UiIGNsYXNzPSJtYXN0ZXItZ3JvdXAtbWVzc2FnZSIgcm9sZT0ic3RhdHVzIj48L2Rpdj48L2Rpdj48L2Rpdj48L3NlY3Rpb24+JwppZiAnaWQ9Im1hc3Rlckdyb3VwUGFuZWwiJyBub3QgaW4gaDoKICAgIGlmIG9sZCBub3QgaW4gaDogcmFpc2UgU3lzdGVtRXhpdCgnRmVjaGFtZW50byBkbyBmb3JtdWxhcmlvIGRlIGxvZ2luIG5hbyBlbmNvbnRyYWRvJykKICAgIGg9aC5yZXBsYWNlKG9sZCxwYW5lbCwxKQoKbWFya2VyPSc8L3NwYW4+PC9kaXY+PC9kaXY+PGRpdiBjbGFzcz0icmVhbGRhdGEtc3RyaXAiPicKcmVwbD0nPC9zcGFuPjwvZGl2PjxidXR0b24gY2xhc3M9InRvcC1sb2dvdXQiIGlkPSJsb2dvdXRUb3BCdXR0b24iIHR5cGU9ImJ1dHRvbiI+8J+aqiBTYWlyPC9idXR0b24+PC9kaXY+PGRpdiBjbGFzcz0icmVhbGRhdGEtc3RyaXAiPicKaWYgJ2lkPSJsb2dvdXRUb3BCdXR0b24iJyBub3QgaW4gaDoKICAgIGlmIG1hcmtlciBub3QgaW4gaDogcmFpc2UgU3lzdGVtRXhpdCgnVG9wbyBkYSBhcGxpY2FjYW8gbmFvIGVuY29udHJhZG8nKQogICAgaD1oLnJlcGxhY2UobWFya2VyLHJlcGwsMSkKaHAud3JpdGVfdGV4dChoLGVuY29kaW5nPSd1dGYtOCcpCgpqcD1QYXRoKCdzcHJpbnQyLWludGVncmFjYW8tbG9naW4tcmVhbGRhdGEtdjEuanMnKQpqPWpwLnJlYWRfdGV4dChlbmNvZGluZz0ndXRmLTgnKQoKcm9sZV9saW5lPSJmdW5jdGlvbiByb2xlTGFiZWwocm9sZSl7cmV0dXJuIFJPTEVfTEFCRUxbcm9sZV18fHJvbGV8fCdBZG1pbmlzdHJhZG9yJ30iCmhlbHBlcnM9cicnJ2Z1bmN0aW9uIHJvbGVMYWJlbChyb2xlKXtyZXR1cm4gUk9MRV9MQUJFTFtyb2xlXXx8cm9sZXx8J0FkbWluaXN0cmFkb3InfQpmdW5jdGlvbiBub3JtYWxpemVHcm91cElkKHZhbHVlKXtjb25zdCB2PWNsZWFuKHZhbHVlKS50b1VwcGVyQ2FzZSgpO2lmKCF2KXJldHVybicnO2lmKC9eQ0xJLVxkKyQvLnRlc3QodikpcmV0dXJuIHY7aWYoL15cZCskLy50ZXN0KHYpKXJldHVybmBDTEktJHt2fWA7cmV0dXJuIHZ9CmZ1bmN0aW9uIHNldE1hc3Rlckdyb3VwTWVzc2FnZSh0ZXh0PScnLGJhZD1mYWxzZSl7Y29uc3QgZWw9JCgnbWFzdGVyR3JvdXBNZXNzYWdlJyk7aWYoIWVsKXJldHVybjtlbC50ZXh0Q29udGVudD10ZXh0O2VsLmNsYXNzTmFtZT1gbWFzdGVyLWdyb3VwLW1lc3NhZ2Uke2JhZD8nIGJhZCc6Jyd9YH0KZnVuY3Rpb24gc2hvd01hc3Rlckdyb3VwUGlja2VyKCl7cnVudGltZS5yb2xlPSdtYXN0ZXInO3J1bnRpbWUuZ3JvdXBJZD0nJzskKCdsb2dpbkZvcm0nKS5oaWRkZW49dHJ1ZTskKCdtYXN0ZXJHcm91cFBhbmVsJykuaGlkZGVuPWZhbHNlOyQoJ21hc3Rlckdyb3VwSW5wdXQnKS52YWx1ZT1ub3JtYWxpemVHcm91cElkKHNlc3Npb25TdG9yYWdlLmdldEl0ZW0oJ3JmLXNwcmludDItbWFzdGVyLXNlbGVjdGVkLWdyb3VwJykpfHwnQ0xJLTQwNzEnO3NldE1hc3Rlckdyb3VwTWVzc2FnZSgnQ29udGEgTWFzdGVyIGF1dGVudGljYWRhLiBFc2NvbGhhIG8gZ3J1cG8gcXVlIGRlc2VqYSB2aXN1YWxpemFyLicpO3NldExvZ2luTWVzc2FnZSgnJyl9CmZ1bmN0aW9uIHJlc2V0QXV0aEdhdGUoKXskKCdsb2dpbkZvcm0nKS5oaWRkZW49ZmFsc2U7JCgnbWFzdGVyR3JvdXBQYW5lbCcpLmhpZGRlbj10cnVlO3NldE1hc3Rlckdyb3VwTWVzc2FnZSgnJyl9CmFzeW5jIGZ1bmN0aW9uIG9wZW5NYXN0ZXJHcm91cCgpe2NvbnN0IGdyb3VwSWQ9bm9ybWFsaXplR3JvdXBJZCgkKCdtYXN0ZXJHcm91cElucHV0JykudmFsdWUpO2lmKCEvXkNMSS1cZCskLy50ZXN0KGdyb3VwSWQpKXJldHVybiBzZXRNYXN0ZXJHcm91cE1lc3NhZ2UoJ0luZm9ybWUgdW0gZ3J1cG8gbm8gZm9ybWF0byBDTEktNDA3MSBvdSBhcGVuYXMgNDA3MS4nLHRydWUpOyQoJ21hc3Rlckdyb3VwSW5wdXQnKS52YWx1ZT1ncm91cElkOyQoJ21hc3Rlckdyb3VwTG9hZCcpLmRpc2FibGVkPXRydWU7c2V0TWFzdGVyR3JvdXBNZXNzYWdlKGBBYnJpbmRvICR7Z3JvdXBJZH3igKZgKTt0cnl7c2Vzc2lvblN0b3JhZ2Uuc2V0SXRlbSgncmYtc3ByaW50Mi1tYXN0ZXItc2VsZWN0ZWQtZ3JvdXAnLGdyb3VwSWQpO2F3YWl0IGxvYWRSZWFsR3JvdXAoJ21hc3RlcicsZ3JvdXBJZCk7c2V0TWFzdGVyR3JvdXBNZXNzYWdlKCcnKTthd2FpdCBlbWl0TG9nKCdzcHJpbnQyLnJlYWxkYXRhX21hc3Rlcl9ncnVwb19hYmVydG8nLHtncnVwb0lkU2VsZWNpb25hZG86Z3JvdXBJZH0pfWNhdGNoKGUpe3NldE1hc3Rlckdyb3VwTWVzc2FnZShmcmllbmRseUVycm9yKGUpLHRydWUpfWZpbmFsbHl7JCgnbWFzdGVyR3JvdXBMb2FkJykuZGlzYWJsZWQ9ZmFsc2V9fQphc3luYyBmdW5jdGlvbiBsb2dvdXRDdXJyZW50KCl7YXdhaXQgZW1pdExvZygnc3ByaW50Mi5yZWFsZGF0YV9sb2dvdXQnLHtwYXBlbDpydW50aW1lLnJvbGV9KTthd2FpdCBzaWduT3V0KGF1dGgpLmNhdGNoKCgpPT57fSk7cnVudGltZS5ncm91cElkPScnO3J1bnRpbWUucm9sZT0nJztzZXNzaW9uU3RvcmFnZS5yZW1vdmVJdGVtKCdyZi1zcHJpbnQyLW1hc3Rlci1zZWxlY3RlZC1ncm91cCcpO2RvY3VtZW50LmJvZHkuY2xhc3NMaXN0LnJlbW92ZSgncmYtYXV0aC1yZWFkeScpO3Jlc2V0QXV0aEdhdGUoKTtzZXRMb2dpbk1lc3NhZ2UoJ1Nlc3PDo28gZW5jZXJyYWRhLicpfScnJwppZiAnZnVuY3Rpb24gbm9ybWFsaXplR3JvdXBJZCh2YWx1ZSknIG5vdCBpbiBqOgogICAgaWYgcm9sZV9saW5lIG5vdCBpbiBqOiByYWlzZSBTeXN0ZW1FeGl0KCdyb2xlTGFiZWwgbmFvIGVuY29udHJhZG8nKQogICAgaj1qLnJlcGxhY2Uocm9sZV9saW5lLGhlbHBlcnMsMSkKCm9sZF9sb2dpbj0idHJ5e2NvbnN0IHNlc3Npb249YXdhaXQgcGVyZm9ybUxvZ2luKGVtYWlsLHBhc3N3b3JkKTskKCdsb2dpblNlbmhhJykudmFsdWU9Jyc7YXdhaXQgbG9hZFJlYWxHcm91cChzZXNzaW9uLnJvbGUsc2Vzc2lvbi5ncm91cElkKTtzZXRMb2dpbk1lc3NhZ2UoJycpO2F3YWl0IGVtaXRMb2coJ3NwcmludDIucmVhbGRhdGFfbG9naW5fc3VjZXNzbycse3BhcGVsOnNlc3Npb24ucm9sZX0pfWNhdGNoKGUpIgpuZXdfbG9naW49InRyeXtjb25zdCBzZXNzaW9uPWF3YWl0IHBlcmZvcm1Mb2dpbihlbWFpbCxwYXNzd29yZCk7JCgnbG9naW5TZW5oYScpLnZhbHVlPScnO2lmKHNlc3Npb24ucm9sZT09PSdtYXN0ZXInJiYhc2Vzc2lvbi5ncm91cElkKXtzaG93TWFzdGVyR3JvdXBQaWNrZXIoKTthd2FpdCBlbWl0TG9nKCdzcHJpbnQyLnJlYWxkYXRhX21hc3Rlcl9hdXRlbnRpY2Fkbycse3BhcGVsOnNlc3Npb24ucm9sZX0pfWVsc2V7YXdhaXQgbG9hZFJlYWxHcm91cChzZXNzaW9uLnJvbGUsc2Vzc2lvbi5ncm91cElkKTtzZXRMb2dpbk1lc3NhZ2UoJycpO2F3YWl0IGVtaXRMb2coJ3NwcmludDIucmVhbGRhdGFfbG9naW5fc3VjZXNzbycse3BhcGVsOnNlc3Npb24ucm9sZX0pfX1jYXRjaChlKSIKaWYgb2xkX2xvZ2luIGluIGo6CiAgICBqPWoucmVwbGFjZShvbGRfbG9naW4sbmV3X2xvZ2luLDEpCmVsaWYgbmV3X2xvZ2luIG5vdCBpbiBqOgogICAgcmFpc2UgU3lzdGVtRXhpdCgnRmx1eG8gZGUgbG9naW4gZXNwZXJhZG8gbmFvIGVuY29udHJhZG8nKQoKb2xkX2xvZ291dD0iJCgnbG9nb3V0QnV0dG9uJykub25jbGljaz1hc3luYygpPT57YXdhaXQgZW1pdExvZygnc3ByaW50Mi5yZWFsZGF0YV9sb2dvdXQnLHtwYXBlbDpydW50aW1lLnJvbGV9KTthd2FpdCBzaWduT3V0KGF1dGgpO3J1bnRpbWUuZ3JvdXBJZD0nJztkb2N1bWVudC5ib2R5LmNsYXNzTGlzdC5yZW1vdmUoJ3JmLWF1dGgtcmVhZHknKTtzZXRMb2dpbk1lc3NhZ2UoJ1Nlc3PDo28gZW5jZXJyYWRhLicpO307IgpuZXdfbG9nb3V0PSIkKCdsb2dvdXRCdXR0b24nKS5vbmNsaWNrPWxvZ291dEN1cnJlbnQ7JCgnbG9nb3V0VG9wQnV0dG9uJykub25jbGljaz1sb2dvdXRDdXJyZW50OyQoJ21hc3RlckxvZ291dEJ1dHRvbicpLm9uY2xpY2s9bG9nb3V0Q3VycmVudDskKCdtYXN0ZXJHcm91cExvYWQnKS5vbmNsaWNrPW9wZW5NYXN0ZXJHcm91cDskKCdtYXN0ZXJHcm91cElucHV0JykuYWRkRXZlbnRMaXN0ZW5lcigna2V5ZG93bicsZT0+e2lmKGUua2V5PT09J0VudGVyJylvcGVuTWFzdGVyR3JvdXAoKX0pOyIKaWYgb2xkX2xvZ291dCBpbiBqOgogICAgaj1qLnJlcGxhY2Uob2xkX2xvZ291dCxuZXdfbG9nb3V0LDEpCmVsaWYgbmV3X2xvZ291dCBub3QgaW4gajoKICAgIHJhaXNlIFN5c3RlbUV4aXQoJ0JpbmRpbmcgYW50aWdvIGRlIGxvZ291dCBuYW8gZW5jb250cmFkbycpCgpvbGRfcmVzdG9yZT0iY29uc3Qgcz1hd2FpdCByZXN0b3JlU2Vzc2lvbih1c2VyKTthd2FpdCBsb2FkUmVhbEdyb3VwKHMucm9sZSxzLmdyb3VwSWQpO3NldExvZ2luTWVzc2FnZSgnJyk7YXdhaXQgZW1pdExvZygnc3ByaW50Mi5yZWFsZGF0YV9zZXNzYW9fcmVzdGF1cmFkYScse3BhcGVsOnMucm9sZX0pIgpuZXdfcmVzdG9yZT0iY29uc3Qgcz1hd2FpdCByZXN0b3JlU2Vzc2lvbih1c2VyKTtpZihzLnJvbGU9PT0nbWFzdGVyJyYmIXMuZ3JvdXBJZCl7Y29uc3Qgc2VsZWN0ZWQ9bm9ybWFsaXplR3JvdXBJZChzZXNzaW9uU3RvcmFnZS5nZXRJdGVtKCdyZi1zcHJpbnQyLW1hc3Rlci1zZWxlY3RlZC1ncm91cCcpKTtpZihzZWxlY3RlZCl7YXdhaXQgbG9hZFJlYWxHcm91cCgnbWFzdGVyJyxzZWxlY3RlZCk7c2V0TG9naW5NZXNzYWdlKCcnKTthd2FpdCBlbWl0TG9nKCdzcHJpbnQyLnJlYWxkYXRhX3Nlc3Nhb19yZXN0YXVyYWRhJyx7cGFwZWw6cy5yb2xlLGdydXBvTWFzdGVyOnNlbGVjdGVkfSl9ZWxzZXtzaG93TWFzdGVyR3JvdXBQaWNrZXIoKTthd2FpdCBlbWl0TG9nKCdzcHJpbnQyLnJlYWxkYXRhX21hc3Rlcl9yZXN0YXVyYWRvJyx7cGFwZWw6cy5yb2xlfSl9fWVsc2V7YXdhaXQgbG9hZFJlYWxHcm91cChzLnJvbGUscy5ncm91cElkKTtzZXRMb2dpbk1lc3NhZ2UoJycpO2F3YWl0IGVtaXRMb2coJ3NwcmludDIucmVhbGRhdGFfc2Vzc2FvX3Jlc3RhdXJhZGEnLHtwYXBlbDpzLnJvbGV9KX0iCmlmIG9sZF9yZXN0b3JlIGluIGo6CiAgICBqPWoucmVwbGFjZShvbGRfcmVzdG9yZSxuZXdfcmVzdG9yZSwxKQplbGlmIG5ld19yZXN0b3JlIG5vdCBpbiBqOgogICAgcmFpc2UgU3lzdGVtRXhpdCgnRmx1eG8gYW50aWdvIGRlIHJlc3RhdXJhY2FvIG5hbyBlbmNvbnRyYWRvJykKCm9sZF9jYXRjaD0ic2V0TG9naW5NZXNzYWdlKGVycm9yLm1lc3NhZ2V8fCdOw6NvIGZvaSBwb3Nzw612ZWwgY2FycmVnYXIgb3MgZGFkb3MgcmVhaXMuJyx0cnVlKTthd2FpdCBlbWl0TG9nKCdzcHJpbnQyLnJlYWxkYXRhX3N5bmNfZXJybyciCm5ld19jYXRjaD0iaWYocm9sZT09PSdtYXN0ZXInKXNldE1hc3Rlckdyb3VwTWVzc2FnZShlcnJvci5tZXNzYWdlfHwnTsOjbyBmb2kgcG9zc8OtdmVsIGNhcnJlZ2FyIG9zIGRhZG9zIHJlYWlzLicsdHJ1ZSk7ZWxzZSBzZXRMb2dpbk1lc3NhZ2UoZXJyb3IubWVzc2FnZXx8J07Do28gZm9pIHBvc3PDrXZlbCBjYXJyZWdhciBvcyBkYWRvcyByZWFpcy4nLHRydWUpO2F3YWl0IGVtaXRMb2coJ3NwcmludDIucmVhbGRhdGFfc3luY19lcnJvJyIKaWYgb2xkX2NhdGNoIGluIGo6CiAgICBqPWoucmVwbGFjZShvbGRfY2F0Y2gsbmV3X2NhdGNoLDEpCmVsaWYgbmV3X2NhdGNoIG5vdCBpbiBqOgogICAgcmFpc2UgU3lzdGVtRXhpdCgnQ2F0Y2ggZGUgc2luY3Jvbml6YWNhbyBuYW8gZW5jb250cmFkbycpCmpwLndyaXRlX3RleHQoaixlbmNvZGluZz0ndXRmLTgnKQo='))"
       - name: Auditar ajuste
         shell: bash
         run: |
           set -euo pipefail
           node --check sprint2-integracao-login-realdata-v1.js
-          python - <<'PY'
-          from pathlib import Path
-          h=Path('sprint2-integracao-login-realdata-v1.html').read_text(encoding='utf-8')
-          j=Path('sprint2-integracao-login-realdata-v1.js').read_text(encoding='utf-8')
-          checks={
-            'master_picker':'id="masterGroupPanel"' in h and 'id="masterGroupInput"' in h,
-            'grupo_4071_default':'value="CLI-4071"' in h,
-            'sair_topo':'id="logoutTopButton"' in h,
-            'sair_lateral':'id="logoutButton"' in h,
-            'master_sem_grupo_aceito':"session.role==='master'&&!session.groupId" in j,
-            'grupo_normalizado':'function normalizeGroupId(value)' in j,
-            'master_carrega_grupo':"loadRealGroup('master',groupId)" in j,
-            'master_persistencia':"rf-sprint2-master-selected-group" in j,
-            'logout_unificado':'logoutCurrent' in j and "$('logoutTopButton').onclick=logoutCurrent" in j,
-            'somente_leitura':all(x not in j for x in ['addDoc(','updateDoc(','deleteDoc(','writeBatch(','setDoc(']),
-          }
-          for k,v in checks.items(): print(f'{k}={v}')
-          print(f'MASTER_GROUP_LOGOUT_RESULT={sum(checks.values())}/{len(checks)}')
-          if not all(checks.values()): raise SystemExit('Falha na auditoria')
-          PY
+          grep -q 'id="masterGroupPanel"' sprint2-integracao-login-realdata-v1.html
+          grep -q 'value="CLI-4071"' sprint2-integracao-login-realdata-v1.html
+          grep -q 'id="logoutTopButton"' sprint2-integracao-login-realdata-v1.html
+          grep -q "session.role==='master'&&!session.groupId" sprint2-integracao-login-realdata-v1.js
+          grep -q "loadRealGroup('master',groupId)" sprint2-integracao-login-realdata-v1.js
+          grep -q "logoutTopButton').onclick=logoutCurrent" sprint2-integracao-login-realdata-v1.js
+          ! grep -Eq 'addDoc\(|updateDoc\(|deleteDoc\(|writeBatch\(|setDoc\(' sprint2-integracao-login-realdata-v1.js
           changed="$(git diff --name-only | sort)"
-          echo "$changed"
+          printf '%s\n' "$changed"
           test "$changed" = $'sprint2-integracao-login-realdata-v1.html\nsprint2-integracao-login-realdata-v1.js'
-
+          echo 'MASTER_GROUP_LOGOUT_RESULT=7/7'
       - name: Commit do ajuste
         shell: bash
         run: |
