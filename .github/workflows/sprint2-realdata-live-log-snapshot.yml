@@ -30,7 +30,7 @@ jobs:
           print('HEALTH_REASONS=',json.dumps(d.get('healthReasons',{}),ensure_ascii=False))
           PY
 
-      - name: Ler eventos vivos da integracao realdata
+      - name: Ler eventos vivos da integracao realdata e Monitor
         shell: bash
         run: |
           set -euo pipefail
@@ -42,18 +42,28 @@ jobs:
           print('GENERATED_AT=',d.get('generatedAt'))
           logs=d.get('logs',[]) or []
           arr=[]
+          monitor=[]
           for x in logs:
               e=str(x.get('evento',''))
               p=str(x.get('pagina',''))
-              if e.startswith('sprint2.realdata_') or p=='sprint2-integracao-login-realdata-v1.html':
+              if e.startswith('sprint2.realdata_') or e.startswith('sprint2.monitor_') or p in ('sprint2-integracao-login-realdata-v1.html','sprint2-integracao-monitor-v1.html'):
                   arr.append(x)
+              if e.startswith('sprint2.monitor_') or p=='sprint2-integracao-monitor-v1.html':
+                  monitor.append(x)
           arr.sort(key=lambda x:str(x.get('clienteEm','')),reverse=True)
+          monitor.sort(key=lambda x:str(x.get('clienteEm','')),reverse=True)
           print('REALDATA_EVENT_COUNT=',len(arr))
           counts={}
           for x in arr:
               e=str(x.get('evento','')); counts[e]=counts.get(e,0)+1
           print('REALDATA_EVENT_COUNTS=',json.dumps(counts,ensure_ascii=False,sort_keys=True))
-          for x in arr[:80]:
+          mcounts={}
+          for x in monitor:
+              e=str(x.get('evento','')); mcounts[e]=mcounts.get(e,0)+1
+          print('SPRINT2_MONITOR_EVENT_COUNT=',len(monitor))
+          print('SPRINT2_MONITOR_EVENT_COUNTS=',json.dumps(mcounts,ensure_ascii=False,sort_keys=True))
+          print('SPRINT2_MONITOR_ERRORS=',sum(1 for x in monitor if str(x.get('nivel','')).lower() in ('error','fatal')))
+          for x in monitor[:80]:
               safe={'clienteEm':x.get('clienteEm'),'evento':x.get('evento'),'nivel':x.get('nivel'),'grupoId':x.get('grupoId'),'pagina':x.get('pagina'),'detalhes':x.get('detalhes',{})}
-              print('REALDATA_EVENT=',json.dumps(safe,ensure_ascii=False))
+              print('SPRINT2_MONITOR_EVENT=',json.dumps(safe,ensure_ascii=False))
           PY
