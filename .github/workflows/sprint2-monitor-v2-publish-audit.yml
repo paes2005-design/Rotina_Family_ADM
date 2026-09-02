@@ -75,3 +75,5 @@ jobs:
           git add sprint2-integracao-monitor-v2.html
           git commit -m 'Sprint 2: publica Monitor V2 operacional'
           git push
+
+# trigger 2026-09-02
