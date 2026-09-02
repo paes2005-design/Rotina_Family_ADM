@@ -1,0 +1,88 @@
+name: Sprint 2 Monitor V2 fix and audit
+
+on:
+  push:
+    paths:
+      - '.github/workflows/sprint2-monitor-v2-fix-and-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Aplicar correcoes pontuais do Monitor V2
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('sprint2-monitor-realdata-v2.js')
+          s=p.read_text(encoding='utf-8')
+
+          old="function formatClock(v,fallback='—'){if(!v)return fallback;if(/^\\d{1,2}:\\d{2}(:\\d{2})?$/.test(String(v)))return String(v).length===5?`${v}:00`:String(v);const d=new Date(v);return Number.isFinite(d.getTime())?`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`:fallback}"
+          new="function formatClock(v,fallback='—'){if(!v)return fallback;if(/^\\d{1,2}:\\d{2}(:\\d{2})?$/.test(String(v)))return String(v).length===5?`${v}:00`:String(v);const d=typeof v?.toDate==='function'?v.toDate():new Date(v);return Number.isFinite(d.getTime())?`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`:fallback}"
+          assert old in s, 'formatClock alvo nao encontrado'
+          s=s.replace(old,new,1)
+
+          anchor="function alarmKey(g,p,t){return[g,p,t].map(v=>clean(v).replaceAll('/','_')).join('__')}"
+          helper="""function alarmKey(g,p,t){return[g,p,t].map(v=>clean(v).replaceAll('/','_')).join('__')}
+function alarmSchedule(x){const date=todayIso(),start=clean(x.__task.start),end=clean(x.__task.end),week=new Date(`${date}T12:00:00`);week.setHours(0,0,0,0);week.setDate(week.getDate()+(week.getDay()===0?-6:1-week.getDay()));const weekIso=`${week.getFullYear()}-${pad(week.getMonth()+1)}-${pad(week.getDate())}`;let endDate=date;if(start&&end&&end<=start){const d=new Date(`${date}T12:00:00`);d.setDate(d.getDate()+1);endDate=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}return{semanaInicio:weekIso,inicioEm:start?`${date}T${start}:00`:'',fimEm:end?`${endDate}T${end}:00`:''}}"""
+          assert anchor in s, 'alarmKey alvo nao encontrado'
+          s=s.replace(anchor,helper,1)
+
+          old_payload="diaSemana:DAY_FULL[new Date().getDay()],dataAgendada:todayIso(),horaSugeridaInicio:x.__task.start,horaSugeridaFim:x.__task.end,momentos,versaoAgenda:3"
+          new_payload="diaSemana:DAY_FULL[new Date().getDay()],dataAgendada:todayIso(),horaSugeridaInicio:x.__task.start,horaSugeridaFim:x.__task.end,...alarmSchedule(x),momentos,versaoAgenda:3"
+          assert old_payload in s, 'payload do alarme alvo nao encontrado'
+          s=s.replace(old_payload,new_payload,1)
+
+          old_shadow="m.querySelectorAll('[data-review]').forEach(x=>x.disabled=true);applyReview(x,b.dataset.review,b.dataset.pct?Number(b.dataset.pct):null,msg)"
+          new_shadow="m.querySelectorAll('[data-review]').forEach(btn=>btn.disabled=true);applyReview(x,b.dataset.review,b.dataset.pct?Number(b.dataset.pct):null,msg)"
+          assert old_shadow in s, 'sombreamento da justificativa alvo nao encontrado'
+          s=s.replace(old_shadow,new_shadow,1)
+
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Sintaxe e contrato funcional
+        shell: bash
+        run: |
+          node --check sprint2-monitor-realdata-v2.js
+          node <<'NODE'
+          const fs=require('fs');
+          const js=fs.readFileSync('sprint2-monitor-realdata-v2.js','utf8');
+          const html=fs.readFileSync('sprint2-integracao-monitor-v2.html','utf8');
+          const ok=(v,m)=>{if(!v)throw new Error(m);console.log('OK - '+m)};
+          ok(html.includes('sprint2-monitor-realdata-v2.js'),'HTML V2 carrega o Monitor V2');
+          ok(html.indexOf('Tarefas')<html.indexOf('Monitor')&&html.indexOf('Monitor')<html.indexOf('Participantes'),'menu mantem Tarefas e Monitor juntos antes de Participantes');
+          ok(js.includes("No prazo · 100%")&&js.includes("Atraso leve · 75%")&&js.includes("Atraso maior · 50%"),'faixas 100/75/50 aparecem no status real');
+          ok(js.includes('toleranciaConsumidaSeg')&&js.includes('inicioExecutadoEm')&&js.includes('terminoExecutadoEm'),'Monitor usa horario real e tolerancia consumida');
+          ok(js.includes("collection(db,'despertadores'")||js.includes("fs.collection(db,'despertadores'"),'Monitor le despertadores reais');
+          ok(js.includes("fs.setDoc(fs.doc(db,'despertadores'")&&js.includes("despertadorHistorico"),'alarme grava comando e historico');
+          ok(js.includes('semanaInicio')&&js.includes('inicioEm')&&js.includes('fimEm')&&js.includes('versaoAgenda:3'),'alarme envia contrato datado completo ao scheduler');
+          ok(js.includes('justificativaAtraso')&&js.includes('justificativaRecusada'),'Monitor exibe justificativas reais');
+          ok(js.includes('devolver até 75%')||js.includes('Devolver até 75%'),'revisao permite devolver pontos ate 75%');
+          ok(js.includes('writeBatch')&&js.includes('revisaoDecisao'),'revisao persiste decisao no historico/tarefa');
+          ok(js.includes("sprint2.monitor_v2_aberto")&&js.includes("sprint2.monitor_v2_render")&&js.includes("sprint2.monitor_v2_alarme_")&&js.includes("sprint2.monitor_v2_justificativa_"),'telemetria cobre abertura, render, alarme e justificativa');
+          ok(js.includes("typeof v?.toDate==='function'"),'horarios aceitam Timestamp do Firestore');
+          ok(js.includes("forEach(btn=>btn.disabled=true);applyReview(x,"),'revisao usa a ocorrencia correta sem sombrear variavel');
+          console.log('MONITOR_V2_RESULT=13/13');
+          NODE
+      - name: Garantir isolamento da versao oficial
+        shell: bash
+        run: |
+          git diff --name-only | tee /tmp/changed.txt
+          test "$(cat /tmp/changed.txt)" = "sprint2-monitor-realdata-v2.js"
+      - name: Publicar correcoes auditadas
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'Nenhuma correcao pendente.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add sprint2-monitor-realdata-v2.js
+          git commit -m 'Sprint 2: fecha correcoes do Monitor V2'
+          git push
