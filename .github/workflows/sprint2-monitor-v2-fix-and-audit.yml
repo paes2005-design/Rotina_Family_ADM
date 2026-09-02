@@ -49,7 +49,9 @@ jobs:
           const html=fs.readFileSync('sprint2-integracao-monitor-v2.html','utf8');
           const ok=(v,m)=>{if(!v)throw new Error(m);console.log('OK - '+m)};
           ok(html.includes('sprint2-monitor-realdata-v2.js'),'HTML V2 carrega o Monitor V2');
-          ok(html.indexOf('Tarefas')<html.indexOf('Monitor')&&html.indexOf('Monitor')<html.indexOf('Participantes'),'menu mantem Tarefas e Monitor juntos antes de Participantes');
+          const nav=(html.match(/<nav class="nav" id="mainNav">([\s\S]*?)<\/nav>/)||[])[1]||'';
+          const t=nav.indexOf('Tarefas'),m=nav.indexOf('Monitor'),p=nav.indexOf('Participantes');
+          ok(t>=0&&m>t&&p>m,'menu mantem Tarefas e Monitor juntos antes de Participantes');
           ok(js.includes("No prazo · 100%")&&js.includes("Atraso leve · 75%")&&js.includes("Atraso maior · 50%"),'faixas 100/75/50 aparecem no status real');
           ok(js.includes('toleranciaConsumidaSeg')&&js.includes('inicioExecutadoEm')&&js.includes('terminoExecutadoEm'),'Monitor usa horario real e tolerancia consumida');
           ok(js.includes("fs.collection(db,'despertadores'"),'Monitor le despertadores reais');
