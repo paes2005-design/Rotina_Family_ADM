@@ -7,7 +7,7 @@ const API_ROOT='https://rotina-family-onesignal-scheduler.rotina-family-onesigna
 const TIME_ZONE='America/Bahia';
 const DAY_SHORT=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const DAY_FULL=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-const CACHE_TTL_MS=120000;
+const CACHE_TTL_MS=5*60*1000;
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').trim();
 const esc=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -266,6 +266,22 @@ function appRows(){
 async function loadData(force=false){
   const g=groupId();
   if(!g||g==='SISTEMA'||!document.body.classList.contains('rf-auth-ready'))return false;
+  try{
+    if(window.rotinaSprint2EnsureData&&window.rotinaSprint2DataSnapshot){
+      if(force&&window.rotinaSprint2SyncNow)await window.rotinaSprint2SyncNow('monitor-manual');
+      else await window.rotinaSprint2EnsureData();
+      const shared=window.rotinaSprint2DataSnapshot();
+      if(shared&&clean(shared.groupId).toUpperCase()===g){
+        taskDocs=(shared.taskDocs||[]).map(x=>({...x}));
+        historyDocs=(shared.history||[]).map(x=>({...x}));
+        executionDocs=(shared.executions||[]).map(x=>({...x}));
+        alarmDocs=(shared.alarms||[]).map(x=>({...x}));
+        lastGroup=g;lastLoadAt=Number(shared.lastServerSync)||Date.now();
+        await log('sprint2.monitor_v3_dados',{tarefas:taskDocs.length,historico:historyDocs.length,execucoes:executionDocs.length,alarmes:alarmDocs.length,storeCentral:true});
+        return true;
+      }
+    }
+  }catch(e){console.warn('Monitor V3 store central:',e)}
   if(!force&&g===lastGroup&&Date.now()-lastLoadAt<CACHE_TTL_MS&&taskDocs.length)return true;
   if(!await firebaseReady())return false;
   try{
@@ -281,7 +297,7 @@ async function loadData(force=false){
     executionDocs=(es.docs||[]).map(d=>({id:d.id,...d.data()}));
     alarmDocs=(as.docs||[]).map(d=>({id:d.id,...d.data()}));
     lastGroup=g;lastLoadAt=Date.now();
-    await log('sprint2.monitor_v3_dados',{tarefas:taskDocs.length,historico:historyDocs.length,execucoes:executionDocs.length,alarmes:alarmDocs.length});
+    await log('sprint2.monitor_v3_dados',{tarefas:taskDocs.length,historico:historyDocs.length,execucoes:executionDocs.length,alarmes:alarmDocs.length,storeCentral:false});
     return true;
   }catch(e){
     console.error('Monitor V3 dados:',e);
@@ -384,7 +400,7 @@ async function openAlarm(x){
       await fs.setDoc(fs.doc(db,'despertadores',alarmKey(groupId(),x.__pid,x.__sourceId)),payload,{merge:true});
       await fs.addDoc(fs.collection(db,'despertadorHistorico'),{...payload,evento:ativo?'ativado-na-data':'retirado-da-data',criadoEm:fs.serverTimestamp()});
       await log(ativo?'sprint2.monitor_v3_alarme_ativado':'sprint2.monitor_v3_alarme_retirado',{tarefaIdentificada:!!x.__sourceId});
-      msg.textContent=ativo?'Alarme ativado.':'Alarme retirado.';lastLoadAt=0;setTimeout(()=>{closeModal();render(true)},350);
+      msg.textContent=ativo?'Alarme ativado.':'Alarme retirado.';if(window.rotinaSprint2SyncLocal)await window.rotinaSprint2SyncLocal('monitor-alarme-cache-local').catch(()=>{});setTimeout(()=>{closeModal();render(false)},350);
     }catch(e){msg.textContent='Não foi possível salvar o alarme.';await log('sprint2.monitor_v3_alarme_erro',{mensagem:String(e?.message||e).slice(0,70)},'error')}
   };
   m.querySelector('#mv2AlarmOn').onclick=()=>command(true);m.querySelector('#mv2AlarmOff').onclick=()=>command(false);
@@ -401,7 +417,7 @@ async function applyReview(x,type,targetPct=null,msg){
     else{const pct=type==='manter'?o.pct:Math.max(o.pct,Number(targetPct)||o.pct),points=type==='manter'?o.points:Math.max(o.points,Math.round(o.max*pct/100));patch={pontosGanhos:points,pontosOriginais:o.points,percentualOriginal:o.pct,percentualRevisado:pct,pontosDevolvidos:Math.max(0,points-o.points),revisaoStatus:'revisado',revisaoDecisao:type==='manter'?'manter':`devolver-${pct}`,revisadoEm:new Date().toISOString()}}
     batch.update(histRef,patch);if(execSnap?.exists())batch.update(execRef,patch);await batch.commit();
     await log(type==='reverter'?'sprint2.monitor_v3_justificativa_reverter':'sprint2.monitor_v3_justificativa_decisao',{alvoPct:targetPct===null?-1:Number(targetPct),reversao:type==='reverter'});
-    msg.textContent='Decisão registrada na ocorrência.';lastLoadAt=0;setTimeout(()=>{closeModal();render(true)},350);
+    msg.textContent='Decisão registrada na ocorrência.';if(window.rotinaSprint2SyncLocal)await window.rotinaSprint2SyncLocal('monitor-revisao-cache-local').catch(()=>{});setTimeout(()=>{closeModal();render(false)},350);
   }catch(e){msg.textContent=e.message||'Não foi possível registrar a decisão.';await log('sprint2.monitor_v3_justificativa_erro',{mensagem:String(e?.message||e).slice(0,70)},'error')}
 }
 async function openJustification(x){
@@ -415,7 +431,7 @@ async function openJustification(x){
 function patchUi(){
   injectStyle();ensureControls();const note=$('view-monitor')?.querySelector('.integration-note');if(note)note.innerHTML='<b>Monitor V3:</b> o ADM não recalcula a execução. Ele lê a ocorrência oficial registrada pelo Participante; sem ocorrência, a tarefa permanece Pendente.';
   const pill=$('view-monitor')?.querySelector('.activepill');if(pill)pill.textContent='V3 • FONTE ÚNICA';
-  const n=$('view-monitor')?.querySelector('.monitor-note');if(n){n.className='monitor-v2-warning monitor-note';n.textContent='Arquitetura desta etapa: ADM configura a regra; Participante registra a execução; Monitor apenas acompanha o resultado. Cache de tela: 2 minutos, com atualização manual.'}
+  const n=$('view-monitor')?.querySelector('.monitor-note');if(n){n.className='monitor-v2-warning monitor-note';n.textContent='Arquitetura desta etapa: ADM configura a regra; Participante registra a execução; Monitor apenas acompanha o resultado. Store central: sincronização remota a cada 5 minutos; ações locais reaproveitam o cache persistente sem nova leitura remota.'}
   const title=$('view-monitor')?.querySelector('h2');if(title)title.textContent='Acompanhamento operacional';const desc=$('view-monitor')?.querySelector('.head p');if(desc)desc.textContent='Previsto x realizado, resultado oficial do Participante, alarmes e revisão de justificativas.';const lastKpi=$('mPending')?.parentElement?.querySelector('small');if(lastKpi)lastKpi.textContent='Pendentes';
 }
 function reorderMenu(){const nav=$('mainNav'),monitor=$('monitorNavButton');if(!nav||!monitor)return;const participants=[...nav.children].find(b=>/Participantes/.test(b.textContent));if(participants&&monitor.nextElementSibling!==participants)nav.insertBefore(monitor,participants)}
@@ -426,7 +442,7 @@ function bind(){
   if(bound)return true;const nav=$('monitorNavButton'),sel=$('monitorParticipant');if(!nav||!sel||!window.RF_APP)return false;bound=true;patchUi();reorderMenu();nav.addEventListener('click',()=>openMonitor(true));sel.addEventListener('change',()=>{current=sel.value;render(false);log('sprint2.monitor_v3_filtro',{filtro:current==='__ALL__'?'todos':'participante'})});document.querySelectorAll('#mainNav [data-route]').forEach(b=>b.addEventListener('click',()=>sessionStorage.setItem('rf-sprint2-integration-route',b.dataset.route||'inicio')));
   const observer=new MutationObserver(()=>{if(document.body.classList.contains('rf-auth-ready')){const wanted=sessionStorage.getItem('rf-sprint2-integration-route');if(wanted==='monitor'&&!$('view-monitor')?.classList.contains('active'))setTimeout(()=>openMonitor(false),0)}});observer.observe(document.body,{attributes:true,attributeFilter:['class']});
   if(document.body.classList.contains('rf-auth-ready')&&sessionStorage.getItem('rf-sprint2-integration-route')==='monitor')openMonitor(false);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('view-monitor')?.classList.contains('active')&&Date.now()-lastLoadAt>CACHE_TTL_MS)render(true)});window.addEventListener('online',()=>{if($('view-monitor')?.classList.contains('active')){lastLoadAt=0;render(true)}});return true;
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('view-monitor')?.classList.contains('active')&&Date.now()-lastLoadAt>CACHE_TTL_MS)render(true)});window.addEventListener('online',()=>{if($('view-monitor')?.classList.contains('active')&&Date.now()-lastLoadAt>CACHE_TTL_MS)render(true)});window.addEventListener('rotina-sprint2-cache-updated',()=>{if($('view-monitor')?.classList.contains('active'))render(false)});return true;
 }
 
 let tries=0;const timer=setInterval(()=>{tries++;if(bind())clearInterval(timer);else if(tries>160)clearInterval(timer)},50);
