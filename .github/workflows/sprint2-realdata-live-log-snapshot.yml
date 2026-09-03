@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/sprint2-realdata-live-log-snapshot.yml'
+      - '.github/triggers/sprint2-realdata-live-log-snapshot.txt'
   workflow_dispatch:
 
 permissions:
@@ -47,11 +48,11 @@ jobs:
           for x in logs:
               e=str(x.get('evento',''))
               p=str(x.get('pagina',''))
-              if e.startswith('sprint2.realdata_') or e.startswith('sprint2.monitor_') or p in ('sprint2-integracao-login-realdata-v1.html','sprint2-integracao-monitor-v1.html','sprint2-integracao-recompensas-v1.html'):
+              if e.startswith('sprint2.realdata_') or e.startswith('sprint2.monitor_') or e.startswith('tarefas_v2_') or e.startswith('recompensas_') or e.startswith('participantes_') or p in ('sprint2-integracao-login-realdata-v1.html','sprint2-integracao-monitor-v1.html','sprint2-integracao-monitor-v2.html','sprint2-integracao-participantes-v1.html','sprint2-integracao-recompensas-v1.html'):
                   arr.append(x)
               if 'analise' in e.lower() or 'analysis' in e.lower():
                   analysis.append(x)
-              if e.startswith('sprint2.monitor_') or p=='sprint2-integracao-monitor-v1.html':
+              if e.startswith('sprint2.monitor_') or p in ('sprint2-integracao-monitor-v1.html','sprint2-integracao-monitor-v2.html'):
                   monitor.append(x)
           arr.sort(key=lambda x:str(x.get('clienteEm','')),reverse=True)
           analysis.sort(key=lambda x:str(x.get('clienteEm','')),reverse=True)
@@ -61,13 +62,15 @@ jobs:
           for x in arr:
               e=str(x.get('evento','')); counts[e]=counts.get(e,0)+1
           print('REALDATA_EVENT_COUNTS=',json.dumps(counts,ensure_ascii=False,sort_keys=True))
+          print('REALDATA_ERRORS=',sum(1 for x in arr if str(x.get('nivel','')).lower() in ('error','fatal')))
+          print('REALDATA_WARNINGS=',sum(1 for x in arr if str(x.get('nivel','')).lower()=='warning'))
           print('ANALYSIS_EVENT_COUNT=',len(analysis))
           print('ANALYSIS_ERRORS=',sum(1 for x in analysis if str(x.get('nivel','')).lower() in ('error','fatal')))
           for x in analysis[:80]:
               safe={'clienteEm':x.get('clienteEm'),'evento':x.get('evento'),'nivel':x.get('nivel'),'grupoId':x.get('grupoId'),'pagina':x.get('pagina'),'detalhes':x.get('detalhes',{})}
               print('SPRINT2_ANALYSIS_EVENT=',json.dumps(safe,ensure_ascii=False))
           print('REALDATA_RECENT_START')
-          for x in arr[:120]:
+          for x in arr[:150]:
               safe={'clienteEm':x.get('clienteEm'),'evento':x.get('evento'),'nivel':x.get('nivel'),'grupoId':x.get('grupoId'),'pagina':x.get('pagina'),'detalhes':x.get('detalhes',{})}
               print('SPRINT2_REALDATA_EVENT=',json.dumps(safe,ensure_ascii=False))
           print('REALDATA_RECENT_END')
