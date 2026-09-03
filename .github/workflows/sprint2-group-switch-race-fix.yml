@@ -1,0 +1,64 @@
+name: Sprint 2 group switch race fix
+
+on:
+  push:
+    paths:
+      - '.github/triggers/sprint2-group-switch-race-fix.txt'
+      - '.github/workflows/sprint2-group-switch-race-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Aplicar correção da corrida entre grupos
+        run: python scripts/sprint2_group_switch_race_fix.py
+
+      - name: Validar sintaxe JavaScript
+        run: |
+          node --check sprint2-data-store-v1.js
+          node --check sprint2-participantes-realdata-v1.js
+          node --check sprint2-integracao-login-realdata-v1.js
+          node --check sprint2-monitor-realdata-v2.js
+
+      - name: Auditar invariantes da troca de grupo
+        shell: python
+        run: |
+          from pathlib import Path
+          store=Path('sprint2-data-store-v1.js').read_text(encoding='utf-8')
+          part=Path('sprint2-participantes-realdata-v1.js').read_text(encoding='utf-8')
+          checks={
+            'uma unica escuta continua': store.count('fs.onSnapshot(')==1,
+            'listener continua somente em execucoes': "fs.collection(db,'execucoes')" in store,
+            'listener exige grupo pronto': 'data.readyGroup!==listenerGroup' in store,
+            'snapshot antigo e descartado': 'if(groupId()!==g)return false;' in store,
+            'consulta fica presa ao grupo de origem': 'queryGroup(c,server,g)' in store,
+            'grupo so fica pronto apos leitura base': 'if(failures===0)data.readyGroup=g' in store,
+            'participantes nao normaliza tarefas': 'normalizeState?.()' not in part,
+            'participantes ignora grupo em transicao': 'ready!==g' in part and 'acceptProfiles()' in part,
+            'participantes sem listener proprio': 'onSnapshot(' not in part,
+          }
+          for label,ok in checks.items(): print(('OK   ' if ok else 'FALHA'),label)
+          print(f'GROUP_SWITCH_RACE_AUDIT={sum(checks.values())}/{len(checks)}')
+          if not all(checks.values()): raise SystemExit(1)
+
+      - name: Confirmar escopo da correção
+        shell: bash
+        run: |
+          { git diff --name-only; git ls-files --others --exclude-standard; } | sort -u | tee /tmp/changed.txt
+          printf '%s\n' sprint2-data-store-v1.js sprint2-participantes-realdata-v1.js | sort > /tmp/expected.txt
+          diff -u /tmp/expected.txt /tmp/changed.txt
+
+      - name: Publicar correção auditada
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add sprint2-data-store-v1.js sprint2-participantes-realdata-v1.js
+          git commit -m 'Sprint 2: corrige perda de tarefas na troca de grupo'
+          git push
