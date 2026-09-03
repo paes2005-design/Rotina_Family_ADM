@@ -1,0 +1,64 @@
+name: Sprint 2 Participantes V1 integration
+
+on:
+  push:
+    paths:
+      - '.github/triggers/sprint2-participantes-v1.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  integrate-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Integrar Participantes ao Store central
+        run: python scripts/sprint2_participantes_v1_integrate.py
+
+      - name: Validar sintaxe JavaScript
+        run: |
+          node --check sprint2-integracao-login-realdata-v1.js
+          node --check sprint2-data-store-v1.js
+          node --check sprint2-participantes-realdata-v1.js
+          node --check sprint2-monitor-realdata-v2.js
+
+      - name: Auditar arquitetura Firebase
+        shell: python
+        run: |
+          from pathlib import Path
+          store=Path('sprint2-data-store-v1.js').read_text(encoding='utf-8')
+          part=Path('sprint2-participantes-realdata-v1.js').read_text(encoding='utf-8')
+          html=Path('sprint2-integracao-participantes-v1.html').read_text(encoding='utf-8')
+          checks={
+            'uma unica escuta continua': store.count('fs.onSnapshot(')==1,
+            'escuta somente execucoes': "fs.collection(db,'execucoes')" in store,
+            'participantes nao abre listener': 'onSnapshot(' not in part,
+            'perfis reconciliados sem listener': "['perfis','tarefas','historico','despertadores']" in store,
+            'manual inclui execucoes e perfis': "['perfis','tarefas','historico','execucoes','despertadores']" in store,
+            'PIN nunca exibido': 'type="password"' in part and 'pinHash' in part,
+            'PIN SHA-256': "crypto.subtle.digest('SHA-256'" in part,
+            'sem delete participante': 'deleteDoc(' not in part,
+            'pagina nova isolada': Path('sprint2-integracao-monitor-v2.html').exists() and 'participantNavButton' in html,
+          }
+          for label,ok in checks.items(): print(('OK   ' if ok else 'FALHA'),label)
+          print(f'PARTICIPANTES_FIREBASE_AUDIT={sum(checks.values())}/{len(checks)}')
+          if not all(checks.values()): raise SystemExit(1)
+
+      - name: Confirmar escopo da mudança
+        shell: bash
+        run: |
+          git diff --name-only | sort | tee /tmp/changed.txt
+          printf '%s\n' sprint2-data-store-v1.js sprint2-integracao-login-realdata-v1.js sprint2-integracao-participantes-v1.html | sort > /tmp/expected.txt
+          diff -u /tmp/expected.txt /tmp/changed.txt
+
+      - name: Publicar integração auditada
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '4189823+github-actions[bot]@users.noreply.github.com'
+          git add sprint2-data-store-v1.js sprint2-integracao-login-realdata-v1.js sprint2-integracao-participantes-v1.html
+          git commit -m 'Sprint 2: integra Participantes V1 ao fluxo real'
+          git push
