@@ -1,0 +1,58 @@
+name: Sprint 2 Recompensas V1 integration
+on:
+  push:
+    paths:
+      - '.github/triggers/sprint2-recompensas-v1.txt'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  integrate-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Integrar Recompensas V1
+        run: python scripts/sprint2_recompensas_v1_integrate.py
+      - name: Validar sintaxe JavaScript
+        run: |
+          node --check sprint2-data-store-v1.js
+          node --check sprint2-recompensas-realdata-v1.js
+          node --check sprint2-participantes-realdata-v1.js
+          node --check sprint2-monitor-realdata-v2.js
+      - name: Auditar arquitetura Firebase e tela
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          store=Path('sprint2-data-store-v1.js').read_text()
+          html=Path('sprint2-integracao-recompensas-v1.html').read_text()
+          mod=Path('sprint2-recompensas-realdata-v1.js').read_text()
+          checks={
+            'uma escuta continua': store.count('fs.onSnapshot(')==1,
+            'escuta apenas execucoes': "fs.collection(db,'execucoes')" in store,
+            'recompensas no store': "queryGroup('recompensas'" in store and 'data.rewards' in store,
+            'resgates no store': "queryGroup('resgates'" in store and 'data.redemptions' in store,
+            'nav recompensas': 'id="rewardNavButton"' in html,
+            'view recompensas': 'id="view-recompensas"' in html,
+            'modulo carregado': 'sprint2-recompensas-realdata-v1.js' in html,
+            'sem listener no modulo': 'onSnapshot(' not in mod,
+            'decisao preserva push': 'pushClientePendente:true' in mod,
+            'protecao de grupo': 'guardRecord' in mod and 'readyGroup' in mod,
+            'historico preservado': 'histórico preservado' in mod.lower(),
+          }
+          for k,v in checks.items(): print(('OK' if v else 'FALHA'),k)
+          if not all(checks.values()): raise SystemExit(1)
+          print(f'OK: {sum(checks.values())}/{len(checks)} verificações')
+          PY
+      - name: Confirmar que Participantes aprovado não foi alterado
+        run: git diff --exit-code -- sprint2-integracao-participantes-v1.html sprint2-participantes-realdata-v1.js sprint2-monitor-realdata-v2.js
+      - name: Publicar integração auditada
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add sprint2-data-store-v1.js sprint2-integracao-recompensas-v1.html
+          if git diff --cached --quiet; then
+            echo 'Sem alterações pendentes.'
+          else
+            git commit -m 'Sprint 2: integra Recompensas V1 ao Store central'
+            git push
+          fi
