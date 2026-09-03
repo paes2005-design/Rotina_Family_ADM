@@ -1,0 +1,1 @@
+Executar correção auditada da corrida na troca de grupo em 2026-09-02.
