@@ -1,0 +1,55 @@
+name: Sprint 2 Master participant edit fix
+
+on:
+  push:
+    paths:
+      - '.github/triggers/sprint2-master-participant-edit-fix.txt'
+      - '.github/workflows/sprint2-master-participant-edit-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Aplicar liberação segura do Master
+        run: python scripts/sprint2_master_participant_edit_fix.py
+
+      - name: Validar sintaxe JavaScript
+        run: node --check sprint2-participantes-realdata-v1.js
+
+      - name: Auditar escopo e segurança
+        shell: python
+        run: |
+          from pathlib import Path
+          s=Path('sprint2-participantes-realdata-v1.js').read_text(encoding='utf-8')
+          checks={
+            'master pode editar': "['adm_familia','adm_convidado','master']" in s,
+            'grupo da sessao validado': "sg!==g" in s,
+            'documento do participante validado': "clean(p.grupoId).toUpperCase()!==g" in s,
+            'um modulo sem listener proprio': 'onSnapshot(' not in s,
+            'nao reintroduz normalizeState': 'normalizeState?.()' not in s,
+          }
+          for label,ok in checks.items(): print(('OK   ' if ok else 'FALHA'),label)
+          print(f'MASTER_PARTICIPANT_EDIT_AUDIT={sum(checks.values())}/{len(checks)}')
+          if not all(checks.values()): raise SystemExit(1)
+
+      - name: Confirmar escopo da alteração
+        shell: bash
+        run: |
+          { git diff --name-only; git ls-files --others --exclude-standard; } | sort -u | tee /tmp/changed.txt
+          printf '%s\n' sprint2-participantes-realdata-v1.js | sort > /tmp/expected.txt
+          diff -u /tmp/expected.txt /tmp/changed.txt
+
+      - name: Publicar correção auditada
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add sprint2-participantes-realdata-v1.js
+          git commit -m 'Sprint 2: libera editar participante e trocar PIN no Master'
+          git push
