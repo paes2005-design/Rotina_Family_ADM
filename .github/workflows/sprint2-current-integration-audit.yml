@@ -1,0 +1,89 @@
+name: Sprint 2 current integration audit
+
+on:
+  push:
+    paths:
+      - 'sprint2-integracao-recompensas-v1.html'
+      - 'sprint2-integracao-login-realdata-v1.js'
+      - 'sprint2-integracao-login-realdata-bridge-v1.js'
+      - 'sprint2-data-store-v1.js'
+      - 'sprint2-tarefas-realdata-v2.js'
+      - 'sprint2-monitor-realdata-v2.js'
+      - 'sprint2-participantes-realdata-v1.js'
+      - 'sprint2-recompensas-realdata-v1.js'
+      - '.github/workflows/sprint2-current-integration-audit.yml'
+      - '.github/triggers/sprint2-current-integration-audit.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validar sintaxe dos módulos integrados
+        run: |
+          set -euo pipefail
+          for f in \
+            sprint2-integracao-login-realdata-v1.js \
+            sprint2-integracao-login-realdata-bridge-v1.js \
+            sprint2-data-store-v1.js \
+            sprint2-tarefas-realdata-v2.js \
+            sprint2-monitor-realdata-v2.js \
+            sprint2-participantes-realdata-v1.js \
+            sprint2-recompensas-realdata-v1.js; do
+              echo "node --check $f"
+              node --check "$f"
+          done
+
+      - name: Auditar arquitetura e contratos da Sprint 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def text(name): return Path(name).read_text(encoding='utf-8')
+          def require(ok,msg):
+              if not ok: raise SystemExit('FALHA: '+msg)
+              print('OK:',msg)
+
+          store=text('sprint2-data-store-v1.js')
+          bridge=text('sprint2-integracao-login-realdata-v1.js')
+          html=text('sprint2-integracao-recompensas-v1.html')
+          tasks=text('sprint2-tarefas-realdata-v2.js')
+          monitor=text('sprint2-monitor-realdata-v2.js')
+          participants=text('sprint2-participantes-realdata-v1.js')
+          rewards=text('sprint2-recompensas-realdata-v1.js')
+
+          require(store.count('fs.onSnapshot(')==1,'Store mantém exatamente um listener contínuo')
+          require("collection(db,'execucoes')" in store,'listener contínuo permanece em execucoes')
+          for name,src in [('Tarefas',tasks),('Monitor',monitor),('Participantes',participants),('Recompensas',rewards)]:
+              require('onSnapshot(' not in src,f'{name} não cria listener próprio')
+
+          require('window.rotinaSprint2TasksRender' in tasks,'Tarefas expõe interface única de renderização')
+          require('window.rotinaSprint2TasksRender' in bridge,'Início usa a interface pública de Tarefas')
+          for legacy in ["$('taskParticipant').onchange","$('taskSearch').oninput","$('taskFilter').onchange"]:
+              require(legacy not in bridge,f'Início não reata controle legado {legacy}')
+
+          require('data-tv2-more' in tasks,'três pontos de detalhes estão no módulo-fonte de Tarefas')
+          require('Semana' in tasks and 'Alarme' in tasks and 'Observação' in tasks,'detalhes preservam Semana, Alarme e Observação')
+          require('snap.alarms' in tasks or 'snapshot().alarms' in tasks or '(snap.alarms||[])' in tasks,'Tarefas lê despertadores pelo Store central')
+
+          for script in ['sprint2-data-store-v1.js','sprint2-tarefas-realdata-v2.js','sprint2-monitor-realdata-v2.js','sprint2-participantes-realdata-v1.js','sprint2-recompensas-realdata-v1.js']:
+              require(script in html,f'HTML integrado carrega {script}')
+
+          require('readyGroup' in store,'Store mantém trava de grupo pronto')
+          require('readyGroup' in tasks,'Tarefas valida grupo pronto antes de renderizar')
+          require('readyGroup' in participants,'Participantes valida grupo pronto')
+          require('readyGroup' in rewards,'Recompensas valida grupo pronto')
+
+          for field in ['pushClientePendente','pushClienteSolicitadoEm','pushClienteTentativas']:
+              require(field in rewards,f'Recompensas preserva efeito oficial {field}')
+
+          require('Conquistas permanecem congeladas' in rewards or 'Conquistas' in rewards and 'congelad' in rewards.lower(),'Conquistas continua explicitamente congelada, sem mock real')
+          print('SPRINT2_CURRENT_INTEGRATION_AUDIT=PASS')
+          PY
