@@ -1,0 +1,67 @@
+name: Sprint 2 Monitor V3 final audit
+
+on:
+  push:
+    paths:
+      - 'sprint2-data-store-v1.js'
+      - 'sprint2-monitor-realdata-v2.js'
+      - 'sprint2-integracao-monitor-v2.html'
+      - '.github/workflows/sprint2-monitor-v3-final-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  final-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validar sintaxe JavaScript
+        run: |
+          node --check sprint2-data-store-v1.js
+          node --check sprint2-monitor-realdata-v2.js
+
+      - name: Auditar arquitetura do Monitor V3
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          store = Path('sprint2-data-store-v1.js').read_text(encoding='utf-8')
+          monitor = Path('sprint2-monitor-realdata-v2.js').read_text(encoding='utf-8')
+          html = Path('sprint2-integracao-monitor-v2.html').read_text(encoding='utf-8')
+
+          checks = []
+          def ok(label, condition):
+              checks.append((label, bool(condition)))
+              print(('OK   ' if condition else 'FALHA'), label)
+
+          ok('existe exatamente uma escuta contínua Firestore', store.count('fs.onSnapshot(') == 1)
+          ok('escuta contínua aponta para execucoes', "fs.collection(db,'execucoes')" in store)
+          ok('historico não possui escuta contínua', not re.search(r"onSnapshot[^\n]+historico|historico[^\n]+onSnapshot", store))
+          ok('listener único é protegido por liveUnsubs.length===1', 'liveUnsubs.length===1' in store)
+          ok('reconciliação periódica cobre tarefas, historico e despertadores', "['tarefas','historico','despertadores']" in store)
+          ok('sincronização total/manual cobre as quatro coleções', "['tarefas','historico','execucoes','despertadores']" in store)
+          ok('intervalo de segurança permanece em cinco minutos', 'const SYNC_MS=5*60*1000' in store)
+          ok('menu limpa todas as seleções antes de selecionar rota', "nav.querySelectorAll('button').forEach(b=>b.classList.remove('active'))" in store)
+          ok('menu contempla inicio, tarefas e monitor', "['inicio','tarefas','monitor'].includes(route)" in store)
+          ok('Monitor redesenha quando store publica atualização', "window.addEventListener('rotina-sprint2-cache-updated'" in monitor)
+          ok('botão Atualizar força sincronização remota', "rotinaSprint2SyncNow('monitor-manual')" in monitor)
+
+          login_pos = html.find('sprint2-integracao-login-realdata-v1.js')
+          store_pos = html.find('sprint2-data-store-v1.js')
+          monitor_pos = html.find('sprint2-monitor-realdata-v2.js')
+          ok('ordem de scripts é Login -> Store -> Monitor', -1 not in (login_pos, store_pos, monitor_pos) and login_pos < store_pos < monitor_pos)
+
+          passed = sum(v for _, v in checks)
+          total = len(checks)
+          print(f'SPRINT2_MONITOR_FINAL_AUDIT={passed}/{total}')
+          if passed != total:
+              raise SystemExit(1)
+
+      - name: Confirmar escopo da mudança
+        run: |
+          echo 'Monitor V3: arquitetura de uma única escuta contínua validada.'
+          echo 'Versão oficial anterior permanece fora deste fluxo de Sprint 2.'
