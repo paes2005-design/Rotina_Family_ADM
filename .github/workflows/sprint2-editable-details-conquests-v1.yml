@@ -1,0 +1,67 @@
+name: Sprint 2 editable details and Conquistas V1
+
+on:
+  push:
+    paths:
+      - 'scripts/sprint2_editable_details_conquests_v1.py'
+      - '.github/workflows/sprint2-editable-details-conquests-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Aplicar integração
+        run: python scripts/sprint2_editable_details_conquests_v1.py
+
+      - name: Auditar JavaScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check sprint2-data-store-v1.js
+          node --check sprint2-tarefas-realdata-v2.js
+          node --check sprint2-recompensas-realdata-v1.js
+          node --check sprint2-conquistas-realdata-v1.js
+          node --check sprint2-participantes-realdata-v1.js
+          node --check sprint2-monitor-realdata-v2.js
+
+      - name: Auditar contratos da Sprint 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(grep -o 'onSnapshot(' sprint2-data-store-v1.js | wc -l)" -eq 1
+          grep -q "collection(db,'execucoes')" sprint2-data-store-v1.js
+          ! grep -q 'onSnapshot(' sprint2-tarefas-realdata-v2.js
+          ! grep -q 'onSnapshot(' sprint2-recompensas-realdata-v1.js
+          ! grep -q 'onSnapshot(' sprint2-conquistas-realdata-v1.js
+          grep -q 'data-tv2-detail-save' sprint2-tarefas-realdata-v2.js
+          grep -q "collection(db,'tarefas')" sprint2-tarefas-realdata-v2.js
+          grep -q "doc(db,'despertadores'" sprint2-tarefas-realdata-v2.js
+          grep -q "conquistas" sprint2-data-store-v1.js
+          grep -q "conquistaHistorico" sprint2-data-store-v1.js
+          grep -q 'id="rv1ConquestsPanel"' sprint2-recompensas-realdata-v1.js
+          grep -q 'rv1HistoryType' sprint2-recompensas-realdata-v1.js
+          grep -q 'sprint2-conquistas-realdata-v1.js' sprint2-integracao-recompensas-v1.html
+          git diff --check
+          echo 'AUDIT_OK=1'
+
+      - name: Publicar integração
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Sem alterações pendentes.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add sprint2-data-store-v1.js sprint2-tarefas-realdata-v2.js sprint2-recompensas-realdata-v1.js sprint2-integracao-recompensas-v1.html
+          git commit -m 'Sprint 2: integra detalhes editáveis e Conquistas V1'
+          git push
