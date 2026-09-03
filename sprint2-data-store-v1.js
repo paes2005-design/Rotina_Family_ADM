@@ -8,12 +8,13 @@ const clean=v=>String(v??'').trim();
 
 let db=null,fs=null,app=null,timer=null,syncing=null,installed=false,liveGroup='';
 let liveUnsubs=[];
-let data={groupId:'',readyGroup:'',profiles:[],taskDocs:[],history:[],executions:[],alarms:[],rewards:[],redemptions:[],lastServerSync:0,lastLiveSync:0,lastLocalSync:0,origin:'empty',version:VERSION};
+let data={groupId:'',readyGroup:'',profiles:[],taskDocs:[],history:[],executions:[],alarms:[],rewards:[],redemptions:[],conquests:[],conquestEvents:[],lastServerSync:0,lastLiveSync:0,lastLocalSync:0,origin:'empty',version:VERSION};
 
 function groupId(){return clean($('topGroup')?.textContent).replace(/^Grupo\s+/i,'').toUpperCase()}
 function copy(list){return (list||[]).map(x=>({...x}))}
-function reset(g=''){data={groupId:g,readyGroup:'',profiles:[],taskDocs:[],history:[],executions:[],alarms:[],rewards:[],redemptions:[],lastServerSync:0,lastLiveSync:0,lastLocalSync:0,origin:'reset',version:VERSION}}
-function snapshot(){return{...data,profiles:copy(data.profiles),taskDocs:copy(data.taskDocs),history:copy(data.history),executions:copy(data.executions),alarms:copy(data.alarms),rewards:copy(data.rewards),redemptions:copy(data.redemptions)}}
+function conquestAccess(){return clean(window.rotinaSprint2SessionSnapshot?.().role)==='master'}
+function reset(g=''){data={groupId:g,readyGroup:'',profiles:[],taskDocs:[],history:[],executions:[],alarms:[],rewards:[],redemptions:[],conquests:[],conquestEvents:[],lastServerSync:0,lastLiveSync:0,lastLocalSync:0,origin:'reset',version:VERSION}}
+function snapshot(){return{...data,profiles:copy(data.profiles),taskDocs:copy(data.taskDocs),history:copy(data.history),executions:copy(data.executions),alarms:copy(data.alarms),rewards:copy(data.rewards),redemptions:copy(data.redemptions),conquests:copy(data.conquests),conquestEvents:copy(data.conquestEvents)}}
 function publish(origin,server=false,failures=0){data.origin=origin;if(server&&failures===0)data.lastServerSync=Date.now();else if(!server)data.lastLocalSync=Date.now();window.dispatchEvent(new CustomEvent('rotina-sprint2-cache-updated',{detail:{groupId:data.groupId,readyGroup:data.readyGroup,origin,server,failures,lastServerSync:data.lastServerSync,lastLiveSync:data.lastLiveSync,version:VERSION}}))}
 
 function syncNavSelection(route){
@@ -102,6 +103,11 @@ async function supplementInitial(){
     if(results[0].status==='fulfilled')data.alarms=results[0].value;
     if(results[1].status==='fulfilled')data.rewards=results[1].value;
     if(results[2].status==='fulfilled')data.redemptions=results[2].value;
+    if(conquestAccess()){
+      const optional=await Promise.allSettled([queryGroup('conquistas',true,g),queryGroup('conquistaHistorico',true,g)]);
+      if(optional[0].status==='fulfilled')data.conquests=optional[0].value;
+      if(optional[1].status==='fulfilled')data.conquestEvents=optional[1].value;
+    }else{data.conquests=[];data.conquestEvents=[]}
     const failures=results.filter(x=>x.status==='rejected').length;
     publish('store-inicial-complementar',true,failures);
     return failures===0;
@@ -118,10 +124,12 @@ async function fullSync(origin='store-intervalo-5min',server=true,insideInitial=
     const liveAlready=liveGroup===g&&liveUnsubs.length===1;
     const reconcileAll=insideInitial||/manual|inicial-completo/.test(origin)||!liveAlready;
     const names=reconcileAll?['perfis','tarefas','historico','execucoes','despertadores','recompensas','resgates']:['perfis','tarefas','historico','despertadores','recompensas','resgates'];
-    const results=await Promise.allSettled(names.map(c=>queryGroup(c,server,g)));
+    const optionalNames=conquestAccess()?['conquistas','conquistaHistorico']:[];
+    const allNames=[...names,...optionalNames];
+    const results=await Promise.allSettled(allNames.map(c=>queryGroup(c,server,g)));
     if(groupId()!==g)return false;
-    results.forEach((r,i)=>{if(r.status!=='fulfilled')return;const name=names[i];if(name==='perfis')data.profiles=r.value;else if(name==='tarefas')data.taskDocs=r.value;else if(name==='historico')data.history=r.value;else if(name==='execucoes')data.executions=r.value;else if(name==='despertadores')data.alarms=r.value;else if(name==='recompensas')data.rewards=r.value;else if(name==='resgates')data.redemptions=r.value});
-    const failures=results.filter(x=>x.status==='rejected').length;
+    results.forEach((r,i)=>{if(r.status!=='fulfilled')return;const name=allNames[i];if(name==='perfis')data.profiles=r.value;else if(name==='tarefas')data.taskDocs=r.value;else if(name==='historico')data.history=r.value;else if(name==='execucoes')data.executions=r.value;else if(name==='despertadores')data.alarms=r.value;else if(name==='recompensas')data.rewards=r.value;else if(name==='resgates')data.redemptions=r.value;else if(name==='conquistas')data.conquests=r.value;else if(name==='conquistaHistorico')data.conquestEvents=r.value});
+    const failures=results.slice(0,names.length).filter(x=>x.status==='rejected').length;
     if(failures===0)data.readyGroup=g;
     publish(origin,server,failures);
     if(failures===0)startLive(g);
