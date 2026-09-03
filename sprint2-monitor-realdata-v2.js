@@ -276,7 +276,7 @@ async function loadData(force=false){
         historyDocs=(shared.history||[]).map(x=>({...x}));
         executionDocs=(shared.executions||[]).map(x=>({...x}));
         alarmDocs=(shared.alarms||[]).map(x=>({...x}));
-        lastGroup=g;lastLoadAt=Number(shared.lastServerSync)||Date.now();
+        lastGroup=g;lastLoadAt=Math.max(Number(shared.lastServerSync)||0,Number(shared.lastLiveSync)||0)||Date.now();
         await log('sprint2.monitor_v3_dados',{tarefas:taskDocs.length,historico:historyDocs.length,execucoes:executionDocs.length,alarmes:alarmDocs.length,storeCentral:true});
         return true;
       }
@@ -431,7 +431,7 @@ async function openJustification(x){
 function patchUi(){
   injectStyle();ensureControls();const note=$('view-monitor')?.querySelector('.integration-note');if(note)note.innerHTML='<b>Monitor V3:</b> o ADM não recalcula a execução. Ele lê a ocorrência oficial registrada pelo Participante; sem ocorrência, a tarefa permanece Pendente.';
   const pill=$('view-monitor')?.querySelector('.activepill');if(pill)pill.textContent='V3 • FONTE ÚNICA';
-  const n=$('view-monitor')?.querySelector('.monitor-note');if(n){n.className='monitor-v2-warning monitor-note';n.textContent='Arquitetura desta etapa: ADM configura a regra; Participante registra a execução; Monitor apenas acompanha o resultado. Store central: sincronização remota a cada 5 minutos; ações locais reaproveitam o cache persistente sem nova leitura remota.'}
+  const n=$('view-monitor')?.querySelector('.monitor-note');if(n){n.className='monitor-v2-warning monitor-note';n.textContent='Arquitetura desta etapa: ADM configura a regra; Participante registra a execução; Monitor apenas acompanha o resultado. Store central: execuções e conclusões chegam automaticamente; a reconciliação remota periódica permanece como segurança e o botão Atualizar força uma conferência imediata.'}
   const title=$('view-monitor')?.querySelector('h2');if(title)title.textContent='Acompanhamento operacional';const desc=$('view-monitor')?.querySelector('.head p');if(desc)desc.textContent='Previsto x realizado, resultado oficial do Participante, alarmes e revisão de justificativas.';const lastKpi=$('mPending')?.parentElement?.querySelector('small');if(lastKpi)lastKpi.textContent='Pendentes';
 }
 function reorderMenu(){const nav=$('mainNav'),monitor=$('monitorNavButton');if(!nav||!monitor)return;const participants=[...nav.children].find(b=>/Participantes/.test(b.textContent));if(participants&&monitor.nextElementSibling!==participants)nav.insertBefore(monitor,participants)}
@@ -439,7 +439,7 @@ function openMonitor(logOpen=true){
   if(!document.body.classList.contains('rf-auth-ready'))return;document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-monitor'));document.querySelectorAll('#mainNav button').forEach(b=>b.classList.remove('active'));$('monitorNavButton')?.classList.add('active');sessionStorage.setItem('rf-sprint2-integration-route','monitor');history.replaceState(null,'','#monitor');if($('mainScroll'))$('mainScroll').scrollTop=0;render(false);if(logOpen)log('sprint2.monitor_v3_aberto',{filtro:current==='__ALL__'?'todos':'participante'});
 }
 function bind(){
-  if(bound)return true;const nav=$('monitorNavButton'),sel=$('monitorParticipant');if(!nav||!sel||!window.RF_APP)return false;bound=true;patchUi();reorderMenu();nav.addEventListener('click',()=>openMonitor(true));sel.addEventListener('change',()=>{current=sel.value;render(false);log('sprint2.monitor_v3_filtro',{filtro:current==='__ALL__'?'todos':'participante'})});document.querySelectorAll('#mainNav [data-route]').forEach(b=>b.addEventListener('click',()=>sessionStorage.setItem('rf-sprint2-integration-route',b.dataset.route||'inicio')));
+  if(bound)return true;const nav=$('monitorNavButton'),sel=$('monitorParticipant');if(!nav||!sel||!window.RF_APP)return false;bound=true;patchUi();reorderMenu();nav.addEventListener('click',()=>openMonitor(true));sel.addEventListener('change',()=>{current=sel.value;render(false);log('sprint2.monitor_v3_filtro',{filtro:current==='__ALL__'?'todos':'participante'})});document.querySelectorAll('#mainNav [data-route]').forEach(b=>b.addEventListener('click',()=>{$('monitorNavButton')?.classList.remove('active');sessionStorage.setItem('rf-sprint2-integration-route',b.dataset.route||'inicio')}));
   const observer=new MutationObserver(()=>{if(document.body.classList.contains('rf-auth-ready')){const wanted=sessionStorage.getItem('rf-sprint2-integration-route');if(wanted==='monitor'&&!$('view-monitor')?.classList.contains('active'))setTimeout(()=>openMonitor(false),0)}});observer.observe(document.body,{attributes:true,attributeFilter:['class']});
   if(document.body.classList.contains('rf-auth-ready')&&sessionStorage.getItem('rf-sprint2-integration-route')==='monitor')openMonitor(false);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('view-monitor')?.classList.contains('active')&&Date.now()-lastLoadAt>CACHE_TTL_MS)render(true)});window.addEventListener('online',()=>{if($('view-monitor')?.classList.contains('active')&&Date.now()-lastLoadAt>CACHE_TTL_MS)render(true)});window.addEventListener('rotina-sprint2-cache-updated',()=>{if($('view-monitor')?.classList.contains('active'))render(false)});return true;
