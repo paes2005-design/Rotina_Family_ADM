@@ -15,12 +15,13 @@ function session(){return window.rotinaSprint2SessionSnapshot?.()||{role:'',grou
 function canWrite(){return ['adm_familia','adm_convidado','master'].includes(clean(session().role))}
 function snapshot(){return window.rotinaSprint2DataSnapshot?.()||{rewards:[],redemptions:[],profiles:[],readyGroup:''}}
 function toast(msg){if(window.RF_APP?.toast)return window.RF_APP.toast(msg);const e=$('toast');if(!e)return;e.textContent=msg;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),1900)}
+function actionLog(event,details={},level='info'){try{window.techLog?.(`recompensas_v1_${event}`,details,level)}catch(_){}}
 function today(){const d=new Date(),y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`}
 function dateOf(r){return clean(r.data||r.criadoEm||r.decididoEm).slice(0,10)}
 function statusOf(r){const s=clean(r.status||'Pendente');return ['Aprovado','Recusado'].includes(s)?s:'Pendente'}
 function participantName(r){return clean(r.perfilNome)||clean(profiles.find(p=>p.id===r.perfilId)?.nome)||'Integrante'}
 function statusClass(s){return s==='Aprovado'?'rv1-approved':s==='Recusado'?'rv1-refused':'rv1-pending'}
-function rewardActive(r){return r.ativa!==false}
+function rewardActive(r){return !r||r.ativa!==false}
 function moneylessPoints(v){const n=Number(v)||0;return Number.isInteger(n)?String(n):n.toFixed(1).replace('.',',')}
 function sameGroupRecord(x,g){return !clean(x?.grupoId)||clean(x.grupoId).toUpperCase()===g}
 
@@ -57,7 +58,28 @@ function renderCatalog(){const box=$('rv1Catalog');if(!box)return;const f=$('rv1
 function renderHistory(){const box=$('rv1History');if(!box)return;refreshParticipants();const p=$('rv1Participant')?.value||'all',s=$('rv1Status')?.value||'all',ref=$('rv1Date')?.value||today(),mode=$('rv1Period')?.value||'day';const rows=redemptions.filter(r=>(p==='all'||r.perfilId===p)&&(s==='all'||statusOf(r)===s)&&inPeriod(dateOf(r),ref,mode));box.innerHTML=rows.length?rows.map(r=>{const st=statusOf(r);return `<article class="rv1-item"><div class="rv1-row"><div><div class="rv1-name">${esc(participantName(r))} · ${esc(r.recompensaNome||'Recompensa')}</div><div class="rv1-desc">Registro real do pedido de resgate.</div></div><span class="rv1-pill ${statusClass(st)}">${esc(st.toUpperCase())}</span></div><div class="rv1-meta"><div><small>Pontos</small><span>${moneylessPoints(r.pontos)}</span></div><div><small>Data</small><span>${esc(dateOf(r)||'—')}</span></div><div><small>Status</small><span>${esc(st)}</span></div><div><small>Participante</small><span>${esc(participantName(r))}</span></div></div>${st==='Pendente'?`<div class="rv1-actions"><button class="rv1-btn" data-rv1-decide="${esc(r.id)}" data-status="Aprovado" ${canWrite()?'':'disabled'}>Aprovar</button><button class="rv1-btn danger" data-rv1-decide="${esc(r.id)}" data-status="Recusado" ${canWrite()?'':'disabled'}>Recusar</button></div>`:''}</article>`}).join(''):'<div class="rv1-empty">Nenhum resgate neste período/filtro.</div>';bindHistoryButtons()}
 function render(){if(!ensureView()||!accept())return;renderCatalog();renderHistory();$('rv1New').disabled=!canWrite()||busy;$('rv1Refresh').disabled=busy}
 async function afterWrite(origin){try{await window.rotinaSprint2SyncLocal?.(origin)}catch(_){ }accept();render()}
-async function saveReward(id){if(busy||!canWrite()||!await firebaseReady())return;const original=id==='new'?null:rewards.find(r=>r.id===id);if(id!=='new'&&!guardRecord(original))return toast('Recompensa não pertence ao grupo atual.');const name=clean($(`rv1Name-${id}`)?.value),points=Number($(`rv1Points-${id}`)?.value),active=$(`rv1Active-${id}`)?.value==='1';if(!name||!Number.isFinite(points)||points<=0)return toast('Informe nome e pontos válidos.');busy=true;render();try{const g=groupId(),now=new Date().toISOString();if(id==='new')await fs.addDoc(fs.collection(db,'recompensas'),{grupoId:g,nome:name,pontos:points,ativa:active,criadoEm:now});else await fs.updateDoc(fs.doc(db,'recompensas',id),{nome:name,pontos:points,ativa:active,atualizadoEm:now});editing='';await afterWrite('recompensas-salvar');toast('Recompensa salva.')}catch(e){console.error(e);toast('Não foi possível salvar a recompensa.')}finally{busy=false;render()}}
+async function saveReward(id){
+  if(busy||!canWrite()||!await firebaseReady())return;
+  const original=id==='new'?null:rewards.find(r=>r.id===id);
+  if(id!=='new'&&!guardRecord(original))return toast('Recompensa não pertence ao grupo atual.');
+  const name=clean($(`rv1Name-${id}`)?.value),points=Number($(`rv1Points-${id}`)?.value),active=$(`rv1Active-${id}`)?.value==='1';
+  if(!name||!Number.isFinite(points)||points<=0)return toast('Informe nome e pontos válidos.');
+  busy=true;
+  try{
+    const g=groupId(),now=new Date().toISOString();actionLog('save_start',{editing:id!=='new'});
+    if(id==='new'){
+      const ref=await fs.addDoc(fs.collection(db,'recompensas'),{grupoId:g,nome:name,pontos:points,ativa:active,criadoEm:now});
+      rewards.push({id:ref.id,grupoId:g,nome:name,pontos:points,ativa:active,criadoEm:now});
+    }else{
+      await fs.updateDoc(fs.doc(db,'recompensas',id),{nome:name,pontos:points,ativa:active,atualizadoEm:now});
+      Object.assign(original,{nome:name,pontos:points,ativa:active,atualizadoEm:now});
+    }
+    editing='';renderCatalog();
+    await window.rotinaSprint2SyncLocal?.('recompensas-salvar');accept();render();
+    actionLog('save_success',{editing:id!=='new'});toast('Recompensa salva.');
+  }catch(e){console.error('Recompensas V1 salvar:',e);actionLog('save_error',{codigo:clean(e?.code)||'erro'},'error');toast('Não foi possível salvar a recompensa.');}
+  finally{busy=false;render()}
+}
 async function toggleReward(id){const r=rewards.find(x=>x.id===id);if(busy||!canWrite()||!guardRecord(r)||!await firebaseReady())return;busy=true;try{await fs.updateDoc(fs.doc(db,'recompensas',id),{ativa:!rewardActive(r),atualizadoEm:new Date().toISOString()});await afterWrite('recompensas-ativacao')}catch(e){console.error(e);toast('Não foi possível alterar a recompensa.')}finally{busy=false;render()}}
 async function deleteReward(id){const r=rewards.find(x=>x.id===id);if(busy||!canWrite()||!guardRecord(r)||!await firebaseReady())return;if(!confirm(`Excluir a recompensa "${r.nome||'Recompensa'}"? O histórico de resgates será preservado.`))return;busy=true;try{await fs.deleteDoc(fs.doc(db,'recompensas',id));await afterWrite('recompensas-excluir');toast('Recompensa excluída; histórico preservado.')}catch(e){console.error(e);toast('Não foi possível excluir a recompensa.')}finally{busy=false;render()}}
 async function decide(id,status){const r=redemptions.find(x=>x.id===id);if(busy||!canWrite()||!guardRecord(r)||statusOf(r)!=='Pendente'||!['Aprovado','Recusado'].includes(status)||!await firebaseReady())return;busy=true;try{const now=new Date().toISOString();await fs.updateDoc(fs.doc(db,'resgates',id),{status,decididoEm:now,pushClientePendente:true,pushClienteSolicitadoEm:now,pushClienteTentativas:0});await afterWrite('recompensas-decidir-resgate');toast(`Pedido ${status.toLowerCase()}.`)}catch(e){console.error(e);toast('Não foi possível decidir o resgate.')}finally{busy=false;render()}}
