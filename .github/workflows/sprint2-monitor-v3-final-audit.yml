@@ -15,6 +15,7 @@ permissions:
 jobs:
   final-audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
@@ -24,8 +25,9 @@ jobs:
           node --check sprint2-monitor-realdata-v2.js
 
       - name: Auditar arquitetura do Monitor V3
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
           import re
 
@@ -60,6 +62,7 @@ jobs:
           print(f'SPRINT2_MONITOR_FINAL_AUDIT={passed}/{total}')
           if passed != total:
               raise SystemExit(1)
+          PY
 
       - name: Confirmar escopo da mudança
         run: |
