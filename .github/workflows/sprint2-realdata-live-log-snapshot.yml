@@ -18,66 +18,90 @@ jobs:
   realdata-logs:
     runs-on: ubuntu-latest
     steps:
-      - name: Ler saude viva do Worker
+      - name: Coletar saúde e eventos vivos
         shell: bash
         run: |
           set -euo pipefail
           curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 25 "$MON_URL" -o /tmp/monitor.json
-          python - <<'PY'
-          import json
-          d=json.load(open('/tmp/monitor.json',encoding='utf-8'))
-          print('MONITOR_STATUS=',d.get('status'))
-          print('LAST_RUN_AT=',d.get('lastRunAt'))
-          print('HEALTH_REASONS=',json.dumps(d.get('healthReasons',{}),ensure_ascii=False))
-          PY
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 25 "$DIAG_URL?limit=1000" -o /tmp/diag.json
 
-      - name: Ler eventos vivos da integracao realdata, Analise e Monitor
+      - name: Gerar resumo sanitizado da Sprint 2
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --retry 3 --retry-delay 2 --max-time 25 "$DIAG_URL?limit=1000" -o /tmp/diag.json
           python - <<'PY'
           import json
-          d=json.load(open('/tmp/diag.json',encoding='utf-8'))
-          print('DIAG_STATUS=',d.get('status'))
-          print('GENERATED_AT=',d.get('generatedAt'))
-          logs=d.get('logs',[]) or []
+          from pathlib import Path
+
+          mon=json.load(open('/tmp/monitor.json',encoding='utf-8'))
+          diag=json.load(open('/tmp/diag.json',encoding='utf-8'))
+          logs=diag.get('logs',[]) or []
+          pages={
+            'sprint2-integracao-login-realdata-v1.html',
+            'sprint2-integracao-monitor-v1.html',
+            'sprint2-integracao-monitor-v2.html',
+            'sprint2-integracao-participantes-v1.html',
+            'sprint2-integracao-recompensas-v1.html'
+          }
+          prefixes=('sprint2.realdata_','sprint2.monitor_','tarefas_v2_','recompensas_','participantes_')
           arr=[]
-          monitor=[]
-          analysis=[]
           for x in logs:
-              e=str(x.get('evento',''))
-              p=str(x.get('pagina',''))
-              if e.startswith('sprint2.realdata_') or e.startswith('sprint2.monitor_') or e.startswith('tarefas_v2_') or e.startswith('recompensas_') or e.startswith('participantes_') or p in ('sprint2-integracao-login-realdata-v1.html','sprint2-integracao-monitor-v1.html','sprint2-integracao-monitor-v2.html','sprint2-integracao-participantes-v1.html','sprint2-integracao-recompensas-v1.html'):
-                  arr.append(x)
-              if 'analise' in e.lower() or 'analysis' in e.lower():
-                  analysis.append(x)
-              if e.startswith('sprint2.monitor_') or p in ('sprint2-integracao-monitor-v1.html','sprint2-integracao-monitor-v2.html'):
-                  monitor.append(x)
+            e=str(x.get('evento',''))
+            p=str(x.get('pagina',''))
+            if e.startswith(prefixes) or p in pages:
+              arr.append(x)
           arr.sort(key=lambda x:str(x.get('clienteEm','')),reverse=True)
-          analysis.sort(key=lambda x:str(x.get('clienteEm','')),reverse=True)
-          monitor.sort(key=lambda x:str(x.get('clienteEm','')),reverse=True)
-          print('REALDATA_EVENT_COUNT=',len(arr))
+
+          def level(x): return str(x.get('nivel','')).lower()
+          def safe(x):
+            d=x.get('detalhes',{}) or {}
+            allow=('mensagem','codigo','status','rota','tempoMs','papel','participantes','tarefasDocs','historico','aberto','docs')
+            return {
+              'clienteEm':x.get('clienteEm'),
+              'evento':x.get('evento'),
+              'nivel':x.get('nivel'),
+              'grupoId':x.get('grupoId'),
+              'pagina':x.get('pagina'),
+              'detalhes':{k:d.get(k) for k in allow if k in d}
+            }
+
           counts={}
           for x in arr:
-              e=str(x.get('evento','')); counts[e]=counts.get(e,0)+1
-          print('REALDATA_EVENT_COUNTS=',json.dumps(counts,ensure_ascii=False,sort_keys=True))
-          print('REALDATA_ERRORS=',sum(1 for x in arr if str(x.get('nivel','')).lower() in ('error','fatal')))
-          print('REALDATA_WARNINGS=',sum(1 for x in arr if str(x.get('nivel','')).lower()=='warning'))
-          print('ANALYSIS_EVENT_COUNT=',len(analysis))
-          print('ANALYSIS_ERRORS=',sum(1 for x in analysis if str(x.get('nivel','')).lower() in ('error','fatal')))
-          for x in analysis[:80]:
-              safe={'clienteEm':x.get('clienteEm'),'evento':x.get('evento'),'nivel':x.get('nivel'),'grupoId':x.get('grupoId'),'pagina':x.get('pagina'),'detalhes':x.get('detalhes',{})}
-              print('SPRINT2_ANALYSIS_EVENT=',json.dumps(safe,ensure_ascii=False))
-          print('REALDATA_RECENT_START')
-          for x in arr[:150]:
-              safe={'clienteEm':x.get('clienteEm'),'evento':x.get('evento'),'nivel':x.get('nivel'),'grupoId':x.get('grupoId'),'pagina':x.get('pagina'),'detalhes':x.get('detalhes',{})}
-              print('SPRINT2_REALDATA_EVENT=',json.dumps(safe,ensure_ascii=False))
-          print('REALDATA_RECENT_END')
-          mcounts={}
-          for x in monitor:
-              e=str(x.get('evento','')); mcounts[e]=mcounts.get(e,0)+1
-          print('SPRINT2_MONITOR_EVENT_COUNT=',len(monitor))
-          print('SPRINT2_MONITOR_EVENT_COUNTS=',json.dumps(mcounts,ensure_ascii=False,sort_keys=True))
-          print('SPRINT2_MONITOR_ERRORS=',sum(1 for x in monitor if str(x.get('nivel','')).lower() in ('error','fatal')))
+            e=str(x.get('evento',''));counts[e]=counts.get(e,0)+1
+          errors=[safe(x) for x in arr if level(x) in ('error','fatal')]
+          warnings=[safe(x) for x in arr if level(x)=='warning']
+          analysis=[x for x in arr if 'analise' in str(x.get('evento','')).lower() or 'analysis' in str(x.get('evento','')).lower()]
+          promise=[safe(x) for x in arr if 'promise' in str(x.get('evento','')).lower() or 'rejection' in str(x.get('evento','')).lower()]
+          monitor=[x for x in arr if str(x.get('evento','')).startswith('sprint2.monitor_') or str(x.get('pagina','')) in ('sprint2-integracao-monitor-v1.html','sprint2-integracao-monitor-v2.html')]
+
+          report={
+            'workerStatus':mon.get('status'),
+            'workerLastRunAt':mon.get('lastRunAt'),
+            'workerHealthReasons':mon.get('healthReasons',{}),
+            'diagnosticsStatus':diag.get('status'),
+            'diagnosticsGeneratedAt':diag.get('generatedAt'),
+            'sprint2EventCount':len(arr),
+            'eventCounts':dict(sorted(counts.items())),
+            'errorCount':len(errors),
+            'warningCount':len(warnings),
+            'analysisEventCount':len(analysis),
+            'analysisErrorCount':sum(1 for x in analysis if level(x) in ('error','fatal')),
+            'promiseRejectionCount':len(promise),
+            'monitorEventCount':len(monitor),
+            'monitorErrorCount':sum(1 for x in monitor if level(x) in ('error','fatal')),
+            'recentErrors':errors[:40],
+            'recentWarnings':warnings[:40],
+            'recentPromiseRejections':promise[:40],
+            'recentEvents':[safe(x) for x in arr[:80]]
+          }
+          Path('/tmp/sprint2-live-audit-summary.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+          print(json.dumps(report,ensure_ascii=False,indent=2))
           PY
+
+      - name: Publicar relatório sanitizado
+        uses: actions/upload-artifact@v4
+        with:
+          name: sprint2-live-audit-summary
+          path: /tmp/sprint2-live-audit-summary.json
+          if-no-files-found: error
+          retention-days: 7
