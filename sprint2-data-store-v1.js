@@ -16,6 +16,23 @@ function reset(g=''){data={groupId:g,taskDocs:[],history:[],executions:[],alarms
 function snapshot(){return{...data,taskDocs:copy(data.taskDocs),history:copy(data.history),executions:copy(data.executions),alarms:copy(data.alarms)}}
 function publish(origin,server=false,failures=0){data.origin=origin;if(server&&failures===0)data.lastServerSync=Date.now();else if(!server)data.lastLocalSync=Date.now();window.dispatchEvent(new CustomEvent('rotina-sprint2-cache-updated',{detail:{groupId:data.groupId,origin,server,failures,lastServerSync:data.lastServerSync,lastLiveSync:data.lastLiveSync,version:VERSION}}))}
 
+function syncNavSelection(route){
+  const nav=$('mainNav');if(!nav)return;
+  nav.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+  if(route==='monitor')$('monitorNavButton')?.classList.add('active');
+  else nav.querySelector(`[data-route="${route}"]`)?.classList.add('active');
+}
+function installNavSelectionGuard(){
+  const nav=$('mainNav');if(!nav||nav.dataset.sprint2SingleActive==='1')return;
+  nav.dataset.sprint2SingleActive='1';
+  nav.addEventListener('click',event=>{
+    const button=event.target.closest('button');if(!button||!nav.contains(button)||button.disabled)return;
+    const route=button.id==='monitorNavButton'?'monitor':clean(button.dataset.route);
+    if(!['inicio','tarefas','monitor'].includes(route))return;
+    requestAnimationFrame(()=>syncNavSelection(route));
+  },true);
+}
+
 function stopLive(){
   for(const unsub of liveUnsubs.splice(0)){try{unsub()}catch(_){ }}
   liveGroup='';
@@ -28,14 +45,11 @@ function publishLive(origin,key,snap){
 }
 function startLive(){
   const g=groupId();if(!g||g==='SISTEMA'||!fs||!db)return false;
-  if(liveGroup===g&&liveUnsubs.length===2)return true;
+  if(liveGroup===g&&liveUnsubs.length===1)return true;
   stopLive();liveGroup=g;
-  const bind=(collectionName,key)=>{
-    const q=fs.query(fs.collection(db,collectionName),fs.where('grupoId','==',g));
-    const unsub=fs.onSnapshot(q,{includeMetadataChanges:false},snap=>publishLive(`live-${collectionName}`,key,snap),err=>console.warn(`Sprint 2 live ${collectionName}:`,err));
-    liveUnsubs.push(unsub);
-  };
-  bind('historico','history');bind('execucoes','executions');
+  const q=fs.query(fs.collection(db,'execucoes'),fs.where('grupoId','==',g));
+  const unsub=fs.onSnapshot(q,{includeMetadataChanges:false},snap=>publishLive('live-execucoes','executions',snap),err=>console.warn('Sprint 2 live execucoes:',err));
+  liveUnsubs.push(unsub);
   return true;
 }
 
@@ -95,7 +109,7 @@ async function fullSync(origin='store-intervalo-5min',server=true,insideInitial=
     if(data.groupId!==g)reset(g);
     const live=startLive();
     const reconcileAll=insideInitial||/manual|inicial-completo/.test(origin)||!live;
-    const names=reconcileAll?['tarefas','historico','execucoes','despertadores']:['tarefas','despertadores'];
+    const names=reconcileAll?['tarefas','historico','execucoes','despertadores']:['tarefas','historico','despertadores'];
     const results=await Promise.allSettled(names.map(c=>queryGroup(c,server)));
     results.forEach((r,i)=>{if(r.status!=='fulfilled')return;const name=names[i];if(name==='tarefas')data.taskDocs=r.value;else if(name==='historico')data.history=r.value;else if(name==='execucoes')data.executions=r.value;else if(name==='despertadores')data.alarms=r.value});
     const failures=results.filter(x=>x.status==='rejected').length;
@@ -119,6 +133,7 @@ function schedule(){
 }
 function install(){
   if(installed)return;installed=true;
+  installNavSelectionGuard();
   window.rotinaSprint2DataSnapshot=snapshot;
   window.rotinaSprint2EnsureData=ensure;
   window.rotinaSprint2SyncNow=(origin='manual')=>fullSync(origin,true);
