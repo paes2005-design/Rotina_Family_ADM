@@ -8,18 +8,19 @@ const clean=v=>String(v??'').trim();
 
 let db=null,fs=null,app=null,timer=null,syncing=null,installed=false,liveGroup='';
 let liveUnsubs=[];
-let data={groupId:'',taskDocs:[],history:[],executions:[],alarms:[],lastServerSync:0,lastLiveSync:0,lastLocalSync:0,origin:'empty',version:VERSION};
+let data={groupId:'',profiles:[],taskDocs:[],history:[],executions:[],alarms:[],lastServerSync:0,lastLiveSync:0,lastLocalSync:0,origin:'empty',version:VERSION};
 
 function groupId(){return clean($('topGroup')?.textContent).replace(/^Grupo\s+/i,'').toUpperCase()}
 function copy(list){return (list||[]).map(x=>({...x}))}
-function reset(g=''){data={groupId:g,taskDocs:[],history:[],executions:[],alarms:[],lastServerSync:0,lastLiveSync:0,lastLocalSync:0,origin:'reset',version:VERSION}}
-function snapshot(){return{...data,taskDocs:copy(data.taskDocs),history:copy(data.history),executions:copy(data.executions),alarms:copy(data.alarms)}}
+function reset(g=''){data={groupId:g,profiles:[],taskDocs:[],history:[],executions:[],alarms:[],lastServerSync:0,lastLiveSync:0,lastLocalSync:0,origin:'reset',version:VERSION}}
+function snapshot(){return{...data,profiles:copy(data.profiles),taskDocs:copy(data.taskDocs),history:copy(data.history),executions:copy(data.executions),alarms:copy(data.alarms)}}
 function publish(origin,server=false,failures=0){data.origin=origin;if(server&&failures===0)data.lastServerSync=Date.now();else if(!server)data.lastLocalSync=Date.now();window.dispatchEvent(new CustomEvent('rotina-sprint2-cache-updated',{detail:{groupId:data.groupId,origin,server,failures,lastServerSync:data.lastServerSync,lastLiveSync:data.lastLiveSync,version:VERSION}}))}
 
 function syncNavSelection(route){
   const nav=$('mainNav');if(!nav)return;
   nav.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
   if(route==='monitor')$('monitorNavButton')?.classList.add('active');
+  else if(route==='participantes')$('participantNavButton')?.classList.add('active');
   else nav.querySelector(`[data-route="${route}"]`)?.classList.add('active');
 }
 function installNavSelectionGuard(){
@@ -27,8 +28,8 @@ function installNavSelectionGuard(){
   nav.dataset.sprint2SingleActive='1';
   nav.addEventListener('click',event=>{
     const button=event.target.closest('button');if(!button||!nav.contains(button)||button.disabled)return;
-    const route=button.id==='monitorNavButton'?'monitor':clean(button.dataset.route);
-    if(!['inicio','tarefas','monitor'].includes(route))return;
+    const route=button.id==='monitorNavButton'?'monitor':button.id==='participantNavButton'?'participantes':clean(button.dataset.route);
+    if(!['inicio','tarefas','monitor','participantes'].includes(route))return;
     requestAnimationFrame(()=>syncNavSelection(route));
   },true);
 }
@@ -58,6 +59,7 @@ function seedFromLogin(){
   const g=groupId();
   if(!base||!g||clean(base.groupId).toUpperCase()!==g)return false;
   if(data.groupId!==g)reset(g);
+  data.profiles=copy(base.profiles);
   data.taskDocs=copy(base.taskDocs);
   data.history=copy(base.history);
   data.lastServerSync=Math.max(data.lastServerSync,Number(base.lastLoadedAt)||0);
@@ -109,9 +111,9 @@ async function fullSync(origin='store-intervalo-5min',server=true,insideInitial=
     if(data.groupId!==g)reset(g);
     const live=startLive();
     const reconcileAll=insideInitial||/manual|inicial-completo/.test(origin)||!live;
-    const names=reconcileAll?['tarefas','historico','execucoes','despertadores']:['tarefas','historico','despertadores'];
+    const names=reconcileAll?['perfis','tarefas','historico','execucoes','despertadores']:['perfis','tarefas','historico','despertadores'];
     const results=await Promise.allSettled(names.map(c=>queryGroup(c,server)));
-    results.forEach((r,i)=>{if(r.status!=='fulfilled')return;const name=names[i];if(name==='tarefas')data.taskDocs=r.value;else if(name==='historico')data.history=r.value;else if(name==='execucoes')data.executions=r.value;else if(name==='despertadores')data.alarms=r.value});
+    results.forEach((r,i)=>{if(r.status!=='fulfilled')return;const name=names[i];if(name==='perfis')data.profiles=r.value;else if(name==='tarefas')data.taskDocs=r.value;else if(name==='historico')data.history=r.value;else if(name==='execucoes')data.executions=r.value;else if(name==='despertadores')data.alarms=r.value});
     const failures=results.filter(x=>x.status==='rejected').length;
     publish(origin,server,failures);
     return failures===0;

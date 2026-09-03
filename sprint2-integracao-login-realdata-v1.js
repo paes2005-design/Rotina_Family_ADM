@@ -69,7 +69,8 @@ function mapRealDataToState(){
   appState.participants=participants;appState.tasks=tasks;appState.executions=executions;appState.taskParticipant=participants[0]?.id||'__ALL__';appState.taskSearch='';appState.taskFilter='all';appState.editingTask=null;appState.openTask=null;appState.nextTaskId=nextId+1;window.RF_APP.normalizeState();
 }
 
-window.rotinaSprint2BaseSnapshot=()=>({groupId:runtime.groupId,taskDocs:runtime.taskDocs.map(x=>({...x})),history:runtime.history.map(x=>({...x})),lastLoadedAt:Number(runtime.lastLoadedAt)||0});
+window.rotinaSprint2BaseSnapshot=()=>({role:runtime.role,groupId:runtime.groupId,profiles:runtime.profiles.map(x=>({...x})),taskDocs:runtime.taskDocs.map(x=>({...x})),history:runtime.history.map(x=>({...x})),lastLoadedAt:Number(runtime.lastLoadedAt)||0});
+window.rotinaSprint2SessionSnapshot=()=>({role:runtime.role,groupId:runtime.groupId});
 
 function readOnlyToast(){window.RF_APP.toast('Modo leitura: primeiro valide os dados reais.');}
 const coreToggleDetails=window.RF_APP.toggleTaskDetails.bind(window.RF_APP);
