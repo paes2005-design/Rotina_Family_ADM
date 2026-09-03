@@ -1,0 +1,63 @@
+name: Sprint 2 fix Recompensas e Tarefas
+on:
+  push:
+    paths:
+      - '.github/triggers/sprint2-fix-rewards-tasks-v1.txt'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fix-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Aplicar correções
+        run: python scripts/sprint2_fix_rewards_tasks_v1.py
+      - name: Validar sintaxe
+        run: |
+          node --check sprint2-recompensas-realdata-v1.js
+          node --check sprint2-tarefas-realdata-v2.js
+          node --check sprint2-data-store-v1.js
+          node --check sprint2-participantes-realdata-v1.js
+          node --check sprint2-monitor-realdata-v2.js
+      - name: Auditar correções e arquitetura
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          r=Path('sprint2-recompensas-realdata-v1.js').read_text()
+          t=Path('sprint2-tarefas-realdata-v2.js').read_text()
+          s=Path('sprint2-data-store-v1.js').read_text()
+          h=Path('sprint2-integracao-recompensas-v1.html').read_text()
+          checks={
+            'nova recompensa sem null crash': "function rewardActive(r){return !r||r.ativa!==false}" in r,
+            'salvar fecha editor': "editing='';renderCatalog();" in r,
+            'telemetria de save': "save_error" in r and "save_success" in r,
+            'tarefas v2 carregada': 'sprint2-tarefas-realdata-v2.js' in h,
+            'tarefas inicia no dia atual': 'dayFilter=todayFull()' in t,
+            'filtro de dia': 'id="tv2Day"' in t and "dayFilter==='all'||r.days.includes(dayFilter)" in t,
+            'filtro participante': 'id="tv2Participant"' in t,
+            'edicao real por batch': 'fs.writeBatch(db)' in t and "batch.update(fs.doc(db,'tarefas',d.id)" in t,
+            'sem criacao/exclusao tarefa': "fs.addDoc(fs.collection(db,'tarefas')" not in t and "deleteDoc" not in t,
+            'protecao de grupo tarefa': 'sameGroup(d,groupId())' in t,
+            'sem listener em recompensas': 'onSnapshot(' not in r,
+            'sem listener em tarefas': 'onSnapshot(' not in t,
+            'uma escuta central': s.count('fs.onSnapshot(')==1,
+            'escuta central apenas execucoes': "fs.collection(db,'execucoes')" in s,
+          }
+          for k,v in checks.items(): print(('OK' if v else 'FALHA'),k)
+          if not all(checks.values()): raise SystemExit(1)
+          print(f'OK: {sum(checks.values())}/{len(checks)} verificações')
+          PY
+      - name: Garantir módulos fechados preservados
+        run: git diff --exit-code -- sprint2-participantes-realdata-v1.js sprint2-monitor-realdata-v2.js sprint2-integracao-participantes-v1.html
+      - name: Publicar correção auditada
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add sprint2-recompensas-realdata-v1.js sprint2-integracao-recompensas-v1.html
+          if git diff --cached --quiet; then
+            echo 'Sem alterações pendentes.'
+          else
+            git commit -m 'Sprint 2: corrige Recompensas e libera edição filtrada de Tarefas'
+            git push
+          fi
