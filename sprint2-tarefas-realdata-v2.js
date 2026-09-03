@@ -1,19 +1,19 @@
 (function(){
 'use strict';
 
-const VERSION='tarefas-realdata-v2';
+const VERSION='tarefas-realdata-v2.1';
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').trim();
 const esc=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const DAYS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-let db=null,fs=null,app=null,rows=[],profiles=[],editing='',busy=false;
+let db=null,fs=null,app=null,rows=[],profiles=[],editing='',opened='',busy=false;
 let participantFilter='all',dayFilter=todayFull(),statusFilter='all',searchFilter='';
 
 function todayFull(){return DAYS[new Date().getDay()]}
 function groupId(){return clean($('topGroup')?.textContent).replace(/^Grupo\s+/i,'').toUpperCase()}
 function session(){return window.rotinaSprint2SessionSnapshot?.()||{role:'',groupId:groupId()}}
 function canWrite(){return ['adm_familia','adm_convidado','master'].includes(clean(session().role))}
-function snapshot(){return window.rotinaSprint2DataSnapshot?.()||{profiles:[],taskDocs:[],readyGroup:''}}
+function snapshot(){return window.rotinaSprint2DataSnapshot?.()||{profiles:[],taskDocs:[],alarms:[],readyGroup:''}}
 function toast(msg){if(window.RF_APP?.toast)return window.RF_APP.toast(msg);const e=$('toast');if(!e)return;e.textContent=msg;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),1800)}
 function log(event,details={},level='info'){try{window.techLog?.(`tarefas_v2_${event}`,details,level)}catch(_){}}
 function activeDoc(d){return !(d.ativa===false||d.ativo===false||d.active===false||clean(d.status).toLowerCase()==='inativa')}
@@ -21,6 +21,18 @@ function profileIdFor(d){if(d.perfilId&&profiles.some(p=>p.id===d.perfilId))retu
 function profileName(pid,d){return clean(profiles.find(p=>p.id===pid)?.nome)||clean(d?.perfilNome)||'Integrante'}
 function recurrenceKey(d,pid){return d.tarefaGrupoId?`${pid}::${d.tarefaGrupoId}`:`${pid}::legacy::${clean(d.nome)}::${clean(d.horaSugeridaInicio)}::${clean(d.horaSugeridaFim)}::${Number(d.pontosMaximos)||0}::${Number(d.tempoLimite)||0}`}
 function sameGroup(d,g){return clean(d?.grupoId).toUpperCase()===g}
+function firstText(docs,keys){for(const d of docs)for(const k of keys){const v=clean(d?.[k]);if(v)return v}return ''}
+function taskGroupId(docs){return clean(docs.find(d=>d.tarefaGrupoId)?.tarefaGrupoId)}
+function activeAlarmsFor(row){
+  const snap=snapshot(),g=groupId(),ids=new Set(row.docs.map(d=>d.id)),tg=row.taskGroupId;
+  return (snap.alarms||[]).filter(a=>sameGroup(a,g)&&a.ativo!==false&&(ids.has(clean(a.tarefaId))||(tg&&clean(a.tarefaGrupoId)===tg))).sort((a,b)=>clean(a.dataAgendada).localeCompare(clean(b.dataAgendada))||clean(a.horaSugeridaInicio).localeCompare(clean(b.horaSugeridaInicio)));
+}
+function alarmText(a){
+  const when=Array.isArray(a.momentos)&&a.momentos.length?a.momentos.map(x=>x==='inicio'?'início':x==='fim'?'fim':x).join(' e '):'início';
+  const date=clean(a.dataAgendada);let dateBr='';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(date)){const [y,m,d]=date.split('-');dateBr=`${d}/${m}/${y}`}
+  return [clean(a.diaSemana),dateBr,clean(a.horaSugeridaInicio),when].filter(Boolean).join(' • ');
+}
 
 async function firebaseReady(){
   if(db&&fs&&app)return true;
@@ -28,45 +40,130 @@ async function firebaseReady(){
     const appMod=await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
     const fsMod=await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
     const named=appMod.getApps().find(x=>x.name==='rotina-sprint2-integracao-realdata');
-    if(!named)return false;app=named;fs=fsMod;db=fsMod.getFirestore(named);return true;
+    if(!named)return false;
+    app=named;fs=fsMod;db=fsMod.getFirestore(named);return true;
   }catch(e){console.warn('Tarefas V2 Firebase:',e);return false}
 }
+
 function accept(){
   const snap=snapshot(),g=groupId(),ready=clean(snap.readyGroup).toUpperCase();
   if(!g||ready!==g)return false;
   profiles=(snap.profiles||[]).filter(d=>!d.grupoId||sameGroup(d,g)).map(x=>({...x}));
-  const docs=(snap.taskDocs||[]).filter(d=>sameGroup(d,g));
-  const map=new Map();
-  for(const d of docs){const pid=profileIdFor(d);if(!pid)continue;const key=recurrenceKey(d,pid);if(!map.has(key))map.set(key,{key,pid,docs:[]});map.get(key).docs.push({...d})}
-  rows=[...map.values()].map(gp=>{const ds=gp.docs.slice().sort((a,b)=>clean(a.diaSemana).localeCompare(clean(b.diaSemana))),base=ds[0]||{};return{key:gp.key,pid:gp.pid,participant:profileName(gp.pid,base),docs:ds,days:[...new Set(ds.map(d=>clean(d.diaSemana)).filter(Boolean))],name:clean(base.nome)||'Tarefa',icon:clean(base.icone)||'✅',start:clean(base.horaSugeridaInicio),end:clean(base.horaSugeridaFim),points:Number(base.pontosMaximos)||0,tolerance:Number(base.tempoLimite)||0,active:ds.some(activeDoc)}}).sort((a,b)=>a.participant.localeCompare(b.participant,'pt-BR')||a.start.localeCompare(b.start)||a.name.localeCompare(b.name,'pt-BR'));
+  const docs=(snap.taskDocs||[]).filter(d=>sameGroup(d,g)),map=new Map();
+  for(const d of docs){
+    const pid=profileIdFor(d);if(!pid)continue;
+    const key=recurrenceKey(d,pid);
+    if(!map.has(key))map.set(key,{key,pid,docs:[]});
+    map.get(key).docs.push({...d});
+  }
+  rows=[...map.values()].map(gp=>{
+    const ds=gp.docs.slice().sort((a,b)=>clean(a.diaSemana).localeCompare(clean(b.diaSemana),'pt-BR')),base=ds[0]||{};
+    return {
+      key:gp.key,pid:gp.pid,participant:profileName(gp.pid,base),docs:ds,
+      taskGroupId:taskGroupId(ds),
+      days:[...new Set(ds.map(d=>clean(d.diaSemana)).filter(Boolean))],
+      name:clean(base.nome)||'Tarefa',icon:clean(base.icone)||'✅',
+      start:clean(base.horaSugeridaInicio),end:clean(base.horaSugeridaFim),
+      points:Number(base.pontosMaximos)||0,tolerance:Number(base.tempoLimite)||0,
+      active:ds.some(activeDoc),
+      observation:firstText(ds,['observacao','observações','observacoes','nota','descricao'])
+    };
+  }).sort((a,b)=>a.participant.localeCompare(b.participant,'pt-BR')||a.start.localeCompare(b.start)||a.name.localeCompare(b.name,'pt-BR'));
+  if(opened&&!rows.some(r=>r.key===opened))opened='';
+  if(editing&&!rows.some(r=>r.key===editing))editing='';
   return true;
 }
+
 function validTime(start,end){return /^\d{2}:\d{2}$/.test(start)&&/^\d{2}:\d{2}$/.test(end)&&start<end}
 function hasConflict(row,start,end){
-  const own=new Set(row.docs.map(d=>d.id));
-  const all=snapshot().taskDocs||[];
-  for(const d of all){if(own.has(d.id)||!sameGroup(d,groupId())||!activeDoc(d))continue;const pid=profileIdFor(d);if(pid!==row.pid)continue;if(!row.days.includes(clean(d.diaSemana)))continue;const a=clean(d.horaSugeridaInicio),b=clean(d.horaSugeridaFim);if(validTime(a,b)&&start<b&&end>a)return d}
+  const own=new Set(row.docs.map(d=>d.id)),all=snapshot().taskDocs||[];
+  for(const d of all){
+    if(own.has(d.id)||!sameGroup(d,groupId())||!activeDoc(d))continue;
+    const pid=profileIdFor(d);if(pid!==row.pid||!row.days.includes(clean(d.diaSemana)))continue;
+    const a=clean(d.horaSugeridaInicio),b=clean(d.horaSugeridaFim);
+    if(validTime(a,b)&&start<b&&end>a)return d;
+  }
   return null;
 }
-function injectStyle(){if($('tv2Style'))return;const s=document.createElement('style');s.id='tv2Style';s.textContent=`
-.tv2-card{background:#fff;border:1px solid #e6e8f0;border-radius:18px;overflow:hidden}.tv2-head{padding:18px 20px;border-bottom:1px solid #e6e8f0;display:flex;justify-content:space-between;gap:12px;align-items:flex-end}.tv2-head h2{margin:4px 0;font-size:23px}.tv2-head p{margin:0;color:#72788f;font-size:11px}.tv2-note{font-size:10px;color:#554c73;background:#faf8ff;border:1px solid #e1d6fb;border-radius:10px;padding:9px 11px}.tv2-filters{display:grid;grid-template-columns:minmax(170px,1fr) minmax(170px,1fr) minmax(130px,.7fr) minmax(180px,1fr) auto;gap:8px;padding:12px 16px;background:#fbf9ff;border-bottom:1px solid #e6e8f0;align-items:end}.tv2-field label{display:block;font-size:8px;text-transform:uppercase;font-weight:850;color:#625c7a;margin-bottom:4px}.tv2-field select,.tv2-field input{width:100%;border:1px solid #dcdde7;border-radius:9px;padding:9px;background:#fff}.tv2-refresh,.tv2-btn{border:1px solid #ded8f5;background:#fff;color:#6b35df;padding:9px 10px;border-radius:9px;font-weight:800;cursor:pointer}.tv2-refresh:disabled,.tv2-btn:disabled{opacity:.5;cursor:not-allowed}.tv2-count{padding:9px 16px;color:#72788f;font-size:10px;border-bottom:1px solid #eef0f4}.tv2-tablewrap{overflow:auto}.tv2-table{width:100%;border-collapse:collapse;min-width:780px}.tv2-table th{background:#f7f3ff;color:#514c75;text-transform:uppercase;font-size:9px;text-align:left;padding:10px}.tv2-table td{padding:10px;border-bottom:1px solid #eef0f4;vertical-align:middle;font-size:11px}.tv2-name{display:flex;gap:8px;align-items:center}.tv2-name span{font-size:18px}.tv2-name b{display:block}.tv2-muted{display:block;color:#7b8192;font-size:9px;margin-top:2px}.tv2-pill{display:inline-block;border-radius:999px;padding:5px 8px;font-size:9px;font-weight:850}.tv2-on{background:#e7f8ef;color:#17744e}.tv2-off{background:#f1f2f5;color:#666b78}.tv2-actions{display:flex;gap:6px;justify-content:flex-end}.tv2-edit td{background:#fcfbff}.tv2-edit input{width:100%;border:1px solid #dcdde7;border-radius:8px;padding:8px;background:#fff}.tv2-editgrid{display:grid;grid-template-columns:52px minmax(150px,1fr);gap:6px;align-items:center}.tv2-mobile{display:none;padding:9px}.tv2-mcard{border:1px solid #e6e8f0;border-radius:13px;padding:12px;background:#fff;margin-bottom:9px}.tv2-mhead{display:flex;justify-content:space-between;gap:8px}.tv2-mgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:9px 0}.tv2-mcell{background:#faf9fd;border-radius:9px;padding:8px}.tv2-mcell small{display:block;color:#72788f;font-size:8px;text-transform:uppercase}.tv2-mcell b{display:block;font-size:11px;margin-top:3px}.tv2-medit{display:grid;gap:7px;margin-top:10px}.tv2-medit input{width:100%;border:1px solid #dcdde7;border-radius:8px;padding:9px}.tv2-empty{padding:22px;text-align:center;color:#72788f;font-size:11px}
+
+function injectStyle(){
+  if($('tv2Style'))return;
+  const s=document.createElement('style');s.id='tv2Style';s.textContent=`
+.tv2-card{background:#fff;border:1px solid #e6e8f0;border-radius:18px;overflow:hidden}.tv2-head{padding:18px 20px;border-bottom:1px solid #e6e8f0;display:flex;justify-content:space-between;gap:12px;align-items:flex-end}.tv2-head h2{margin:4px 0;font-size:23px}.tv2-head p{margin:0;color:#72788f;font-size:11px}.tv2-note{font-size:10px;color:#554c73;background:#faf8ff;border:1px solid #e1d6fb;border-radius:10px;padding:9px 11px}.tv2-filters{display:grid;grid-template-columns:minmax(170px,1fr) minmax(170px,1fr) minmax(130px,.7fr) minmax(180px,1fr) auto;gap:8px;padding:12px 16px;background:#fbf9ff;border-bottom:1px solid #e6e8f0;align-items:end}.tv2-field label{display:block;font-size:8px;text-transform:uppercase;font-weight:850;color:#625c7a;margin-bottom:4px}.tv2-field select,.tv2-field input{width:100%;border:1px solid #dcdde7;border-radius:9px;padding:9px;background:#fff}.tv2-refresh,.tv2-btn,.tv2-more{border:1px solid #ded8f5;background:#fff;color:#6b35df;padding:9px 10px;border-radius:9px;font-weight:800;cursor:pointer}.tv2-more{font-size:18px;line-height:1;padding:7px 10px}.tv2-refresh:disabled,.tv2-btn:disabled{opacity:.5;cursor:not-allowed}.tv2-count{padding:9px 16px;color:#72788f;font-size:10px;border-bottom:1px solid #eef0f4}.tv2-tablewrap{overflow:auto}.tv2-table{width:100%;border-collapse:collapse;min-width:780px}.tv2-table th{background:#f7f3ff;color:#514c75;text-transform:uppercase;font-size:9px;text-align:left;padding:10px}.tv2-table td{padding:10px;border-bottom:1px solid #eef0f4;vertical-align:middle;font-size:11px}.tv2-name{display:flex;gap:8px;align-items:center}.tv2-name span{font-size:18px}.tv2-name b{display:block}.tv2-muted{display:block;color:#7b8192;font-size:9px;margin-top:2px}.tv2-pill{display:inline-block;border-radius:999px;padding:5px 8px;font-size:9px;font-weight:850}.tv2-on{background:#e7f8ef;color:#17744e}.tv2-off{background:#f1f2f5;color:#666b78}.tv2-actions{display:flex;gap:6px;justify-content:flex-end;align-items:center}.tv2-edit td{background:#fcfbff}.tv2-edit input{width:100%;border:1px solid #dcdde7;border-radius:8px;padding:8px;background:#fff}.tv2-editgrid{display:grid;grid-template-columns:52px minmax(150px,1fr);gap:6px;align-items:center}.tv2-details-row td{padding:0;background:#fbf9ff}.tv2-details{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:10px;padding:13px 16px;border-bottom:1px solid #e9e5f6}.tv2-detail{background:#fff;border:1px solid #e5e0f3;border-radius:11px;padding:10px}.tv2-detail small{display:block;text-transform:uppercase;font-size:8px;font-weight:900;color:#71698a;margin-bottom:6px}.tv2-detail p{margin:0;color:#454b5f;font-size:10px;line-height:1.45}.tv2-days{display:flex;flex-wrap:wrap;gap:5px}.tv2-day{padding:5px 7px;border-radius:999px;background:#f0eaff;color:#5e32bc;font-size:9px;font-weight:800}.tv2-alarm-line+.tv2-alarm-line{margin-top:4px}.tv2-mobile{display:none;padding:9px}.tv2-mcard{border:1px solid #e6e8f0;border-radius:13px;padding:12px;background:#fff;margin-bottom:9px}.tv2-mhead{display:flex;justify-content:space-between;gap:8px}.tv2-mgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:9px 0}.tv2-mcell{background:#faf9fd;border-radius:9px;padding:8px}.tv2-mcell small{display:block;color:#72788f;font-size:8px;text-transform:uppercase}.tv2-mcell b{display:block;font-size:11px;margin-top:3px}.tv2-medit{display:grid;gap:7px;margin-top:10px}.tv2-medit input{width:100%;border:1px solid #dcdde7;border-radius:8px;padding:9px}.tv2-mdetails{margin-top:9px}.tv2-mdetails .tv2-details{grid-template-columns:1fr;padding:0;border:0}.tv2-empty{padding:22px;text-align:center;color:#72788f;font-size:11px}
 @media(max-width:900px){.tv2-filters{grid-template-columns:1fr 1fr}.tv2-tablewrap{display:none}.tv2-mobile{display:block}.tv2-refresh{width:100%}}
 @media(max-width:520px){.tv2-head{display:grid}.tv2-filters{grid-template-columns:1fr}.tv2-mgrid{grid-template-columns:1fr 1fr}}
-`;document.head.appendChild(s)}
-function dayOptions(){const today=todayFull();return `<option value="all">Todos os dias</option>`+DAYS.map(d=>`<option value="${d}">${d===today?'Hoje · ':''}${d}-feira${d==='Sábado'||d==='Domingo'?'':''}</option>`).join('').replace(/Domingo-feira/g,'Domingo').replace(/Sábado-feira/g,'Sábado')}
-function viewHtml(){return `<div class="tv2-card"><div class="tv2-head"><div><div class="crumb">Tarefas • agenda real</div><h2>Agenda de tarefas</h2><p>Filtre por participante e dia. A edição altera a recorrência da tarefa sem criar novas escutas no Firebase.</p></div><div class="tv2-note">Criação e exclusão continuam fora deste ajuste. Edição está liberada.</div></div><div class="tv2-filters"><div class="tv2-field"><label>Participante</label><select id="tv2Participant"></select></div><div class="tv2-field"><label>Dia</label><select id="tv2Day">${dayOptions()}</select></div><div class="tv2-field"><label>Status</label><select id="tv2Status"><option value="all">Todas</option><option value="active">Ativas</option><option value="inactive">Inativas</option></select></div><div class="tv2-field"><label>Buscar</label><input id="tv2Search" placeholder="Buscar tarefa"></div><button id="tv2Refresh" class="tv2-refresh">↻ Atualizar</button></div><div id="tv2Count" class="tv2-count"></div><div class="tv2-tablewrap"><table class="tv2-table"><thead><tr><th>Tarefa</th><th>Participante</th><th>Dias</th><th>Início</th><th>Fim</th><th>Pontos</th><th>Tolerância</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody id="tv2Body"></tbody></table></div><div id="tv2Mobile" class="tv2-mobile"></div></div>`}
+`;document.head.appendChild(s);
+}
+function dayOptions(){const today=todayFull();return `<option value="all">Todos os dias</option>`+DAYS.map(d=>`<option value="${d}">${d===today?'Hoje · ':''}${d}${d==='Sábado'||d==='Domingo'?'':'-feira'}</option>`).join('')}
+function viewHtml(){return `<div class="tv2-card"><div class="tv2-head"><div><div class="crumb">Tarefas • agenda real</div><h2>Agenda de tarefas</h2><p>Filtre por participante e dia. A edição altera a recorrência da tarefa sem criar novas escutas no Firebase.</p></div><div class="tv2-note">Os três pontos abrem Semana, Alarme e Observação da tarefa.</div></div><div class="tv2-filters"><div class="tv2-field"><label>Participante</label><select id="tv2Participant"></select></div><div class="tv2-field"><label>Dia</label><select id="tv2Day">${dayOptions()}</select></div><div class="tv2-field"><label>Status</label><select id="tv2Status"><option value="all">Todas</option><option value="active">Ativas</option><option value="inactive">Inativas</option></select></div><div class="tv2-field"><label>Buscar</label><input id="tv2Search" placeholder="Buscar tarefa"></div><button id="tv2Refresh" class="tv2-refresh">↻ Atualizar</button></div><div id="tv2Count" class="tv2-count"></div><div class="tv2-tablewrap"><table class="tv2-table"><thead><tr><th>Tarefa</th><th>Participante</th><th>Dias</th><th>Início</th><th>Fim</th><th>Pontos</th><th>Tolerância</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody id="tv2Body"></tbody></table></div><div id="tv2Mobile" class="tv2-mobile"></div></div>`}
 function ensureView(){const view=$('view-tarefas');if(!view)return false;if(view.dataset.tv2!=='1'){injectStyle();view.innerHTML=viewHtml();view.dataset.tv2='1';bindControls()}return true}
 function fillParticipant(){const el=$('tv2Participant');if(!el)return;const keep=participantFilter;el.innerHTML='<option value="all">Todos os participantes</option>'+profiles.slice().sort((a,b)=>clean(a.nome).localeCompare(clean(b.nome),'pt-BR')).map(p=>`<option value="${esc(p.id)}">${esc(p.nome||'Integrante')}</option>`).join('');el.value=[...el.options].some(o=>o.value===keep)?keep:'all';participantFilter=el.value}
 function filtered(){const q=searchFilter.toLocaleLowerCase('pt-BR');return rows.filter(r=>(participantFilter==='all'||r.pid===participantFilter)&&(dayFilter==='all'||r.days.includes(dayFilter))&&(statusFilter==='all'||(statusFilter==='active'?r.active:!r.active))&&(!q||r.name.toLocaleLowerCase('pt-BR').includes(q)||r.participant.toLocaleLowerCase('pt-BR').includes(q)))}
+
+function detailsHtml(r,mobile=false){
+  const alarms=activeAlarmsFor(r);
+  const week=r.days.length?r.days.map(d=>`<span class="tv2-day">${esc(d)}</span>`).join(''):'<span class="tv2-muted">Sem dias definidos</span>';
+  const alarm=alarms.length?alarms.map(a=>`<p class="tv2-alarm-line">⏰ ${esc(alarmText(a))}</p>`).join(''):'<p>Nenhum despertador ativo para esta recorrência.</p>';
+  const observation=r.observation?`<p>${esc(r.observation)}</p>`:'<p>Sem observação registrada nessa tarefa.</p>';
+  return `<div class="${mobile?'tv2-mdetails':''}"><div class="tv2-details"><div class="tv2-detail"><small>Semana</small><div class="tv2-days">${week}</div></div><div class="tv2-detail"><small>Alarme</small>${alarm}</div><div class="tv2-detail"><small>Observação</small>${observation}</div></div></div>`;
+}
 function editDesktop(r){return `<tr class="tv2-edit"><td><div class="tv2-editgrid"><span style="font-size:20px">${esc(r.icon)}</span><input id="tv2-name-${esc(r.key)}" value="${esc(r.name)}"></div></td><td>${esc(r.participant)}</td><td>${esc(r.days.join(', '))}</td><td><input id="tv2-start-${esc(r.key)}" type="time" value="${esc(r.start)}"></td><td><input id="tv2-end-${esc(r.key)}" type="time" value="${esc(r.end)}"></td><td><input id="tv2-points-${esc(r.key)}" type="number" min="0" step="1" value="${r.points}"></td><td><input id="tv2-tol-${esc(r.key)}" type="number" min="0" step="1" value="${r.tolerance}"></td><td><span class="tv2-pill ${r.active?'tv2-on':'tv2-off'}">${r.active?'ATIVA':'INATIVA'}</span></td><td><div class="tv2-actions"><button class="tv2-btn" data-tv2-save="${esc(r.key)}">Salvar</button><button class="tv2-btn" data-tv2-cancel>Cancelar</button></div></td></tr>`}
-function readDesktop(r){return `<tr><td><div class="tv2-name"><span>${esc(r.icon)}</span><div><b>${esc(r.name)}</b><small class="tv2-muted">${r.docs.length} ocorrência(s) recorrente(s)</small></div></div></td><td>${esc(r.participant)}</td><td>${esc(r.days.join(', '))}</td><td>${esc(r.start||'—')}</td><td>${esc(r.end||'—')}</td><td>${r.points}</td><td>${r.tolerance} min</td><td><span class="tv2-pill ${r.active?'tv2-on':'tv2-off'}">${r.active?'ATIVA':'INATIVA'}</span></td><td><div class="tv2-actions"><button class="tv2-btn" data-tv2-edit="${esc(r.key)}" ${canWrite()?'':'disabled'}>✎ Editar</button></div></td></tr>`}
-function mobileCard(r){const e=editing===r.key;return `<article class="tv2-mcard"><div class="tv2-mhead"><div class="tv2-name"><span>${esc(r.icon)}</span><div><b>${esc(r.name)}</b><small class="tv2-muted">${esc(r.participant)} · ${esc(r.days.join(', '))}</small></div></div><span class="tv2-pill ${r.active?'tv2-on':'tv2-off'}">${r.active?'ATIVA':'INATIVA'}</span></div>${e?`<div class="tv2-medit"><input id="tv2-m-name-${esc(r.key)}" value="${esc(r.name)}"><div class="tv2-mgrid"><div><small>Início</small><input id="tv2-m-start-${esc(r.key)}" type="time" value="${esc(r.start)}"></div><div><small>Fim</small><input id="tv2-m-end-${esc(r.key)}" type="time" value="${esc(r.end)}"></div><div><small>Pontos</small><input id="tv2-m-points-${esc(r.key)}" type="number" min="0" value="${r.points}"></div><div><small>Tolerância</small><input id="tv2-m-tol-${esc(r.key)}" type="number" min="0" value="${r.tolerance}"></div></div><div class="tv2-actions"><button class="tv2-btn" data-tv2-save="${esc(r.key)}" data-mobile="1">Salvar</button><button class="tv2-btn" data-tv2-cancel>Cancelar</button></div></div>`:`<div class="tv2-mgrid"><div class="tv2-mcell"><small>Horário</small><b>${esc(r.start)} → ${esc(r.end)}</b></div><div class="tv2-mcell"><small>Pontos / tolerância</small><b>${r.points} pts · ${r.tolerance} min</b></div></div><div class="tv2-actions"><button class="tv2-btn" data-tv2-edit="${esc(r.key)}" ${canWrite()?'':'disabled'}>✎ Editar</button></div>`}</article>`}
-function bindRows(){const root=$('view-tarefas');root?.querySelectorAll('[data-tv2-edit]').forEach(b=>b.onclick=()=>{editing=b.dataset.tv2Edit;render()});root?.querySelectorAll('[data-tv2-cancel]').forEach(b=>b.onclick=()=>{editing='';render()});root?.querySelectorAll('[data-tv2-save]').forEach(b=>b.onclick=()=>save(b.dataset.tv2Save,b.dataset.mobile==='1'))}
-function render(){if(!ensureView()||!accept())return;fillParticipant();$('tv2Day').value=dayFilter;$('tv2Status').value=statusFilter;$('tv2Search').value=searchFilter;const list=filtered();$('tv2Count').textContent=`${list.length} tarefa${list.length===1?'':'s'} · ${dayFilter==='all'?'todos os dias':dayFilter}${participantFilter==='all'?'':' · participante selecionado'}`;$('tv2Body').innerHTML=list.length?list.map(r=>editing===r.key?editDesktop(r):readDesktop(r)).join(''):'<tr><td colspan="9" class="tv2-empty">Nenhuma tarefa encontrada neste filtro.</td></tr>';$('tv2Mobile').innerHTML=list.length?list.map(mobileCard).join(''):'<div class="tv2-empty">Nenhuma tarefa encontrada neste filtro.</div>';$('tv2Refresh').disabled=busy;bindRows()}
-async function save(key,mobile){const row=rows.find(r=>r.key===key);if(!row||busy||!canWrite()||!await firebaseReady())return;const read=(name)=>$(mobile?`tv2-m-${name}-${key}`:`tv2-${name}-${key}`)?.value;const name=clean(read('name')),start=clean(read('start')),end=clean(read('end')),points=Number(read('points')),tol=Number(read('tol'));if(!name||!validTime(start,end)||!Number.isFinite(points)||points<0||!Number.isFinite(tol)||tol<0)return toast('Revise nome, horários, pontos e tolerância.');if(!row.docs.every(d=>sameGroup(d,groupId())))return toast('A tarefa não pertence ao grupo atual.');const conflict=hasConflict(row,start,end);if(conflict)return toast(`Conflito de horário com "${clean(conflict.nome)||'outra tarefa'}".`);busy=true;try{const batch=fs.writeBatch(db),now=new Date().toISOString();for(const d of row.docs){batch.update(fs.doc(db,'tarefas',d.id),{nome:name,horaSugeridaInicio:start,horaSugeridaFim:end,pontosMaximos:points,tempoLimite:tol,atualizadoEm:now})}await batch.commit();editing='';await window.rotinaSprint2SyncLocal?.('tarefas-editar-real');accept();render();log('edit_success',{docs:row.docs.length});toast('Tarefa atualizada.')}catch(e){console.error('Tarefas V2 editar:',e);log('edit_error',{codigo:clean(e?.code)||'erro'},'error');toast('Não foi possível salvar a tarefa.')}finally{busy=false;render()}}
-function bindControls(){const view=$('view-tarefas');if(view.dataset.tv2Bound==='1')return;view.dataset.tv2Bound='1';$('tv2Participant').onchange=e=>{participantFilter=e.target.value;editing='';render()};$('tv2Day').onchange=e=>{dayFilter=e.target.value;editing='';render()};$('tv2Status').onchange=e=>{statusFilter=e.target.value;editing='';render()};$('tv2Search').oninput=e=>{searchFilter=e.target.value;render()};$('tv2Refresh').onclick=async()=>{if(busy)return;busy=true;render();try{await window.rotinaSprint2SyncNow?.('tarefas-manual-v2');accept();render();toast('Tarefas atualizadas.')}finally{busy=false;render()}}}
+function readDesktop(r){
+  const main=`<tr><td><div class="tv2-name"><span>${esc(r.icon)}</span><div><b>${esc(r.name)}</b><small class="tv2-muted">${r.docs.length} ocorrência(s) recorrente(s)</small></div></div></td><td>${esc(r.participant)}</td><td>${esc(r.days.join(', '))}</td><td>${esc(r.start||'—')}</td><td>${esc(r.end||'—')}</td><td>${r.points}</td><td>${r.tolerance} min</td><td><span class="tv2-pill ${r.active?'tv2-on':'tv2-off'}">${r.active?'ATIVA':'INATIVA'}</span></td><td><div class="tv2-actions"><button class="tv2-btn" data-tv2-edit="${esc(r.key)}" ${canWrite()?'':'disabled'}>✎ Editar</button><button class="tv2-more" data-tv2-more="${esc(r.key)}" aria-label="Detalhes de ${esc(r.name)}" title="Detalhes">⋮</button></div></td></tr>`;
+  return main+(opened===r.key?`<tr class="tv2-details-row"><td colspan="9">${detailsHtml(r)}</td></tr>`:'');
+}
+function mobileCard(r){
+  const e=editing===r.key,o=opened===r.key;
+  return `<article class="tv2-mcard"><div class="tv2-mhead"><div class="tv2-name"><span>${esc(r.icon)}</span><div><b>${esc(r.name)}</b><small class="tv2-muted">${esc(r.participant)} · ${esc(r.days.join(', '))}</small></div></div><span class="tv2-pill ${r.active?'tv2-on':'tv2-off'}">${r.active?'ATIVA':'INATIVA'}</span></div>${e?`<div class="tv2-medit"><input id="tv2-m-name-${esc(r.key)}" value="${esc(r.name)}"><div class="tv2-mgrid"><div><small>Início</small><input id="tv2-m-start-${esc(r.key)}" type="time" value="${esc(r.start)}"></div><div><small>Fim</small><input id="tv2-m-end-${esc(r.key)}" type="time" value="${esc(r.end)}"></div><div><small>Pontos</small><input id="tv2-m-points-${esc(r.key)}" type="number" min="0" value="${r.points}"></div><div><small>Tolerância</small><input id="tv2-m-tol-${esc(r.key)}" type="number" min="0" value="${r.tolerance}"></div></div><div class="tv2-actions"><button class="tv2-btn" data-tv2-save="${esc(r.key)}" data-mobile="1">Salvar</button><button class="tv2-btn" data-tv2-cancel>Cancelar</button></div></div>`:`<div class="tv2-mgrid"><div class="tv2-mcell"><small>Horário</small><b>${esc(r.start)} → ${esc(r.end)}</b></div><div class="tv2-mcell"><small>Pontos / tolerância</small><b>${r.points} pts · ${r.tolerance} min</b></div></div><div class="tv2-actions"><button class="tv2-btn" data-tv2-edit="${esc(r.key)}" ${canWrite()?'':'disabled'}>✎ Editar</button><button class="tv2-more" data-tv2-more="${esc(r.key)}" aria-label="Detalhes de ${esc(r.name)}" title="Detalhes">⋮</button></div>${o?detailsHtml(r,true):''}`}</article>`;
+}
+function bindRows(){
+  const root=$('view-tarefas');
+  root?.querySelectorAll('[data-tv2-edit]').forEach(b=>b.onclick=()=>{editing=b.dataset.tv2Edit;opened='';render()});
+  root?.querySelectorAll('[data-tv2-cancel]').forEach(b=>b.onclick=()=>{editing='';render()});
+  root?.querySelectorAll('[data-tv2-save]').forEach(b=>b.onclick=()=>save(b.dataset.tv2Save,b.dataset.mobile==='1'));
+  root?.querySelectorAll('[data-tv2-more]').forEach(b=>b.onclick=()=>{opened=opened===b.dataset.tv2More?'':b.dataset.tv2More;log('details_toggle',{aberto:!!opened});render()});
+}
+function render(){
+  if(!ensureView()||!accept())return;
+  fillParticipant();$('tv2Day').value=dayFilter;$('tv2Status').value=statusFilter;$('tv2Search').value=searchFilter;
+  const list=filtered();
+  $('tv2Count').textContent=`${list.length} tarefa${list.length===1?'':'s'} · ${dayFilter==='all'?'todos os dias':dayFilter}${participantFilter==='all'?'':' · participante selecionado'}`;
+  $('tv2Body').innerHTML=list.length?list.map(r=>editing===r.key?editDesktop(r):readDesktop(r)).join(''):'<tr><td colspan="9" class="tv2-empty">Nenhuma tarefa encontrada neste filtro.</td></tr>';
+  $('tv2Mobile').innerHTML=list.length?list.map(mobileCard).join(''):'<div class="tv2-empty">Nenhuma tarefa encontrada neste filtro.</div>';
+  $('tv2Refresh').disabled=busy;bindRows();
+}
+async function save(key,mobile){
+  const row=rows.find(r=>r.key===key);if(!row||busy||!canWrite()||!await firebaseReady())return;
+  const read=name=>$(mobile?`tv2-m-${name}-${key}`:`tv2-${name}-${key}`)?.value;
+  const name=clean(read('name')),start=clean(read('start')),end=clean(read('end')),points=Number(read('points')),tol=Number(read('tol'));
+  if(!name||!validTime(start,end)||!Number.isFinite(points)||points<0||!Number.isFinite(tol)||tol<0)return toast('Revise nome, horários, pontos e tolerância.');
+  if(!row.docs.every(d=>sameGroup(d,groupId())))return toast('A tarefa não pertence ao grupo atual.');
+  const conflict=hasConflict(row,start,end);if(conflict)return toast(`Conflito de horário com "${clean(conflict.nome)||'outra tarefa'}".`);
+  busy=true;
+  try{
+    const batch=fs.writeBatch(db),now=new Date().toISOString();
+    for(const d of row.docs)batch.update(fs.doc(db,'tarefas',d.id),{nome:name,horaSugeridaInicio:start,horaSugeridaFim:end,pontosMaximos:points,tempoLimite:tol,atualizadoEm:now});
+    await batch.commit();editing='';
+    await window.rotinaSprint2SyncLocal?.('tarefas-editar-real');
+    accept();render();log('edit_success',{docs:row.docs.length});toast('Tarefa atualizada.');
+  }catch(e){console.error('Tarefas V2 editar:',e);log('edit_error',{codigo:clean(e?.code)||'erro'},'error');toast('Não foi possível salvar a tarefa.');}
+  finally{busy=false;render()}
+}
+function bindControls(){
+  const view=$('view-tarefas');if(view.dataset.tv2Bound==='1')return;view.dataset.tv2Bound='1';
+  $('tv2Participant').onchange=e=>{participantFilter=e.target.value;editing='';opened='';render()};
+  $('tv2Day').onchange=e=>{dayFilter=e.target.value;editing='';opened='';render()};
+  $('tv2Status').onchange=e=>{statusFilter=e.target.value;editing='';opened='';render()};
+  $('tv2Search').oninput=e=>{searchFilter=e.target.value;opened='';render()};
+  $('tv2Refresh').onclick=async()=>{if(busy)return;busy=true;render();try{await window.rotinaSprint2SyncNow?.('tarefas-manual-v2');accept();render();toast('Tarefas atualizadas.')}finally{busy=false;render()}};
+}
 function activate(){if(!window.RF_APP)return;ensureView();if(document.body.classList.contains('rf-auth-ready'))render()}
 window.rotinaSprint2TasksRender=()=>render();
-function install(){const obs=new MutationObserver(()=>{if(document.body.classList.contains('rf-auth-ready'))setTimeout(activate,0)});obs.observe(document.body,{attributes:true,attributeFilter:['class']});window.addEventListener('rotina-sprint2-cache-updated',()=>{if($('view-tarefas')?.classList.contains('active'))render()});setTimeout(activate,300)}
+function install(){
+  const obs=new MutationObserver(()=>{if(document.body.classList.contains('rf-auth-ready'))setTimeout(activate,0)});
+  obs.observe(document.body,{attributes:true,attributeFilter:['class']});
+  window.addEventListener('rotina-sprint2-cache-updated',()=>{if($('view-tarefas')?.classList.contains('active'))render()});
+  setTimeout(activate,300);
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
