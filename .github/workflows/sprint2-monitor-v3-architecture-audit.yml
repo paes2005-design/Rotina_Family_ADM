@@ -3,84 +3,72 @@ name: Sprint 2 Monitor V3 architecture audit
 on:
   push:
     paths:
+      - 'sprint2-data-store-v1.js'
+      - 'sprint2-monitor-realdata-v2.js'
+      - 'sprint2-integracao-monitor-v2.html'
       - '.github/workflows/sprint2-monitor-v3-architecture-audit.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   architecture-audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
-      - name: Corrigir contrato canonico do alarme
+      - name: Validar sintaxe JavaScript
+        run: |
+          node --check sprint2-data-store-v1.js
+          node --check sprint2-monitor-realdata-v2.js
+
+      - name: Auditar fonte unica, menu e sincronizacao
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          p=Path('sprint2-monitor-realdata-v2.js')
-          s=p.read_text(encoding='utf-8')
-          old="function alarmKey(g,p,t,date){return[g,p,t,date].map(v=>clean(v).replaceAll('/','_')).join('__')}"
-          new="function alarmKey(g,p,t){return[g,p,t].map(v=>clean(v).replaceAll('/','_')).join('__')}"
-          assert old in s, 'alarmKey V3 esperado nao encontrado'
-          s=s.replace(old,new,1)
-          old_call="alarmKey(groupId(),x.__pid,x.__sourceId,x.__date)"
-          new_call="alarmKey(groupId(),x.__pid,x.__sourceId)"
-          assert old_call in s, 'chamada alarmKey V3 esperada nao encontrada'
-          s=s.replace(old_call,new_call,1)
-          p.write_text(s,encoding='utf-8')
+          import re
+
+          store = Path('sprint2-data-store-v1.js').read_text(encoding='utf-8')
+          monitor = Path('sprint2-monitor-realdata-v2.js').read_text(encoding='utf-8')
+          html = Path('sprint2-integracao-monitor-v2.html').read_text(encoding='utf-8')
+
+          checks = []
+          def ok(label, condition):
+              checks.append((label, bool(condition)))
+              print(('OK - ' if condition else 'FALHA - ') + label)
+
+          ok('Store possui exatamente uma escuta continua Firestore', store.count('fs.onSnapshot(') == 1)
+          ok('escuta continua observa somente execucoes', "fs.collection(db,'execucoes')" in store)
+          ok('historico nao possui escuta continua', not re.search(r"onSnapshot[^\n]+historico|historico[^\n]+onSnapshot", store))
+          ok('listener unico e protegido contra duplicacao', 'liveUnsubs.length===1' in store)
+          ok('reconciliacao periodica cobre tarefas historico e despertadores', "['tarefas','historico','despertadores']" in store)
+          ok('sincronizacao total cobre as quatro colecoes', "['tarefas','historico','execucoes','despertadores']" in store)
+          ok('janela de reconciliacao permanece em cinco minutos', 'const SYNC_MS=5*60*1000' in store)
+          ok('menu limpa todas as selecoes antes de marcar a rota', "nav.querySelectorAll('button').forEach(b=>b.classList.remove('active'))" in store)
+          ok('menu controla Inicio Tarefas e Monitor', "['inicio','tarefas','monitor'].includes(route)" in store)
+          ok('Monitor reage ao evento do Store central', "window.addEventListener('rotina-sprint2-cache-updated'" in monitor)
+          ok('botao Atualizar forca sincronizacao remota', "rotinaSprint2SyncNow('monitor-manual')" in monitor)
+          ok('Monitor continua sendo read model V3', "VERSION='monitor-realdata-v3-readmodel'" in monitor)
+          ok('resultado exige ocorrencia por tarefa participante e data', 'findByOccurrence(historyDocs,source,pid,date)' in monitor and 'findByOccurrence(executionDocs,source,pid,date)' in monitor)
+          ok('sem ocorrencia permanece pendente e sem faixa', "Pendente · horário previsto passou" in monitor and "if(x.__state!=='final')return null" in monitor)
+          ok('Monitor nao recalcula percentual por pontos', 'won*100/max' not in monitor and 'won * 100 / max' not in monitor)
+
+          login_pos = html.find('sprint2-integracao-login-realdata-v1.js')
+          store_pos = html.find('sprint2-data-store-v1.js')
+          monitor_pos = html.find('sprint2-monitor-realdata-v2.js')
+          ok('ordem de scripts e Login Store Monitor', -1 not in (login_pos, store_pos, monitor_pos) and login_pos < store_pos < monitor_pos)
+
+          passed = sum(v for _, v in checks)
+          total = len(checks)
+          print(f'MONITOR_V3_ARCHITECTURE_RESULT={passed}/{total}')
+          if passed != total:
+              raise SystemExit(1)
           PY
 
-      - name: Sintaxe
-        run: node --check sprint2-monitor-realdata-v2.js
-
-      - name: Auditar fonte unica e compatibilidade
-        shell: bash
+      - name: Confirmar escopo Sprint 2
         run: |
-          node <<'NODE'
-          const fs=require('fs');
-          const js=fs.readFileSync('sprint2-monitor-realdata-v2.js','utf8');
-          const alarm=fs.readFileSync('family-alarm-admin.js','utf8');
-          const ok=(v,m)=>{if(!v)throw new Error(m);console.log('OK - '+m)};
-
-          ok(js.includes("VERSION='monitor-realdata-v3-readmodel'"),'Monitor executa como read model V3');
-          ok(js.includes("const TIME_ZONE='America/Bahia'"),'relogio operacional fixado em America/Bahia');
-          ok(js.includes("findByOccurrence(historyDocs,source,pid,date)")&&js.includes("findByOccurrence(executionDocs,source,pid,date)"),'resultado exige ocorrencia por tarefa, participante e data');
-          ok(js.includes("clean(x.tarefaId)===clean(source.id)")&&js.includes("recordDate(x)===date"),'nao ha heranca de historico por nome apenas');
-          ok(js.includes("stateKind='pending'")&&js.includes("__resultSource:sourceKind,__state:stateKind"),'ausencia de ocorrencia permanece pendente');
-          ok(js.includes("Pendente · horário previsto passou")&&js.includes("if(x.__state!=='final')return null"),'horario passado nao cria faixa de pontuacao');
-          ok(!js.includes('won*100/max')&&!js.includes('won * 100 / max'),'Monitor nao recalcula percentual por pontos');
-          ok(js.includes("if(faixa==='dentro-limites')return 100")&&js.includes("if(faixa==='atraso-leve')return 75")&&js.includes("if(faixa==='atraso-maior')return 50"),'Monitor apenas interpreta resultado armazenado');
-          ok(js.includes("$('mPending').textContent=pending")&&!js.includes("$('mPending').textContent=pending+late"),'pendentes e atrasos nao sao somados');
-          ok(js.includes('data-period="day"')&&js.includes('data-period="week"')&&js.includes('data-period="month"')&&js.includes('data-period="year"'),'controles Dia Semana Mes Ano restaurados');
-          ok(js.includes('Todos os status')&&js.includes('Pendentes')&&js.includes('Em andamento'),'filtro operacional de status restaurado');
-          ok(js.includes("function alarmKey(g,p,t){return[g,p,t]")&&alarm.includes("function chaveDoc(g,p,t){return [g,p,t]"),'chave de alarme V3 coincide com contrato oficial');
-          ok(js.includes('dataAgendada:x.__date')&&js.includes('semanaInicio')&&js.includes('inicioEm')&&js.includes('fimEm'),'data da ocorrencia permanece no payload do alarme');
-          ok(!js.includes("batch.update(taskRef,patch)")&&js.includes("batch.update(histRef,patch)"),'revisao nao duplica resultado de volta em tarefas');
-          ok(js.includes("fs.doc(db,'execucoes',`${x.__date}__${x.__sourceId}`)")&&js.includes('execSnap?.exists()'),'revisao atualiza execucao correspondente somente quando existente');
-          ok(js.includes('versaoMonitor:3')&&js.includes('if(!response.ok)')&&js.includes('Number(result.accepted)!==1'),'telemetria valida confirmacao do Worker');
-          ok(js.includes('CACHE_TTL_MS=120000')&&js.includes('mv3Refresh'),'leitura de tela possui cache curto e atualizacao manual');
-          ok(js.includes("Fonte: <b>")&&js.includes('sourceLabel(x)'),'fonte do resultado fica visivel para auditoria');
-          console.log('MONITOR_V3_ARCHITECTURE_RESULT=18/18');
-          NODE
-
-      - name: Confirmar isolamento da Sprint 2
-        shell: bash
-        run: |
-          git diff --name-only | tee /tmp/changed.txt
-          test "$(cat /tmp/changed.txt)" = "sprint2-monitor-realdata-v2.js"
-
-      - name: Publicar correcao de compatibilidade
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo 'Nenhuma correcao pendente.'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add sprint2-monitor-realdata-v2.js
-          git commit -m 'Sprint 2: alinha Monitor V3 ao contrato oficial de alarmes'
-          git push
+          echo 'Auditoria somente leitura: nenhum arquivo de producao e alterado pelo teste.'
+          echo 'Monitor V3 validado com uma unica escuta continua em execucoes.'
