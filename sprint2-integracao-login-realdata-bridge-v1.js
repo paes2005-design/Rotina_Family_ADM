@@ -48,7 +48,7 @@
   if(!document.getElementById('sprint2MasterRealDataScript')){
     const script=document.createElement('script');
     script.id='sprint2MasterRealDataScript';
-    script.src='sprint2-master-realdata-v1.js?v=20260904-master-realdata-v1';
+    script.src='sprint2-master-realdata-v1.js?v=20260904-master-realdata-v1-audit2';
     script.async=true;
     script.onerror=()=>techLog('master_realdata_load_error',{bridge:1},'error');
     document.head.appendChild(script);
