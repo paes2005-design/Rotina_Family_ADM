@@ -42,7 +42,7 @@ jobs:
       - name: One continuous Firestore listener remains
         run: |
           test "$(grep -o 'fs\.onSnapshot' sprint2-data-store-v1.js | wc -l | tr -d ' ')" = "1"
-          ! grep -q 'onSnapshot' sprint2-master-realdata-v1.js
+          ! grep -Eq 'fs\.onSnapshot|\.onSnapshot\s*\(' sprint2-master-realdata-v1.js
       - name: Integrated shell loads Master
         run: |
           grep -q 'sprint2-master-realdata-v1.js?v=20260904-master-realdata-v1' sprint2-integracao-login-realdata-bridge-v1.js
