@@ -112,7 +112,7 @@ function mondayOfWeek(){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDa
 function isoDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function dateForDay(day){const idx=DAYS.indexOf(day),d=mondayOfWeek();d.setDate(d.getDate()+(idx===0?6:idx-1));return isoDate(d)}
 function alarmDocId(g,pid,taskId){return [g,pid,taskId].map(v=>String(v||'').replaceAll('/','_')).join('__')}
-function agendaFields(day,start,end){const date=dataForDay(day),mk=t=>`${date}T${t}:00`;return{dataAgendada:date,semanaInicio:isoDate(mondayOfWeek()),inicioEm:mk(start),fimEm:mk(end)}}
+function agendaFields(day,start,end){const date=dateForDay(day),mk=t=>`${date}T${t}:00`;return{dataAgendada:date,semanaInicio:isoDate(mondayOfWeek()),inicioEm:mk(start),fimEm:mk(end)}}
 function conflictForDay(row,day){const own=new Set(row.docs.map(d=>d.id));for(const d of snapshot().taskDocs||[]){if(own.has(d.id)||!sameGroup(d,groupId())||!activeDoc(d)||profileIdFor(d)!==row.pid||clean(d.diaSemana)!==day)continue;const a=clean(d.horaSugeridaInicio),b=clean(d.horaSugeridaFim);if(validTime(a,b)&&row.start<b&&row.end>a)return d}return null}
 async function saveDetails(token){
   const row=rows.find(r=>detailToken(r.key)===token);if(!row||busy||!canWrite()||!await firebaseReady())return;
