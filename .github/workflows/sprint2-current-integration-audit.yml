@@ -11,6 +11,7 @@ on:
       - 'sprint2-monitor-realdata-v2.js'
       - 'sprint2-participantes-realdata-v1.js'
       - 'sprint2-recompensas-realdata-v1.js'
+      - 'sprint2-conquistas-realdata-v1.js'
       - '.github/workflows/sprint2-current-integration-audit.yml'
       - '.github/triggers/sprint2-current-integration-audit.txt'
   workflow_dispatch:
@@ -34,7 +35,8 @@ jobs:
             sprint2-tarefas-realdata-v2.js \
             sprint2-monitor-realdata-v2.js \
             sprint2-participantes-realdata-v1.js \
-            sprint2-recompensas-realdata-v1.js; do
+            sprint2-recompensas-realdata-v1.js \
+            sprint2-conquistas-realdata-v1.js; do
               echo "node --check $f"
               node --check "$f"
           done
@@ -58,10 +60,11 @@ jobs:
           monitor=text('sprint2-monitor-realdata-v2.js')
           participants=text('sprint2-participantes-realdata-v1.js')
           rewards=text('sprint2-recompensas-realdata-v1.js')
+          conquests=text('sprint2-conquistas-realdata-v1.js')
 
           require(store.count('fs.onSnapshot(')==1,'Store mantém exatamente um listener contínuo')
           require("collection(db,'execucoes')" in store,'listener contínuo permanece em execucoes')
-          for name,src in [('Tarefas',tasks),('Monitor',monitor),('Participantes',participants),('Recompensas',rewards)]:
+          for name,src in [('Tarefas',tasks),('Monitor',monitor),('Participantes',participants),('Recompensas',rewards),('Conquistas',conquests)]:
               require('onSnapshot(' not in src,f'{name} não cria listener próprio')
 
           require('window.rotinaSprint2TasksRender' in tasks,'Tarefas expõe interface única de renderização')
@@ -71,19 +74,39 @@ jobs:
 
           require('data-tv2-more' in tasks,'três pontos de detalhes estão no módulo-fonte de Tarefas')
           require('Semana' in tasks and 'Alarme' in tasks and 'Observação' in tasks,'detalhes preservam Semana, Alarme e Observação')
-          require('snap.alarms' in tasks or 'snapshot().alarms' in tasks or '(snap.alarms||[])' in tasks,'Tarefas lê despertadores pelo Store central')
+          require('data-tv2-detail-save' in tasks and 'saveDetails' in tasks,'detalhes de Tarefas são editáveis e possuem salvamento real')
+          require("fs.collection(db,'tarefas')" in tasks,'edição de Semana cria ocorrências reais de Tarefas quando necessário')
+          require("fs.doc(db,'despertadores'" in tasks,'edição de Alarme grava o contrato oficial de despertadores')
+          require('observacao:note' in tasks,'edição de Observação persiste no documento real da Tarefa')
+          require('snapshot().alarms' in tasks or '(snap.alarms||[])' in tasks,'Tarefas lê despertadores pelo Store central')
 
-          for script in ['sprint2-data-store-v1.js','sprint2-tarefas-realdata-v2.js','sprint2-monitor-realdata-v2.js','sprint2-participantes-realdata-v1.js','sprint2-recompensas-realdata-v1.js']:
+          require('conquests' in store and 'conquestEvents' in store,'Store central expõe dados de Conquistas')
+          require("queryGroup('conquistas'" in store and "queryGroup('conquistaHistorico'" in store,'Store reconcilia Conquistas sem listener extra')
+          require("clean(window.rotinaSprint2SessionSnapshot?.().role)==='master'" in store,'coleções novas ficam isoladas ao Master nesta fase')
+          require("function canWrite(){return clean(session().role)==='master'}" in conquests,'gravação de Conquistas permanece Master-only sem alterar regras de produção')
+          require('on_time_days' in conquests and 'tasks_100' in conquests and 'no_justification_days' in conquests and 'percent_points' in conquests and 'points' in conquests,'Conquistas contém as cinco regras aprovadas')
+          require("modoCiclo==='unique'" in conquests and "modoCiclo==='periodic'" in conquests and "modoCiclo==='continuous'" in conquests,'Conquistas preserva ciclos único, periódico e contínuo')
+          require('pendenteValidacao' in conquests and 'Validar recompensa' in conquests,'meta atingida entra em validação do ADM')
+          require('cq1Preview' in conquests,'Conquistas mantém prévia do participante')
+          require('cqFormDeadline' in conquests and 'cqFormDeadlineValue' in conquests and 'cqFormDeadlineUnit' in conquests,'regra de pontos preserva configuração de prazo aprovada')
+          require('prazo:deadline' in conquests and 'prazoValor:' in conquests and 'prazoUnidade:' in conquests,'prazo de pontos é persistido no contrato da Conquista')
+          require('não há expiração automática inventada' in conquests,'prazo não introduz semântica automática não aprovada')
+
+          require('id="rv1ConquestsPanel"' in rewards,'layout integrado reserva painel de Conquistas ao lado de Recompensas')
+          require('rv1HistoryType' in rewards and 'window.rotinaSprint2ConquestHistoryRows' in conquests,'Histórico unifica Recompensas e eventos de Conquistas')
+          require('data-rv1-decide' in rewards and 'Aprovar' in rewards and 'Recusar' in rewards,'Histórico preserva aprovação e recusa de resgates')
+
+          for script in ['sprint2-data-store-v1.js','sprint2-tarefas-realdata-v2.js','sprint2-monitor-realdata-v2.js','sprint2-participantes-realdata-v1.js','sprint2-recompensas-realdata-v1.js','sprint2-conquistas-realdata-v1.js']:
               require(script in html,f'HTML integrado carrega {script}')
 
           require('readyGroup' in store,'Store mantém trava de grupo pronto')
           require('readyGroup' in tasks,'Tarefas valida grupo pronto antes de renderizar')
           require('readyGroup' in participants,'Participantes valida grupo pronto')
           require('readyGroup' in rewards,'Recompensas valida grupo pronto')
+          require('readyGroup' in conquests,'Conquistas valida grupo pronto')
 
           for field in ['pushClientePendente','pushClienteSolicitadoEm','pushClienteTentativas']:
               require(field in rewards,f'Recompensas preserva efeito oficial {field}')
 
-          require('Conquistas permanecem congeladas' in rewards or 'Conquistas' in rewards and 'congelad' in rewards.lower(),'Conquistas continua explicitamente congelada, sem mock real')
           print('SPRINT2_CURRENT_INTEGRATION_AUDIT=PASS')
           PY
