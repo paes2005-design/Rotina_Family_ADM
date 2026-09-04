@@ -1,0 +1,85 @@
+name: Sprint 2 task icon edit fix
+
+on:
+  push:
+    paths:
+      - '.github/triggers/sprint2-task-icon-edit-fix.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore approved icon editor
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p = Path('sprint2-tarefas-realdata-v2.js')
+          s = p.read_text(encoding='utf-8')
+
+          replacements = [
+            ("const VERSION='tarefas-realdata-v2.2-editable-details';",
+             "const VERSION='tarefas-realdata-v2.3-icon-edit';"),
+            ("const DAYS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];",
+             "const DAYS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];\nconst ICONS=['🛏️','📚','🧹','🎻','🍴','🗑️','🧼','🪥','🐶','✅'];"),
+            ("function editDesktop(r){return `<tr class=\"tv2-edit\"><td><div class=\"tv2-editgrid\"><span style=\"font-size:20px\">${esc(r.icon)}</span><input id=\"tv2-name-${esc(r.key)}\" value=\"${esc(r.name)}\"></div></td>",
+             "function iconOptions(current){return ICONS.map(i=>`<option value=\"${esc(i)}\" ${i===current?'selected':''}>${esc(i)}</option>`).join('')}\nfunction editDesktop(r){return `<tr class=\"tv2-edit\"><td><div class=\"tv2-editgrid\"><select id=\"tv2-icon-${esc(r.key)}\" aria-label=\"Ícone da tarefa\">${iconOptions(r.icon)}</select><input id=\"tv2-name-${esc(r.key)}\" value=\"${esc(r.name)}\"></div></td>"),
+            ("return `<article class=\"tv2-mcard\"><div class=\"tv2-mhead\"><div class=\"tv2-name\"><span>${esc(r.icon)}</span><div><b>${esc(r.name)}</b><small class=\"tv2-muted\">${esc(r.participant)} · ${esc(r.days.join(', '))}</small></div></div><span class=\"tv2-pill ${r.active?'tv2-on':'tv2-off'}\">${r.active?'ATIVA':'INATIVA'}</span></div>${e?`<div class=\"tv2-medit\"><input id=\"tv2-m-name-${esc(r.key)}\" value=\"${esc(r.name)}\">",
+             "return `<article class=\"tv2-mcard\"><div class=\"tv2-mhead\"><div class=\"tv2-name\"><span>${esc(r.icon)}</span><div><b>${esc(r.name)}</b><small class=\"tv2-muted\">${esc(r.participant)} · ${esc(r.days.join(', '))}</small></div></div><span class=\"tv2-pill ${r.active?'tv2-on':'tv2-off'}\">${r.active?'ATIVA':'INATIVA'}</span></div>${e?`<div class=\"tv2-medit\"><select id=\"tv2-m-icon-${esc(r.key)}\" aria-label=\"Ícone da tarefa\">${iconOptions(r.icon)}</select><input id=\"tv2-m-name-${esc(r.key)}\" value=\"${esc(r.name)}\">"),
+            ("const name=clean(read('name')),start=clean(read('start')),end=clean(read('end')),points=Number(read('points')),tol=Number(read('tol'));",
+             "const icon=clean(read('icon')),name=clean(read('name')),start=clean(read('start')),end=clean(read('end')),points=Number(read('points')),tol=Number(read('tol'));"),
+            ("if(!name||!validTime(start,end)||!Number.isFinite(points)||points<0||!Number.isFinite(tol)||tol<0)return toast('Revise nome, horários, pontos e tolerância.');",
+             "if(!ICONS.includes(icon)||!name||!validTime(start,end)||!Number.isFinite(points)||points<0||!Number.isFinite(tol)||tol<0)return toast('Revise ícone, nome, horários, pontos e tolerância.');"),
+            ("for(const d of row.docs)batch.update(fs.doc(db,'tarefas',d.id),{nome:name,horaSugeridaInicio:start,horaSugeridaFim:end,pontosMaximos:points,tempoLimite:tol,atualizadoEm:now});",
+             "for(const d of row.docs)batch.update(fs.doc(db,'tarefas',d.id),{icone:icon,nome:name,horaSugeridaInicio:start,horaSugeridaFim:end,pontosMaximos:points,tempoLimite:tol,atualizadoEm:now});"),
+            ("accept();render();log('edit_success',{docs:row.docs.length});toast('Tarefa atualizada.');",
+             "accept();render();log('edit_success',{docs:row.docs.length,icone:icon});toast('Tarefa atualizada.');")
+          ]
+
+          for old, new in replacements:
+            if old not in s:
+              raise SystemExit('Trecho esperado não encontrado: ' + old[:120])
+            s = s.replace(old, new, 1)
+
+          p.write_text(s, encoding='utf-8')
+
+      - name: Syntax check
+        run: node --check sprint2-tarefas-realdata-v2.js
+
+      - name: Audit icon editing contract
+        shell: python
+        run: |
+          from pathlib import Path
+          s=Path('sprint2-tarefas-realdata-v2.js').read_text(encoding='utf-8')
+          checks={
+            'lista aprovada de ícones': "const ICONS=['🛏️','📚','🧹','🎻','🍴','🗑️','🧼','🪥','🐶','✅'];" in s,
+            'seletor web': 'id=\\"tv2-icon-${esc(r.key)}\\"' in s,
+            'seletor mobile': 'id=\\"tv2-m-icon-${esc(r.key)}\\"' in s,
+            'salva ícone no Firestore': "{icone:icon,nome:name" in s,
+            'valida ícone': '!ICONS.includes(icon)' in s,
+            'sem listener novo': 'onSnapshot(' not in s,
+          }
+          for k,v in checks.items():
+            print(('✅' if v else '❌'), k)
+          if not all(checks.values()):
+            raise SystemExit(1)
+
+      - name: Commit fix
+        run: |
+          if git diff --quiet; then
+            echo 'No changes required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add sprint2-tarefas-realdata-v2.js
+          git commit -m 'Sprint 2: restaura edição de ícones nas tarefas'
+          git push
