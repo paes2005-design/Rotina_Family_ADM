@@ -1,11 +1,12 @@
 (function(){
 'use strict';
 
-const VERSION='tarefas-realdata-v2.2-editable-details';
+const VERSION='tarefas-realdata-v2.3-icon-edit';
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').trim();
 const esc=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const DAYS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const ICONS=['🛏️','📚','🧹','🎻','🍴','🗑️','🧼','🪥','🐶','✅'];
 let db=null,fs=null,app=null,rows=[],profiles=[],editing='',opened='',busy=false;
 let participantFilter='all',dayFilter=todayFull(),statusFilter='all',searchFilter='';
 
@@ -131,14 +132,15 @@ async function saveDetails(token){
   }catch(e){console.error('Tarefas V2 detalhes:',e);log('details_save_error',{codigo:clean(e?.code)||'erro'},'error');toast('Não foi possível salvar os detalhes.')}finally{busy=false;render()}
 }
 
-function editDesktop(r){return `<tr class="tv2-edit"><td><div class="tv2-editgrid"><span style="font-size:20px">${esc(r.icon)}</span><input id="tv2-name-${esc(r.key)}" value="${esc(r.name)}"></div></td><td>${esc(r.participant)}</td><td>${esc(r.days.join(', '))}</td><td><input id="tv2-start-${esc(r.key)}" type="time" value="${esc(r.start)}"></td><td><input id="tv2-end-${esc(r.key)}" type="time" value="${esc(r.end)}"></td><td><input id="tv2-points-${esc(r.key)}" type="number" min="0" step="1" value="${r.points}"></td><td><input id="tv2-tol-${esc(r.key)}" type="number" min="0" step="1" value="${r.tolerance}"></td><td><span class="tv2-pill ${r.active?'tv2-on':'tv2-off'}">${r.active?'ATIVA':'INATIVA'}</span></td><td><div class="tv2-actions"><button class="tv2-btn" data-tv2-save="${esc(r.key)}">Salvar</button><button class="tv2-btn" data-tv2-cancel>Cancelar</button></div></td></tr>`}
+function iconOptions(current){return ICONS.map(i=>`<option value="${esc(i)}" ${i===current?'selected':''}>${esc(i)}</option>`).join('')}
+function editDesktop(r){return `<tr class="tv2-edit"><td><div class="tv2-editgrid"><select id="tv2-icon-${esc(r.key)}" aria-label="Ícone da tarefa">${iconOptions(r.icon)}</select><input id="tv2-name-${esc(r.key)}" value="${esc(r.name)}"></div></td><td>${esc(r.participant)}</td><td>${esc(r.days.join(', '))}</td><td><input id="tv2-start-${esc(r.key)}" type="time" value="${esc(r.start)}"></td><td><input id="tv2-end-${esc(r.key)}" type="time" value="${esc(r.end)}"></td><td><input id="tv2-points-${esc(r.key)}" type="number" min="0" step="1" value="${r.points}"></td><td><input id="tv2-tol-${esc(r.key)}" type="number" min="0" step="1" value="${r.tolerance}"></td><td><span class="tv2-pill ${r.active?'tv2-on':'tv2-off'}">${r.active?'ATIVA':'INATIVA'}</span></td><td><div class="tv2-actions"><button class="tv2-btn" data-tv2-save="${esc(r.key)}">Salvar</button><button class="tv2-btn" data-tv2-cancel>Cancelar</button></div></td></tr>`}
 function readDesktop(r){
   const main=`<tr><td><div class="tv2-name"><span>${esc(r.icon)}</span><div><b>${esc(r.name)}</b><small class="tv2-muted">${r.docs.length} ocorrência(s) recorrente(s)</small></div></div></td><td>${esc(r.participant)}</td><td>${esc(r.days.join(', '))}</td><td>${esc(r.start||'—')}</td><td>${esc(r.end||'—')}</td><td>${r.points}</td><td>${r.tolerance} min</td><td><span class="tv2-pill ${r.active?'tv2-on':'tv2-off'}">${r.active?'ATIVA':'INATIVA'}</span></td><td><div class="tv2-actions"><button class="tv2-btn" data-tv2-edit="${esc(r.key)}" ${canWrite()?'':'disabled'}>✎ Editar</button><button class="tv2-more" data-tv2-more="${esc(r.key)}" aria-label="Detalhes de ${esc(r.name)}" title="Detalhes">⋮</button></div></td></tr>`;
   return main+(opened===r.key?`<tr class="tv2-details-row"><td colspan="9">${detailsHtml(r)}</td></tr>`:'');
 }
 function mobileCard(r){
   const e=editing===r.key,o=opened===r.key;
-  return `<article class="tv2-mcard"><div class="tv2-mhead"><div class="tv2-name"><span>${esc(r.icon)}</span><div><b>${esc(r.name)}</b><small class="tv2-muted">${esc(r.participant)} · ${esc(r.days.join(', '))}</small></div></div><span class="tv2-pill ${r.active?'tv2-on':'tv2-off'}">${r.active?'ATIVA':'INATIVA'}</span></div>${e?`<div class="tv2-medit"><input id="tv2-m-name-${esc(r.key)}" value="${esc(r.name)}"><div class="tv2-mgrid"><div><small>Início</small><input id="tv2-m-start-${esc(r.key)}" type="time" value="${esc(r.start)}"></div><div><small>Fim</small><input id="tv2-m-end-${esc(r.key)}" type="time" value="${esc(r.end)}"></div><div><small>Pontos</small><input id="tv2-m-points-${esc(r.key)}" type="number" min="0" value="${r.points}"></div><div><small>Tolerância</small><input id="tv2-m-tol-${esc(r.key)}" type="number" min="0" value="${r.tolerance}"></div></div><div class="tv2-actions"><button class="tv2-btn" data-tv2-save="${esc(r.key)}" data-mobile="1">Salvar</button><button class="tv2-btn" data-tv2-cancel>Cancelar</button></div></div>`:`<div class="tv2-mgrid"><div class="tv2-mcell"><small>Horário</small><b>${esc(r.start)} → ${esc(r.end)}</b></div><div class="tv2-mcell"><small>Pontos / tolerância</small><b>${r.points} pts · ${r.tolerance} min</b></div></div><div class="tv2-actions"><button class="tv2-btn" data-tv2-edit="${esc(r.key)}" ${canWrite()?'':'disabled'}>✎ Editar</button><button class="tv2-more" data-tv2-more="${esc(r.key)}" aria-label="Detalhes de ${esc(r.name)}" title="Detalhes">⋮</button></div>${o?detailsHtml(r,true):''}`}</article>`;
+  return `<article class="tv2-mcard"><div class="tv2-mhead"><div class="tv2-name"><span>${esc(r.icon)}</span><div><b>${esc(r.name)}</b><small class="tv2-muted">${esc(r.participant)} · ${esc(r.days.join(', '))}</small></div></div><span class="tv2-pill ${r.active?'tv2-on':'tv2-off'}">${r.active?'ATIVA':'INATIVA'}</span></div>${e?`<div class="tv2-medit"><select id="tv2-m-icon-${esc(r.key)}" aria-label="Ícone da tarefa">${iconOptions(r.icon)}</select><input id="tv2-m-name-${esc(r.key)}" value="${esc(r.name)}"><div class="tv2-mgrid"><div><small>Início</small><input id="tv2-m-start-${esc(r.key)}" type="time" value="${esc(r.start)}"></div><div><small>Fim</small><input id="tv2-m-end-${esc(r.key)}" type="time" value="${esc(r.end)}"></div><div><small>Pontos</small><input id="tv2-m-points-${esc(r.key)}" type="number" min="0" value="${r.points}"></div><div><small>Tolerância</small><input id="tv2-m-tol-${esc(r.key)}" type="number" min="0" value="${r.tolerance}"></div></div><div class="tv2-actions"><button class="tv2-btn" data-tv2-save="${esc(r.key)}" data-mobile="1">Salvar</button><button class="tv2-btn" data-tv2-cancel>Cancelar</button></div></div>`:`<div class="tv2-mgrid"><div class="tv2-mcell"><small>Horário</small><b>${esc(r.start)} → ${esc(r.end)}</b></div><div class="tv2-mcell"><small>Pontos / tolerância</small><b>${r.points} pts · ${r.tolerance} min</b></div></div><div class="tv2-actions"><button class="tv2-btn" data-tv2-edit="${esc(r.key)}" ${canWrite()?'':'disabled'}>✎ Editar</button><button class="tv2-more" data-tv2-more="${esc(r.key)}" aria-label="Detalhes de ${esc(r.name)}" title="Detalhes">⋮</button></div>${o?detailsHtml(r,true):''}`}</article>`;
 }
 function bindRows(){
   const root=$('view-tarefas');
@@ -161,17 +163,17 @@ function render(){
 async function save(key,mobile){
   const row=rows.find(r=>r.key===key);if(!row||busy||!canWrite()||!await firebaseReady())return;
   const read=name=>$(mobile?`tv2-m-${name}-${key}`:`tv2-${name}-${key}`)?.value;
-  const name=clean(read('name')),start=clean(read('start')),end=clean(read('end')),points=Number(read('points')),tol=Number(read('tol'));
-  if(!name||!validTime(start,end)||!Number.isFinite(points)||points<0||!Number.isFinite(tol)||tol<0)return toast('Revise nome, horários, pontos e tolerância.');
+  const icon=clean(read('icon')),name=clean(read('name')),start=clean(read('start')),end=clean(read('end')),points=Number(read('points')),tol=Number(read('tol'));
+  if(!ICONS.includes(icon)||!name||!validTime(start,end)||!Number.isFinite(points)||points<0||!Number.isFinite(tol)||tol<0)return toast('Revise ícone, nome, horários, pontos e tolerância.');
   if(!row.docs.every(d=>sameGroup(d,groupId())))return toast('A tarefa não pertence ao grupo atual.');
   const conflict=hasConflict(row,start,end);if(conflict)return toast(`Conflito de horário com "${clean(conflict.nome)||'outra tarefa'}".`);
   busy=true;
   try{
     const batch=fs.writeBatch(db),now=new Date().toISOString();
-    for(const d of row.docs)batch.update(fs.doc(db,'tarefas',d.id),{nome:name,horaSugeridaInicio:start,horaSugeridaFim:end,pontosMaximos:points,tempoLimite:tol,atualizadoEm:now});
+    for(const d of row.docs)batch.update(fs.doc(db,'tarefas',d.id),{icone:icon,nome:name,horaSugeridaInicio:start,horaSugeridaFim:end,pontosMaximos:points,tempoLimite:tol,atualizadoEm:now});
     await batch.commit();editing='';
     await window.rotinaSprint2SyncLocal?.('tarefas-editar-real');
-    accept();render();log('edit_success',{docs:row.docs.length});toast('Tarefa atualizada.');
+    accept();render();log('edit_success',{docs:row.docs.length,icone:icon});toast('Tarefa atualizada.');
   }catch(e){console.error('Tarefas V2 editar:',e);log('edit_error',{codigo:clean(e?.code)||'erro'},'error');toast('Não foi possível salvar a tarefa.');}
   finally{busy=false;render()}
 }
