@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='tarefas-realdata-v2.5-create-inline';
+const VERSION='tarefas-realdata-v2.6-create-inline-contract';
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').trim();
 const esc=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -178,20 +178,46 @@ function render(){
   $('tv2Refresh').disabled=busy;if($('tv2Add'))$('tv2Add').disabled=busy||creating||!canWrite();bindRows();
 }
 async function createTask(mobile){
-  if(!creating||busy||!canWrite()||!await firebaseReady())return;
+  if(!creating||busy||!canWrite())return;
+  if(!await firebaseReady()){log('create_error',{etapa:'firebase_ready',codigo:'firebase-nao-pronto',mensagem:'Aplicativo Firebase da Sprint 2 não disponível.'},'error');return toast('Não foi possível preparar a gravação da tarefa.');}
   const prefix=mobile?'tv2-m-new-':'tv2-new-';
   const icon=clean($(prefix+'icon')?.value),name=clean($(prefix+'name')?.value),start=clean($(prefix+'start')?.value),end=clean($(prefix+'end')?.value),points=Number($(prefix+'points')?.value),tol=Number($(prefix+'tol')?.value),targets=draftTargets(),days=WEEKDAYS.slice();
   if(!targets.length)return toast('Cadastre ou selecione pelo menos um participante.');
   if(!ICONS.includes(icon)||!name||!validTime(start,end)||!Number.isFinite(points)||points<0||!Number.isFinite(tol)||tol<0)return toast('Revise ícone, nome, horários, pontos e tolerância.');
   for(const pid of targets){const conflict=draftConflict(pid,days,start,end);if(conflict)return toast(`Conflito de horário para ${profileName(pid)} com "${clean(conflict.nome)||'outra tarefa'}".`)}
+  const g=groupId(),role=clean(session().role);let stage='prepare',committed=false,docs=0;
   busy=true;render();
   try{
-    const batch=fs.writeBatch(db),g=groupId(),now=new Date().toISOString(),tg=`tg-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
-    let docs=0;
-    for(const pid of targets){const participant=profileName(pid);for(const day of days){const ref=fs.doc(fs.collection(db,'tarefas'));batch.set(ref,{grupoId:g,nome,icone:icon,perfilNome:participant,perfilId:pid,tarefaGrupoId:tg,horaSugeridaInicio:start,horaSugeridaFim:end,diaSemana:day,tempoLimite:tol,pontosMaximos:points,justificativaObrigatoria:false,observacao:'',status:'Pendente',pontosGanhos:0,horarioInicio:'',horarioTermino:'',criadoEm:now,atualizadoEm:now});docs++}}
-    await batch.commit();creating=false;await window.rotinaSprint2SyncLocal?.('tarefas-criar-real');accept();render();log('create_success',{participantes:targets.length,dias:days.length,docs});toast(targets.length>1?'Tarefa criada para todos os participantes.':'Nova tarefa criada.');
-  }catch(e){console.error('Tarefas V2 criar:',e);log('create_error',{codigo:clean(e?.code)||'erro'},'error');toast('Não foi possível criar a tarefa.');}
-  finally{busy=false;render()}
+    const batch=fs.writeBatch(db),stamp=Date.now();
+    for(const pid of targets){
+      const participant=profileName(pid),tg=`tg-${stamp}-${Math.random().toString(36).slice(2,8)}`;
+      for(const day of days){
+        const ref=fs.doc(fs.collection(db,'tarefas'));
+        batch.set(ref,{grupoId:g,nome,icone:icon,perfilNome:participant,perfilId:pid,tarefaGrupoId:tg,horaSugeridaInicio:start,horaSugeridaFim:end,diaSemana:day,tempoLimite:tol,pontosMaximos:points,justificativaObrigatoria:false,status:'Pendente',pontosGanhos:0,horarioInicio:'',horarioTermino:''});
+        docs++;
+      }
+    }
+    stage='commit';
+    await batch.commit();
+    committed=true;
+    log('create_commit_success',{grupo:g,papel:role,participantes:targets.length,dias:days.length,docs});
+    creating=false;
+    stage='sync';
+    try{
+      const synced=await window.rotinaSprint2SyncNow?.('tarefas-criar-real-v26');
+      if(synced===false)log('create_sync_warning',{grupo:g,papel:role,participantes:targets.length,docs,mensagem:'Sincronização pós-criação retornou false.'},'warning');
+    }catch(syncError){
+      log('create_sync_warning',{grupo:g,papel:role,participantes:targets.length,docs,codigo:clean(syncError?.code)||'erro',mensagem:clean(syncError?.message)||String(syncError),tipo:clean(syncError?.name)||'Error'},'warning');
+    }
+    stage='render';
+    accept();render();
+    log('create_success',{grupo:g,papel:role,participantes:targets.length,dias:days.length,docs});
+    toast(targets.length>1?'Tarefa criada para todos os participantes.':'Nova tarefa criada.');
+  }catch(e){
+    console.error('Tarefas V2 criar:',e);
+    log('create_error',{etapa:stage,commitRealizado:committed,grupo:g,papel:role,participantes:targets.length,dias:days.length,docs,codigo:clean(e?.code)||'erro',mensagem:clean(e?.message)||String(e),tipo:clean(e?.name)||'Error'},'error');
+    toast(committed?'A tarefa foi gravada, mas a tela não conseguiu atualizar. Use ↻ Atualizar.':'Não foi possível criar a tarefa.');
+  }finally{busy=false;render()}
 }
 async function save(key,mobile){
   const row=rows.find(r=>r.key===key);if(!row||busy||!canWrite()||!await firebaseReady())return;
