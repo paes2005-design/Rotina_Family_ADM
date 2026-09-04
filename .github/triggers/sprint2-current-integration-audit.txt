@@ -1,1 +1,1 @@
-Auditoria final da integração Sprint 2 após restaurar detalhes e consolidar a propriedade de Tarefas.
+Auditoria final da integração Sprint 2 após detalhes editáveis, Conquistas V1 e correção runtime do calendário de alarmes.
