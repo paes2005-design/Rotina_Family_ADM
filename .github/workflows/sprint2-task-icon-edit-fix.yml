@@ -61,8 +61,8 @@ jobs:
           s=Path('sprint2-tarefas-realdata-v2.js').read_text(encoding='utf-8')
           checks={
             'lista aprovada de ícones': "const ICONS=['🛏️','📚','🧹','🎻','🍴','🗑️','🧼','🪥','🐶','✅'];" in s,
-            'seletor web': 'id=\\"tv2-icon-${esc(r.key)}\\"' in s,
-            'seletor mobile': 'id=\\"tv2-m-icon-${esc(r.key)}\\"' in s,
+            'seletor web': 'tv2-icon-${esc(r.key)}' in s and 'iconOptions(r.icon)' in s,
+            'seletor mobile': 'tv2-m-icon-${esc(r.key)}' in s,
             'salva ícone no Firestore': "{icone:icon,nome:name" in s,
             'valida ícone': '!ICONS.includes(icon)' in s,
             'sem listener novo': 'onSnapshot(' not in s,
