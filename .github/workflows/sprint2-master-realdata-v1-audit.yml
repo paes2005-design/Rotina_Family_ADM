@@ -1,0 +1,55 @@
+name: Sprint 2 - Master RealData V1 Audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sprint2-master-realdata-v1.js'
+      - 'sprint2-integracao-login-realdata-bridge-v1.js'
+      - 'sprint2-data-store-v1.js'
+      - 'sprint2-integracao-recompensas-v1.html'
+      - '.github/workflows/sprint2-master-realdata-v1-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: JavaScript syntax
+        run: |
+          node --check sprint2-master-realdata-v1.js
+          node --check sprint2-integracao-login-realdata-bridge-v1.js
+          node --check sprint2-data-store-v1.js
+      - name: Master V2 structure preserved
+        run: |
+          grep -q "master-realdata-v1.0" sprint2-master-realdata-v1.js
+          grep -q 'data-m-pane="overview"' sprint2-master-realdata-v1.js
+          grep -q 'data-m-pane="access"' sprint2-master-realdata-v1.js
+          grep -q 'data-m-pane="diagnostic"' sprint2-master-realdata-v1.js
+          grep -q 'Acessos e grupos' sprint2-master-realdata-v1.js
+          grep -q 'Diagnóstico / Andon' sprint2-master-realdata-v1.js
+      - name: Real Master contracts present
+        run: |
+          grep -q "masterApi('/session')" sprint2-master-realdata-v1.js
+          grep -q "masterApi('/users" sprint2-master-realdata-v1.js
+          grep -q "masterApi('/groups" sprint2-master-realdata-v1.js
+          grep -q '/group?grupoId=' sprint2-master-realdata-v1.js
+          grep -q '/logs?grupoId=' sprint2-master-realdata-v1.js
+          grep -q 'confirm-group' sprint2-master-realdata-v1.js
+          grep -q 'set-group-blocked' sprint2-master-realdata-v1.js
+          grep -q 'send-password-reset' sprint2-master-realdata-v1.js
+      - name: One continuous Firestore listener remains
+        run: |
+          test "$(grep -o 'fs\.onSnapshot' sprint2-data-store-v1.js | wc -l | tr -d ' ')" = "1"
+          ! grep -q 'onSnapshot' sprint2-master-realdata-v1.js
+      - name: Integrated shell loads Master
+        run: |
+          grep -q 'sprint2-master-realdata-v1.js?v=20260904-master-realdata-v1' sprint2-integracao-login-realdata-bridge-v1.js
+          grep -q 'sprint2-integracao-login-realdata-bridge-v1.js' sprint2-integracao-recompensas-v1.html
+      - name: No iframe in Master
+        run: |
+          ! grep -qi '<iframe' sprint2-master-realdata-v1.js
+      - name: Summary
+        run: |
+          echo 'Master RealData V1: estrutura, contratos, sintaxe e listener central aprovados.'
