@@ -1,11 +1,13 @@
 (function(){
 'use strict';
 
-const VERSION='recompensas-realdata-v1.1-conquistas';
+const VERSION='recompensas-realdata-v1.2-production-ui';
 const PAGE='sprint2-integracao-recompensas-v1.html';
+const APP_VERSION='2.0.0';
+const APP_BUILD='20260905.2';
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').trim();
-const esc=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 let db=null,fs=null,app=null,busy=false,editing='';
 let rewards=[],redemptions=[],profiles=[];
 let period='day';
@@ -61,9 +63,9 @@ function renderHistory(){
   const rewardRows=redemptions.map(r=>({id:r.id,type:'reward',perfilId:r.perfilId,perfilNome:participantName(r),title:r.recompensaNome||'Recompensa',status:statusOf(r),date:dateOf(r),created:r.decididoEm||r.criadoEm||'',points:r.pontos,raw:r}));
   const conquestRows=(window.rotinaSprint2ConquestHistoryRows?.()||[]);
   const rows=[...rewardRows,...conquestRows].filter(r=>(type==='all'||r.type===type)&&(p==='all'||r.perfilId===p)&&(stf==='all'||r.status===stf)&&inPeriod(r.date,ref,mode)).sort((a,b)=>clean(b.created||b.date).localeCompare(clean(a.created||a.date)));
-  box.innerHTML=rows.length?rows.map(r=>{if(r.type==='conquest')return `<article class="rv1-item"><div class="rv1-row"><div><div class="rv1-name">🏆 ${esc(r.perfilNome||'Integrante')} · ${esc(r.title)}</div><div class="rv1-desc">Evento real de Conquista.</div></div><span class="rv1-pill rv1-pending">${esc(clean(r.status).toUpperCase())}</span></div><div class="rv1-meta"><div><small>Tipo</small><span>Conquista</span></div><div><small>Data</small><span>${esc(r.date||'—')}</span></div><div><small>Status</small><span>${esc(r.status)}</span></div><div><small>Participante</small><span>${esc(r.perfilNome||'Integrante')}</span></div></div></article>`;const x=r.raw,s=statusOf(x);return `<article class="rv1-item"><div class="rv1-row"><div><div class="rv1-name">${esc(participantName(x))} · ${esc(x.recompensaNome||'Recompensa')}</div><div class="rv1-desc">Pedido real de resgate.</div></div><span class="rv1-pill ${statusClass(s)}">${esc(s.toUpperCase())}</span></div><div class="rv1-meta"><div><small>Pontos</small><span>${moneylessPoints(x.pontos)}</span></div><div><small>Data</small><span>${esc(dateOf(x)||'—')}</span></div><div><small>Status</small><span>${esc(s)}</span></div><div><small>Participante</small><span>${esc(participantName(x))}</span></div></div>${s==='Pendente'?`<div class="rv1-actions"><button class="rv1-btn" data-rv1-decide="${esc(x.id)}" data-status="Aprovado" ${canWrite()?'':'disabled'}>Aprovar</button><button class="rv1-btn danger" data-rv1-decide="${esc(x.id)}" data-status="Recusado" ${canWrite()?'':'disabled'}>Recusar</button></div>`:''}</article>`}).join(''):'<div class="rv1-empty">Nenhuma movimentação neste período/filtro.</div>';bindHistoryButtons()
+  box.innerHTML=rows.length?rows.map(r=>{if(r.type==='conquest')return `<article class="rv1-item"><div class="rv1-row"><div><div class="rv1-name">🏆 ${esc(r.perfilNome||'Integrante')} · ${esc(r.title)}</div></div><span class="rv1-pill rv1-pending">${esc(clean(r.status).toUpperCase())}</span></div><div class="rv1-meta"><div><small>Tipo</small><span>Conquista</span></div><div><small>Data</small><span>${esc(r.date||'—')}</span></div><div><small>Status</small><span>${esc(r.status)}</span></div><div><small>Participante</small><span>${esc(r.perfilNome||'Integrante')}</span></div></div></article>`;const x=r.raw,s=statusOf(x);return `<article class="rv1-item"><div class="rv1-row"><div><div class="rv1-name">${esc(participantName(x))} · ${esc(x.recompensaNome||'Recompensa')}</div></div><span class="rv1-pill ${statusClass(s)}">${esc(s.toUpperCase())}</span></div><div class="rv1-meta"><div><small>Pontos</small><span>${moneylessPoints(x.pontos)}</span></div><div><small>Data</small><span>${esc(dateOf(x)||'—')}</span></div><div><small>Status</small><span>${esc(s)}</span></div><div><small>Participante</small><span>${esc(participantName(x))}</span></div></div>${s==='Pendente'?`<div class="rv1-actions"><button class="rv1-btn" data-rv1-decide="${esc(x.id)}" data-status="Aprovado" ${canWrite()?'':'disabled'}>Aprovar</button><button class="rv1-btn danger" data-rv1-decide="${esc(x.id)}" data-status="Recusado" ${canWrite()?'':'disabled'}>Recusar</button></div>`:''}</article>`}).join(''):'<div class="rv1-empty">Nenhuma movimentação neste período/filtro.</div>';bindHistoryButtons()
 }
-function render(){if(!ensureView()||!accept())return;renderCatalog();window.rotinaSprint2RenderConquests?.();renderHistory();$('rv1New').disabled=!canWrite()||busy;$('rv1Refresh').disabled=busy}
+function render(){if(!ensureView()||!accept())return;renderCatalog();window.rotinaSprint2RenderConquests?.();renderHistory();$('rv1New').disabled=!canWrite()||busy;$('rv1Refresh').disabled=busy;queueProductionUi()}
 async function afterWrite(origin){try{await window.rotinaSprint2SyncLocal?.(origin)}catch(_){ }accept();render()}
 async function saveReward(id){
   if(busy||!canWrite()||!await firebaseReady())return;
@@ -94,6 +96,26 @@ function bindListButtons(){const box=$('rv1Catalog');box?.querySelectorAll('[dat
 function bindHistoryButtons(){const box=$('rv1History');box?.querySelectorAll('[data-rv1-decide]').forEach(b=>b.onclick=()=>decide(b.dataset.rv1Decide,b.dataset.status))}
 function bindControls(){if($('view-recompensas').dataset.bound==='1')return;$('view-recompensas').dataset.bound='1';$('rv1New').onclick=()=>{editing='new';renderCatalog()};$('rv1CatalogFilter').onchange=renderCatalog;['rv1HistoryType','rv1Participant','rv1Status','rv1Date','rv1Period'].forEach(id=>$(id).onchange=renderHistory);$('rv1Refresh').onclick=async()=>{if(busy)return;busy=true;render();try{await window.rotinaSprint2SyncNow?.('recompensas-manual');accept();render();toast('Recompensas atualizadas.')}finally{busy=false;render()}}}
 function openView(){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-recompensas'));history.replaceState(null,'','#recompensas');ensureView();render();$('mainScroll')?.scrollTo?.({top:0,behavior:'auto'})}
-function install(){ensureView();$('rewardNavButton')?.addEventListener('click',openView);window.addEventListener('rotina-sprint2-cache-updated',()=>{if($('view-recompensas')?.classList.contains('active'))render()});document.body.addEventListener('click',e=>{const a=e.target.closest?.('[data-open-recompensas]');if(a)openView()});if(location.hash==='#recompensas'&&document.body.classList.contains('rf-auth-ready'))setTimeout(openView,0)}
+
+let productionUiQueued=false;
+function productionUi(){
+  productionUiQueued=false;
+  let style=$('rfProductionUiStyle');
+  if(!style){style=document.createElement('style');style.id='rfProductionUiStyle';style.textContent='#rfBuildFooter{padding:18px 8px 10px;text-align:center;color:#8a8fa0;font-size:9px;letter-spacing:.02em}#rfBuildFooter b{color:#666d80;font-weight:800}';document.head.appendChild(style)}
+  document.querySelectorAll('#view-monitor .integration-note,#view-monitor .monitor-note,#view-recompensas .cq-warning,#view-participantes .pv1-readonly').forEach(el=>el.remove());
+  document.querySelectorAll('#view-recompensas .rv1-desc').forEach(el=>{const t=clean(el.textContent);if(t==='Evento real de Conquista.'||t==='Pedido real de resgate.')el.remove()});
+  document.querySelectorAll('#view-monitor .mv3-source').forEach(el=>el.remove());
+  document.querySelectorAll('#view-monitor .monitor-v2-grid>div').forEach(cell=>{const label=cell.querySelector('small');if(clean(label?.textContent).toLowerCase()==='fonte')cell.remove()});
+  const pill=$('view-monitor')?.querySelector('.activepill');if(pill&&/V3|FONTE ÚNICA/i.test(clean(pill.textContent)))pill.textContent='SOMENTE LEITURA';
+  const main=$('mainScroll');if(main&&!$('rfBuildFooter')){const footer=document.createElement('footer');footer.id='rfBuildFooter';footer.innerHTML=`Rotina Family ADM · <b>Versão ${APP_VERSION}</b> · Build <b>${APP_BUILD}</b>`;main.appendChild(footer)}
+  window.ROTINA_OFFICIAL_BUILD={...(window.ROTINA_OFFICIAL_BUILD||{}),channel:'production',version:APP_BUILD,appVersion:APP_VERSION};
+}
+function queueProductionUi(){if(productionUiQueued)return;productionUiQueued=true;requestAnimationFrame(productionUi)}
+function installProductionUi(){
+  queueProductionUi();setTimeout(queueProductionUi,250);setTimeout(queueProductionUi,1200);
+  const target=$('mainScroll')||document.body;new MutationObserver(queueProductionUi).observe(target,{childList:true,subtree:true});
+}
+
+function install(){ensureView();$('rewardNavButton')?.addEventListener('click',openView);window.addEventListener('rotina-sprint2-cache-updated',()=>{if($('view-recompensas')?.classList.contains('active'))render();queueProductionUi()});document.body.addEventListener('click',e=>{const a=e.target.closest?.('[data-open-recompensas]');if(a)openView()});installProductionUi();if(location.hash==='#recompensas'&&document.body.classList.contains('rf-auth-ready'))setTimeout(openView,0)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
