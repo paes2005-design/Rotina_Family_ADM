@@ -62,8 +62,13 @@ jobs:
           rewards=text('sprint2-recompensas-realdata-v1.js')
           conquests=text('sprint2-conquistas-realdata-v1.js')
 
-          require(store.count('fs.onSnapshot(')==1,'Store mantém exatamente um listener contínuo')
-          require("collection(db,'execucoes')" in store,'listener contínuo permanece em execucoes')
+          require(store.count('fs.onSnapshot(')==1,'Store mantém listeners centralizados em um único ponto de código')
+          for contract in [
+              "['execucoes','executions','live-execucoes']",
+              "['recompensas','rewards','live-recompensas']",
+              "['resgates','redemptions','live-resgates']"
+          ]:
+              require(contract in store,f'Store mantém fluxo contínuo {contract}')
           for name,src in [('Tarefas',tasks),('Monitor',monitor),('Participantes',participants),('Recompensas',rewards),('Conquistas',conquests)]:
               require('onSnapshot(' not in src,f'{name} não cria listener próprio')
 
