@@ -1,0 +1,198 @@
+name: Promote Sprint 2 ADM Official V1
+
+on:
+  push:
+    paths:
+      - '.github/triggers/promote-sprint2-adm-official-v1.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Criar entrada oficial ADM v9
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+
+          BUILD='20260905.1'
+          SOURCE=Path('sprint2-integracao-recompensas-v1.html')
+          TARGET=Path('index-ADMIN-v9.html')
+          html=SOURCE.read_text(encoding='utf-8')
+
+          required=[
+            'sprint2-teste-core.js',
+            'sprint2-observability-v1.js',
+            'sprint2-integracao-login-realdata-bridge-v1.js',
+            'sprint2-integracao-login-realdata-v1.js?v=20260903-tasks-ownership-v1',
+            'sprint2-data-store-v1.js?v=20260903-conquistas-v1',
+            'sprint2-tarefas-realdata-v2.js?v=20260905-inline-owner-v40',
+            'sprint2-participantes-realdata-v1.js',
+            'sprint2-recompensas-realdata-v1.js?v=20260903-conquistas-v1',
+            'sprint2-conquistas-realdata-v1.js?v=20260903-deadline-v1',
+            'sprint2-monitor-realdata-v2.js?v=20260905-monitor-result-v31'
+          ]
+          for item in required:
+            if item not in html:
+              raise SystemExit('Módulo obrigatório ausente na integração: '+item)
+
+          # Produção usa o mesmo proprietário funcional validado, apenas retirando rótulos de teste.
+          html=html.replace('<title>Rotina Family — Sprint 2 • Recompensas V1</title>','<title>Rotina Family ADM</title>',1)
+          html=html.replace('<meta name="theme-color" content="#6b35df">','<meta name="theme-color" content="#6b35df"><meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"><link rel="manifest" href="./manifest.json?v='+BUILD+'">',1)
+          html=html.replace('<div class="eyebrow">Sprint 2 · conexão real</div>','<div class="eyebrow">Acesso administrativo</div>',1)
+          html=html.replace('Painel Administrador • Sprint 2','Painel Administrador',1)
+          html=html.replace('<a class="memory-link" href="sprint2-continuidade-atual.html" target="_blank">📌 Memória Sprint 2</a>','',1)
+          html=html.replace('<div class="version">Sprint 2 • Recompensas V1 integrado</div>','<div class="version">ADM • Produção '+BUILD+'</div>',1)
+          html=html.replace('<b>Monitor conectado:</b>','<b>Monitor:</b>',1)
+          html=html.replace('Este incremento não grava nada no Firebase. Primeiro validamos se o Monitor representa corretamente o que está acontecendo no grupo.','O Monitor é somente leitura e acompanha os dados reais do grupo.',1)
+
+          boot=f'''<script>\nwindow.ROTINA_OFFICIAL_BUILD={{channel:'production',version:'{BUILD}',source:'sprint2-integracao-recompensas-v1'}};\nif('serviceWorker' in navigator){{navigator.serviceWorker.register('./sw.js?v={BUILD}',{{updateViaCache:'none'}}).then(r=>r.update()).catch(()=>{{}});}}\n</script>'''
+          if '</body>' not in html:
+            raise SystemExit('HTML oficial sem fechamento body')
+          html=html.replace('</body>',boot+'</body>',1)
+          TARGET.write_text(html,encoding='utf-8')
+
+          # Entrada estável do repositório/PWA. Mantém parâmetros úteis, remove só o ponteiro legado.
+          index=f'''<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta name="theme-color" content="#6b35df">
+  <link rel="manifest" href="./manifest.json?v={BUILD}">
+  <title>Rotina Family ADM</title>
+  <style>body{{font-family:Segoe UI,Tahoma,sans-serif;background:#f6f7fb;color:#334155;margin:0;display:grid;place-items:center;min-height:100vh}}.loading{{padding:24px;text-align:center}}</style>
+</head>
+<body>
+  <div class="loading">Atualizando Rotina Family ADM...</div>
+  <script>
+    (async()=>{{
+      try{{
+        if('serviceWorker' in navigator){{
+          const reg=await navigator.serviceWorker.register('./sw.js?v={BUILD}',{{updateViaCache:'none'}});
+          await reg.update().catch(()=>{{}});
+        }}
+      }}catch(_){{}}
+      const target=new URL('./index-ADMIN-v9.html',location.href);
+      const params=new URLSearchParams(location.search);
+      params.delete('entry');
+      params.set('release','{BUILD}');
+      target.search=params.toString();
+      target.hash=location.hash;
+      location.replace(target.href);
+    }})();
+  </script>
+  <noscript><a href="./index-ADMIN-v9.html?release={BUILD}">Abrir Rotina Family ADM</a></noscript>
+</body>
+</html>'''
+          Path('index.html').write_text(index,encoding='utf-8')
+
+          manifest=json.loads(Path('manifest.json').read_text(encoding='utf-8'))
+          manifest['name']='Rotina Family ADM'
+          manifest['short_name']='Rotina Family ADM'
+          manifest['description']='Painel oficial de administração do Rotina Family'
+          manifest['start_url']=f'./index.html?release={BUILD}'
+          manifest['theme_color']='#6b35df'
+          manifest['background_color']='#f6f7fb'
+          Path('manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+          sw=f'''const CACHE_NAME='rotina-family-adm-v90-production-{BUILD}';
+const ROTINA_SW_VERSION='90';
+const ROTINA_BUILD_ID='{BUILD}';
+const APP_MAIN_URL=new URL('./index-ADMIN-v9.html',self.location.href).href;
+const ENTRY_URL=new URL('./index.html',self.location.href).href;
+const LEGACY_MAIN_PATH=new URL('./index-ADMIN-v8.html',self.location.href).pathname;
+const APP_SHELL=[
+  './','./index.html','./index-ADMIN-v9.html','./manifest.json?v={BUILD}',
+  './icon-administrador-192.png','./icon-administrador-512.png',
+  './sprint2-teste-atual.css?v=20260905-hidden-semantic-v1',
+  './sprint2-teste-core.js','./sprint2-observability-v1.js','./sprint2-integracao-login-realdata-bridge-v1.js',
+  './sprint2-integracao-login-realdata-v1.js?v=20260903-tasks-ownership-v1',
+  './sprint2-data-store-v1.js?v=20260903-conquistas-v1',
+  './sprint2-tarefas-realdata-v2.js?v=20260905-inline-owner-v40',
+  './sprint2-participantes-realdata-v1.js',
+  './sprint2-recompensas-realdata-v1.js?v=20260903-conquistas-v1',
+  './sprint2-conquistas-realdata-v1.js?v=20260903-deadline-v1',
+  './sprint2-monitor-realdata-v2.js?v=20260905-monitor-result-v31',
+  './sprint2-master-realdata-v1.js?v=20260905-master-realdata-v13-role-visibility'
+];
+const MODULE_ROOTS=['https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js'];
+async function cacheModuleTree(url,cache,seen=new Set()){{if(seen.has(url))return;seen.add(url);try{{const response=await fetch(url,{{mode:'cors',cache:'no-store'}});if(!response.ok)return;await cache.put(url,response.clone());const text=await response.text();const specs=[...text.matchAll(/(?:from\\s*|import\\s*)[\"']([^\"']+)[\"']/g)].map(m=>m[1]);await Promise.allSettled(specs.map(spec=>{{const next=new URL(spec,url).href;return next.startsWith('https://www.gstatic.com/firebasejs/')?cacheModuleTree(next,cache,seen):Promise.resolve();}}));}}catch(_){{}}}}
+self.addEventListener('install',event=>{{event.waitUntil((async()=>{{const cache=await caches.open(CACHE_NAME);await cache.addAll(APP_SHELL);await Promise.allSettled(MODULE_ROOTS.map(url=>cacheModuleTree(url,cache)));}})());self.skipWaiting();}});
+self.addEventListener('activate',event=>{{event.waitUntil((async()=>{{const keys=await caches.keys();await Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)));await self.clients.claim();}})());}});
+self.addEventListener('fetch',event=>{{
+  if(event.request.method!=='GET')return;
+  const url=new URL(event.request.url);
+  const sameOrigin=url.origin===self.location.origin;
+  const staticCdn=url.hostname==='www.gstatic.com'&&url.pathname.startsWith('/firebasejs/');
+  if(!sameOrigin&&!staticCdn)return;
+  if(event.request.mode==='navigate'){{
+    if(sameOrigin&&url.pathname===LEGACY_MAIN_PATH){{
+      const destino=new URL('./index-ADMIN-v9.html?release={BUILD}',self.location.href).href;
+      event.respondWith(Promise.resolve(Response.redirect(destino,302)));
+      return;
+    }}
+    event.respondWith((async()=>{{
+      const isEntry=url.href===ENTRY_URL||url.pathname.endsWith('/');
+      const alvo=isEntry?ENTRY_URL:event.request;
+      try{{const response=await fetch(alvo,{{cache:'no-store'}});if(response&&response.ok){{const cache=await caches.open(CACHE_NAME);await cache.put(alvo,response.clone());}}return response;}}
+      catch(_){{return (await caches.match(alvo))||(await caches.match(APP_MAIN_URL))||(await caches.match(ENTRY_URL));}}
+    }})());
+    return;
+  }}
+  const isAppAsset=sameOrigin&&(/\\.(?:js|css|html|json)$/.test(url.pathname));
+  if(isAppAsset){{event.respondWith((async()=>{{try{{const response=await fetch(event.request,{{cache:'no-store'}});if(response&&response.ok){{const cache=await caches.open(CACHE_NAME);await cache.put(event.request,response.clone());}}return response;}}catch(_){{return caches.match(event.request);}}}})());return;}}
+  event.respondWith((async()=>{{const cached=await caches.match(event.request);if(cached)return cached;const response=await fetch(event.request);if(response&&(response.ok||response.type==='opaque')){{const cache=await caches.open(CACHE_NAME);await cache.put(event.request,response.clone());}}return response;}})());
+}});
+self.addEventListener('message',event=>{{if(event.data?.type!=='ROTINA_GET_BUILD_INFO')return;event.source?.postMessage({{type:'ROTINA_BUILD_INFO',token:event.data?.token||'',swVersion:ROTINA_SW_VERSION,build:ROTINA_BUILD_ID,cacheName:CACHE_NAME}});}});
+self.addEventListener('notificationclick',event=>{{event.notification.close();const destino=new URL(event.notification.data?.url||'./?abrir=resgates',self.location.href).href;event.waitUntil((async()=>{{const janelas=await clients.matchAll({{type:'window',includeUncontrolled:true}});const aberta=janelas.find(j=>new URL(j.url).origin===self.location.origin);if(aberta){{await aberta.focus();if('navigate' in aberta)await aberta.navigate(destino);return;}}if(clients.openWindow)await clients.openWindow(destino);}})());}});
+'''
+          Path('sw.js').write_text(sw,encoding='utf-8')
+
+      - name: Auditar promoção antes do commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f index-ADMIN-v9.html
+          grep -q "ADM • Produção 20260905.1" index-ADMIN-v9.html
+          grep -q "index-ADMIN-v9.html" index.html
+          grep -q "index-ADMIN-v9.html" sw.js
+          grep -q "LEGACY_MAIN_PATH" sw.js
+          grep -q "release=20260905.1" manifest.json
+          ! grep -q "Memória Sprint 2" index-ADMIN-v9.html
+          ! grep -q "index-ADMIN-v8.html" index.html
+          ! grep -q "adm-justification-review.js" sw.js
+          grep -q "sprint2-master-realdata-v1.js" sprint2-integracao-login-realdata-bridge-v1.js
+
+          # Invariante arquitetural: somente o store central pode manter listener contínuo.
+          test "$(grep -F "onSnapshot(" sprint2-data-store-v1.js | wc -l | tr -d ' ')" = "1"
+          for f in sprint2-tarefas-realdata-v2.js sprint2-participantes-realdata-v1.js sprint2-recompensas-realdata-v1.js sprint2-conquistas-realdata-v1.js sprint2-monitor-realdata-v2.js sprint2-master-realdata-v1.js; do
+            if grep -Fq "onSnapshot(" "$f"; then echo "Listener paralelo encontrado em $f"; exit 1; fi
+            node --check "$f"
+          done
+          node --check sprint2-data-store-v1.js
+          node --check sprint2-integracao-login-realdata-v1.js
+          node --check sprint2-integracao-login-realdata-bridge-v1.js
+          node --check sprint2-observability-v1.js
+          node --check sw.js
+          git diff --check
+
+      - name: Commit promoção oficial
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "paes2005-design"
+          git config user.email "paes2005@gmail.com"
+          git add index-ADMIN-v9.html index.html manifest.json sw.js
+          git commit -m "ADM: promove Sprint 2 para produção oficial"
+          git push
