@@ -1,10 +1,10 @@
 (function(){
 'use strict';
 
-const VERSION='recompensas-realdata-v1.3.1-production-ui';
+const VERSION='recompensas-realdata-v1.3.2-production-ui';
 const PAGE='sprint2-integracao-recompensas-v1.html';
 const APP_VERSION='2.0.0';
-const APP_BUILD='20260905.5';
+const APP_BUILD='20260905.6';
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').trim();
 const esc=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -102,7 +102,7 @@ function productionUi(){
   productionUiQueued=false;
   let style=$('rfProductionUiStyle');
   if(!style){style=document.createElement('style');style.id='rfProductionUiStyle';style.textContent='#rfBuildFooter{padding:18px 8px 10px;text-align:center;color:#8a8fa0;font-size:9px;letter-spacing:.02em}#rfBuildFooter b{color:#666d80;font-weight:800}';document.head.appendChild(style)}
-  document.querySelector('.realdata-strip')?.remove();
+  const syncStrip=document.querySelector('.realdata-strip');if(syncStrip)syncStrip.style.display='none';
   document.querySelectorAll('#view-monitor .integration-note,#view-monitor .monitor-note,#view-monitor .head p,#view-monitor .activepill').forEach(el=>el.remove());
   document.querySelectorAll('#view-recompensas .cq-warning,#view-participantes .pv1-readonly').forEach(el=>{el.style.display='none'});
   document.querySelectorAll('#view-recompensas .rv1-desc').forEach(el=>{const t=clean(el.textContent);if(t==='Evento real de Conquista.'||t==='Pedido real de resgate.')el.remove()});
