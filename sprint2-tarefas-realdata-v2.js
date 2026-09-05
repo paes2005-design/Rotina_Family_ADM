@@ -165,7 +165,7 @@ async function firebaseReady(){
     const appMod=await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
     const fsMod=await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
     const named=appMod.getApps().find(x=>x.name==='rotina-sprint2-integracao-realdata');
-    if(!named)throw new Error('Aplicação Firebase da Sprint 2 não inicializada');
+    if(!named)throw new Error('Aplicação Firebase do ADM não inicializada');
     app=named;fs=fsMod;db=fsMod.getFirestore(named);
     return true;
   }catch(e){

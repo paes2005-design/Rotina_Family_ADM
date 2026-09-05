@@ -13,7 +13,7 @@ const clean=v=>String(v??'').trim();
 const clamp=(n,min=0,max=100)=>Math.min(max,Math.max(min,Number(n)||0));
 const runtime={role:'',groupId:'',profiles:[],taskDocs:[],history:[],redemptions:[],analysisPeriod:'day',analysisRef:'',analysisParticipant:'all',manualLogin:false,loading:false};
 const appState=window.RF_APP?.state;
-if(!appState) throw new Error('Núcleo de Tarefas da Sprint 2 não carregou.');
+if(!appState) throw new Error('Núcleo de Tarefas não carregou.');
 
 const appMod=await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
 const authMod=await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');

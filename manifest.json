@@ -1,13 +1,13 @@
 {
   "name": "Rotina Family ADM",
   "short_name": "Rotina Family ADM",
-  "description": "Painel de administração de metas e tarefas",
-  "start_url": "./index.html?entry=index-ADMIN-v8.html",
+  "description": "Painel de administração do Rotina Family",
+  "start_url": "./index.html?release=20260905.1",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f4f7f6",
-  "theme_color": "#4a90e2",
+  "background_color": "#f6f7fb",
+  "theme_color": "#6b35df",
   "icons": [
     {
       "src": "icon-administrador-192.png",
