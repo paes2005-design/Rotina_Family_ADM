@@ -2,7 +2,7 @@
   "name": "Rotina Family ADM",
   "short_name": "Rotina Family ADM",
   "description": "Painel de administração do Rotina Family",
-  "start_url": "./index.html?release=20260905.1",
+  "start_url": "./index.html?release=20260905.3",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

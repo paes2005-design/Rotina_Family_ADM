@@ -1,10 +1,10 @@
 (function(){
 'use strict';
 
-const VERSION='recompensas-realdata-v1.2-production-ui';
+const VERSION='recompensas-realdata-v1.3-production-ui';
 const PAGE='sprint2-integracao-recompensas-v1.html';
 const APP_VERSION='2.0.0';
-const APP_BUILD='20260905.2';
+const APP_BUILD='20260905.3';
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').trim();
 const esc=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -102,12 +102,12 @@ function productionUi(){
   productionUiQueued=false;
   let style=$('rfProductionUiStyle');
   if(!style){style=document.createElement('style');style.id='rfProductionUiStyle';style.textContent='#rfBuildFooter{padding:18px 8px 10px;text-align:center;color:#8a8fa0;font-size:9px;letter-spacing:.02em}#rfBuildFooter b{color:#666d80;font-weight:800}';document.head.appendChild(style)}
-  document.querySelectorAll('#view-monitor .integration-note,#view-monitor .monitor-note').forEach(el=>el.remove());
+  document.querySelectorAll('#view-monitor .integration-note,#view-monitor .monitor-note,#view-monitor .head p,#view-monitor .activepill').forEach(el=>el.remove());
   document.querySelectorAll('#view-recompensas .cq-warning,#view-participantes .pv1-readonly').forEach(el=>{el.style.display='none'});
   document.querySelectorAll('#view-recompensas .rv1-desc').forEach(el=>{const t=clean(el.textContent);if(t==='Evento real de Conquista.'||t==='Pedido real de resgate.')el.remove()});
   document.querySelectorAll('#view-monitor .mv3-source').forEach(el=>el.remove());
   document.querySelectorAll('#view-monitor .monitor-v2-grid>div').forEach(cell=>{const label=cell.querySelector('small');if(clean(label?.textContent).toLowerCase()==='fonte')cell.remove()});
-  const pill=$('view-monitor')?.querySelector('.activepill');if(pill&&/V3|FONTE ÚNICA/i.test(clean(pill.textContent)))pill.textContent='SOMENTE LEITURA';
+  const pill=$('view-monitor')?.querySelector('.activepill');if(pill)pill.remove();
   const main=$('mainScroll');if(main&&!$('rfBuildFooter')){const footer=document.createElement('footer');footer.id='rfBuildFooter';footer.innerHTML=`Rotina Family ADM · <b>Versão ${APP_VERSION}</b> · Build <b>${APP_BUILD}</b>`;main.appendChild(footer)}
   window.ROTINA_OFFICIAL_BUILD={...(window.ROTINA_OFFICIAL_BUILD||{}),channel:'production',version:APP_BUILD,appVersion:APP_VERSION};
 }

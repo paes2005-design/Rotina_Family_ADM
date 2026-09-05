@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='monitor-realdata-v3.1-result-colors';
+const VERSION='monitor-realdata-v3.2-production-clean';
 const PAGE='sprint2-integracao-monitor-v2.html';
 const API_ROOT='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
 const TIME_ZONE='America/Bahia';
@@ -453,10 +453,10 @@ async function openJustification(x){
 }
 
 function patchUi(){
-  injectStyle();ensureControls();const note=$('view-monitor')?.querySelector('.integration-note');if(note)note.innerHTML='<b>Monitor V3:</b> o ADM não recalcula a execução. Ele lê a ocorrência oficial registrada pelo Participante; sem ocorrência, a tarefa permanece Pendente.';
-  const pill=$('view-monitor')?.querySelector('.activepill');if(pill)pill.textContent='V3 • FONTE ÚNICA';
-  const n=$('view-monitor')?.querySelector('.monitor-note');if(n){n.className='monitor-v2-warning monitor-note';n.textContent='Arquitetura desta etapa: ADM configura a regra; Participante registra a execução; Monitor apenas acompanha o resultado. Store central: execuções e conclusões chegam automaticamente; a reconciliação remota periódica permanece como segurança e o botão Atualizar força uma conferência imediata.'}
-  const title=$('view-monitor')?.querySelector('h2');if(title)title.textContent='Acompanhamento operacional';const desc=$('view-monitor')?.querySelector('.head p');if(desc)desc.textContent='Previsto x realizado, resultado operacional em uma única leitura, pontos e revisão de justificativas.';const lastKpi=$('mPending')?.parentElement?.querySelector('small');if(lastKpi)lastKpi.textContent='Pendentes';
+  injectStyle();ensureControls();const note=$('view-monitor')?.querySelector('.integration-note');if(note)note.remove();
+  const pill=$('view-monitor')?.querySelector('.activepill');if(pill)pill.remove();
+  const n=$('view-monitor')?.querySelector('.monitor-note');if(n)n.remove();
+  const title=$('view-monitor')?.querySelector('h2');if(title)title.textContent='Acompanhamento operacional';const desc=$('view-monitor')?.querySelector('.head p');if(desc)desc.remove();const lastKpi=$('mPending')?.parentElement?.querySelector('small');if(lastKpi)lastKpi.textContent='Pendentes';
 }
 function reorderMenu(){const nav=$('mainNav'),monitor=$('monitorNavButton');if(!nav||!monitor)return;const participants=[...nav.children].find(b=>/Participantes/.test(b.textContent));if(participants&&monitor.nextElementSibling!==participants)nav.insertBefore(monitor,participants)}
 function openMonitor(logOpen=true){
