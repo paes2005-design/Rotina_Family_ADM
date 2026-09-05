@@ -66,7 +66,9 @@ jobs:
           for contract in [
               "['execucoes','executions','live-execucoes']",
               "['recompensas','rewards','live-recompensas']",
-              "['resgates','redemptions','live-resgates']"
+              "['resgates','redemptions','live-resgates']",
+              "['conquistas','conquests','live-conquistas']",
+              "['conquistaHistorico','conquestEvents','live-conquista-historico']"
           ]:
               require(contract in store,f'Store mantém fluxo contínuo {contract}')
           for name,src in [('Tarefas',tasks),('Monitor',monitor),('Participantes',participants),('Recompensas',rewards),('Conquistas',conquests)]:
@@ -102,7 +104,7 @@ jobs:
 
           require('conquests' in store and 'conquestEvents' in store,'Store central expõe dados de Conquistas')
           require("queryGroup('conquistas'" in store and "queryGroup('conquistaHistorico'" in store,'Store reconcilia Conquistas sem listener extra')
-          require("clean(window.rotinaSprint2SessionSnapshot?.().role)==='master'" in store,'coleções novas ficam isoladas ao Master nesta fase')
+          require("['adm_familia','adm_convidado','master'].includes(clean(window.rotinaSprint2SessionSnapshot?.().role))" in store,'ADM do grupo e Master podem ler Conquistas do grupo')
           require("function canWrite(){return clean(session().role)==='master'}" in conquests,'gravação de Conquistas permanece Master-only sem alterar regras de produção')
           require('on_time_days' in conquests and 'tasks_100' in conquests and 'no_justification_days' in conquests and 'percent_points' in conquests and 'points' in conquests,'Conquistas contém as cinco regras aprovadas')
           require("modoCiclo==='unique'" in conquests and "modoCiclo==='periodic'" in conquests and "modoCiclo==='continuous'" in conquests,'Conquistas preserva ciclos único, periódico e contínuo')
