@@ -1,0 +1,122 @@
+from pathlib import Path
+import re
+
+p=Path('sprint2-monitor-realdata-v2.js')
+s=p.read_text(encoding='utf-8')
+original=s
+s=s.replace("const VERSION='monitor-realdata-v3-readmodel';","const VERSION='monitor-realdata-v3.1-result-colors';",1)
+
+old_grid=".monitor-v2-row,.monitor-v2-header{display:grid;grid-template-columns:38px minmax(170px,1.35fr) minmax(118px,.8fr) minmax(155px,1fr) minmax(145px,1fr) 82px 92px minmax(150px,1fr);"
+new_grid=".monitor-v2-row,.monitor-v2-header{display:grid;grid-template-columns:38px minmax(170px,1.35fr) minmax(118px,.8fr) minmax(155px,1fr) minmax(190px,1.15fr) 92px minmax(150px,1fr);"
+if old_grid not in s: raise SystemExit('grid desktop nao encontrado')
+s=s.replace(old_grid,new_grid,1)
+old_1100="@media(max-width:1100px){.monitor-v2-row,.monitor-v2-header{grid-template-columns:34px minmax(150px,1fr) 110px 140px 130px 72px 80px minmax(130px,.9fr)}}"
+new_1100="@media(max-width:1100px){.monitor-v2-row,.monitor-v2-header{grid-template-columns:34px minmax(150px,1fr) 110px 140px minmax(165px,1fr) 80px minmax(130px,.9fr)}}"
+if old_1100 not in s: raise SystemExit('grid 1100 nao encontrado')
+s=s.replace(old_1100,new_1100,1)
+old_score=".score-band{display:inline-flex;align-items:center;justify-content:center;min-width:50px;padding:6px 8px;border-radius:999px;font-weight:900}.score-100{background:#dcfce7;color:#166534}.score-75{background:#fef3c7;color:#92400e}.score-50{background:#ffedd5;color:#9a3412}.score-0{background:#fee2e2;color:#991b1b}.score-na{background:#f1f5f9;color:#64748b}"
+new_score=".result-pill{display:inline-flex;align-items:center;gap:5px;justify-content:center;padding:6px 9px;border-radius:999px;font-weight:900;line-height:1.2}.result-100{background:#dcfce7;color:#166534}.result-75{background:#fef3c7;color:#92400e}.result-50{background:#ffedd5;color:#9a3412}.result-0{background:#fee2e2;color:#991b1b}.result-running{background:#dbeafe;color:#1d4ed8}.result-pending{background:#f1f5f9;color:#64748b}.result-neutral{background:#eef2f7;color:#475569}.review-tag{display:inline-block;margin-top:3px;padding:2px 6px;border-radius:999px;background:#ede9fe;color:#6d28d9;font-size:8px;font-weight:900;text-transform:uppercase}.monitor-v2-result-wide{grid-column:1/-1}"
+if old_score not in s: raise SystemExit('css score antigo nao encontrado')
+s=s.replace(old_score,new_score,1)
+
+start=s.index('function storedPercentage(x){')
+end=s.index('function toleranceText(x){',start)
+replacement="""function statusPercentage(x){
+  const raw=clean(x?.status);
+  const explicit=raw.match(/(?:^|[^\\d])(100|75|50|0)%/);
+  if(explicit)return Number(explicit[1]);
+  if(/atraso\\s+leve/i.test(raw))return 75;
+  if(/atraso\\s+maior/i.test(raw))return 50;
+  if(/atrasado|toler[aâ]ncia\\s+estourada/i.test(raw))return 0;
+  if(/prazo/i.test(raw))return 100;
+  return null;
+}
+function bandPercentage(x){
+  const faixa=clean(x?.faixaAtraso).toLowerCase();
+  if(faixa==='dentro-limites')return 100;
+  if(faixa==='atraso-leve')return 75;
+  if(faixa==='atraso-maior')return 50;
+  if(faixa==='estourado')return 0;
+  return null;
+}
+function numericPercentage(v){
+  if(v===null||v===undefined||v===''||!Number.isFinite(Number(v)))return null;
+  return Math.max(0,Math.min(100,Math.round(Number(v))));
+}
+function operationalPercentage(x){
+  if(x.__state!=='final')return null;
+  const fromStatus=statusPercentage(x);if(fromStatus!==null)return fromStatus;
+  const fromBand=bandPercentage(x);if(fromBand!==null)return fromBand;
+  const original=numericPercentage(x.percentualOriginal);if(original!==null)return original;
+  return numericPercentage(x.percentualAplicado);
+}
+function reviewedPercentage(x){
+  const revised=numericPercentage(x.percentualRevisado);
+  return revised!==null?revised:operationalPercentage(x);
+}
+function resultConflict(x){
+  if(x.__state!=='final')return false;
+  const values=[statusPercentage(x),bandPercentage(x),numericPercentage(x.percentualOriginal),numericPercentage(x.percentualAplicado)].filter(v=>v!==null);
+  return new Set(values).size>1;
+}
+function schedulePassed(x){
+  if(x.__date!==todayIso()||x.__state!=='pending')return false;
+  const end=clean(x.__task.start||'');
+  if(!/^\\d{1,2}:\\d{2}$/.test(end))return false;
+  return nowHm().slice(0,5)>end;
+}
+function statusInfo(x){
+  if(x.__state==='pending')return schedulePassed(x)?{label:'Pendente · horário previsto passou',icon:'⏳',kind:'pending'}:{label:'Pendente',icon:'⏳',kind:'pending'};
+  if(x.__state==='running')return{label:'Em andamento',icon:'▶️',kind:'running'};
+  const pct=operationalPercentage(x),raw=clean(x.status);
+  if(x.inicioAntecipado===true&&pct===100)return{label:'No prazo · início antecipado · 100%',icon:'🔵',kind:'100'};
+  if(pct===100)return{label:'No prazo · 100%',icon:'✅',kind:'100'};
+  if(pct===75)return{label:'Atraso leve · 75%',icon:'🟡',kind:'75'};
+  if(pct===50)return{label:'Atraso maior · 50%',icon:'🟠',kind:'50'};
+  if(pct===0)return{label:'Tolerância estourada · 0%',icon:'🔴',kind:'0'};
+  return{label:raw||'Concluída',icon:'✅',kind:'neutral'};
+}
+function resultClass(x){const st=statusInfo(x);return `result-${st.kind}`}
+function resultHtml(x){const st=statusInfo(x);return `<span class=\"result-pill ${resultClass(x)}\">${st.icon} ${esc(st.label)}</span>`}
+function pointsHtml(x){
+  const reviewed=x.revisaoStatus==='revisado'&&!!x.revisaoDecisao;
+  return `<b>${wonPoints(x)}/${maxPoints(x)}</b><br><small>pts</small>${reviewed?'<span class=\"review-tag\">Revisado</span>':''}`;
+}
+"""
+s=s[:start]+replacement+s[end:]
+s=s.replace("const key=x.__state==='pending'?'pending':x.__state==='running'?'running':storedPercentage(x)===100?'ok':'late';","const key=x.__state==='pending'?'pending':x.__state==='running'?'running':operationalPercentage(x)===100?'ok':'late';",1)
+
+row_start=s.index('function rowHtml(x){')
+card_start=s.index('function cardHtml(x){',row_start)
+bind_start=s.index('function bindRowActions(',card_start)
+new_render="""function rowHtml(x){
+  const dateLabel=period==='day'?'':`<small>${esc(x.__date.split('-').reverse().join('/'))}</small>`;
+  return `<div class=\"monitor-v2-row ${x.__date<todayIso()?'mv3-past':''}\" data-family-task-id=\"${esc(x.__sourceId)}\" data-family-profile-id=\"${esc(x.__pid)}\"><span style=\"font-size:18px\">${statusInfo(x).icon}</span><span class=\"monitor-v2-title\"><b>${esc(x.__task.icon||'✅')} ${esc(x.__task.name)}</b><small>${esc(participantName(x.__pid))}</small>${dateLabel}</span><span><b>${esc(x.__task.start)}–${esc(x.__task.end)}</b><br><small>${esc(toleranceText(x))}</small></span><span class=\"monitor-v2-real\"><b>${esc(actualText(x))}</b><small>${x.inicioAntecipado===true?'Início antecipado':''}</small><div class=\"mv3-source\">Fonte: <b>${esc(sourceLabel(x))}</b></div></span><span class=\"monitor-v2-status\">${resultHtml(x)}</span><span>${pointsHtml(x)}</span><span>${actionsHtml(x)}</span></div>`;
+}
+function cardHtml(x){
+  return `<article class=\"monitor-v2-card\" data-family-task-id=\"${esc(x.__sourceId)}\" data-family-profile-id=\"${esc(x.__pid)}\"><div class=\"monitor-v2-card-head\"><span style=\"font-size:19px\">${statusInfo(x).icon}</span><div><b>${esc(x.__task.icon||'✅')} ${esc(x.__task.name)}</b><small>${esc(participantName(x.__pid))} · ${esc(x.__date.split('-').reverse().join('/'))}</small></div></div><div class=\"monitor-v2-grid\"><div class=\"monitor-v2-result-wide\"><small>Resultado</small>${resultHtml(x)}</div><div><small>Previsto</small><b>${esc(x.__task.start)}–${esc(x.__task.end)}</b></div><div><small>Real</small><b>${esc(actualText(x))}</b></div><div><small>Pontos</small>${pointsHtml(x)}</div><div><small>Tolerância</small><b>${esc(toleranceText(x))}</b></div><div><small>Fonte</small><b>${esc(sourceLabel(x))}</b></div></div>${actionsHtml(x)}</article>`;
+}
+"""
+s=s[:row_start]+new_render+s[bind_start:]
+s=s.replace("const late=rows.filter(x=>x.__state==='final'&&[75,50,0].includes(storedPercentage(x))).length;","const late=rows.filter(x=>x.__state==='final'&&[75,50,0].includes(operationalPercentage(x))).length;\n  const conflicts=rows.filter(resultConflict).length;",1)
+old_legend='const legend=`<div class="monitor-v2-legend"><span class="score-na">Pendente não é atraso</span><span class="score-100">100% no prazo</span><span class="score-75">75% atraso leve</span><span class="score-50">50% atraso maior</span><span class="score-0">0% tolerância estourada</span></div>`;'
+new_legend='const legend=`<div class="monitor-v2-legend"><span class="result-pending">⚪ Pendente</span><span class="result-running">🔵 Em andamento</span><span class="result-100">🟢 No prazo · 100%</span><span class="result-75">🟡 Atraso leve · 75%</span><span class="result-50">🟠 Atraso maior · 50%</span><span class="result-0">🔴 Tolerância estourada · 0%</span></div>`;'
+if old_legend not in s: raise SystemExit('legenda antiga nao encontrada')
+s=s.replace(old_legend,new_legend,1)
+old_header='const header=\'<div class="monitor-v2-header"><span></span><span>Tarefa</span><span>Previsto / tolerância</span><span>Real / fonte</span><span>Situação oficial</span><span>Faixa</span><span>Pontos</span><span>Ações</span></div>\';'
+new_header='const header=\'<div class="monitor-v2-header"><span></span><span>Tarefa</span><span>Previsto / tolerância</span><span>Real / fonte</span><span>Resultado</span><span>Pontos</span><span>Ações</span></div>\';'
+if old_header not in s: raise SystemExit('cabecalho antigo nao encontrado')
+s=s.replace(old_header,new_header,1)
+s=s.replace("await log('sprint2.monitor_v3_render',{linhas:rows.length,concluidas:done,andamento:running,atrasos:late,pendentes:pending});","await log('sprint2.monitor_v3_render',{linhas:rows.length,concluidas:done,andamento:running,atrasos:late,pendentes:pending,conflitosPersistidos:conflicts});",1)
+s=s.replace("const max=maxPoints(x),points=Number.isFinite(Number(x.pontosOriginais))?Number(x.pontosOriginais):wonPoints(x),pct=Number.isFinite(Number(x.percentualOriginal))?Number(x.percentualOriginal):(storedPercentage(x)??0);return{max,points,pct};","const max=maxPoints(x),points=Number.isFinite(Number(x.pontosOriginais))?Number(x.pontosOriginais):wonPoints(x),pct=operationalPercentage(x)??0;return{max,points,pct};",1)
+s=s.replace("Resultado revisado: <strong>${storedPercentage(x)}%</strong>","Resultado revisado: <strong>${reviewedPercentage(x)}%</strong>",1)
+s=s.replace("const title=$('view-monitor')?.querySelector('h2');if(title)title.textContent='Acompanhamento operacional';const desc=$('view-monitor')?.querySelector('.head p');if(desc)desc.textContent='Previsto x realizado, resultado oficial do Participante, alarmes e revisão de justificativas.';","const title=$('view-monitor')?.querySelector('h2');if(title)title.textContent='Acompanhamento operacional';const desc=$('view-monitor')?.querySelector('.head p');if(desc)desc.textContent='Previsto x realizado, resultado operacional em uma única leitura, pontos e revisão de justificativas.';",1)
+if s==original: raise SystemExit('nenhuma alteracao aplicada')
+if 'storedPercentage(' in s: raise SystemExit('referencia antiga storedPercentage permaneceu')
+p.write_text(s,encoding='utf-8')
+
+html=Path('sprint2-integracao-recompensas-v1.html')
+h=html.read_text(encoding='utf-8')
+nh,n=re.subn(r'src="sprint2-monitor-realdata-v2\.js(?:\?v=[^"]*)?"','src="sprint2-monitor-realdata-v2.js?v=20260905-monitor-result-v31"',h,count=1)
+if n!=1: raise SystemExit('script do monitor nao localizado no HTML integrado')
+html.write_text(nh,encoding='utf-8')
