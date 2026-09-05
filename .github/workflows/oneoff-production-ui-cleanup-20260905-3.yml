@@ -30,7 +30,6 @@ jobs:
                   raise SystemExit(f'Expected text not found in {path}: {old[:140]}')
               p.write_text(text.replace(old,new),encoding='utf-8')
 
-          # Store: desafios/conquistas devem ser lidos pelo ADM do próprio grupo, não apenas pelo Master.
           replace('sprint2-data-store-v1.js',
                   "const VERSION='sprint2-data-store-v1.1-live-rewards';",
                   "const VERSION='sprint2-data-store-v1.2-live-group-content';")
@@ -47,18 +46,7 @@ jobs:
                   "const liveAlready=liveGroup===g&&liveUnsubs.length===3;",
                   "const liveAlready=liveGroup===g&&liveUnsubs.length===5;")
 
-          # Auditoria: leitura de Conquistas passa a ser do ADM do grupo + Master; escrita continua Master-only.
-          replace('.github/workflows/sprint2-current-integration-audit.yml',
-                  "              \"['resgates','redemptions','live-resgates']\"\n          ]:",
-                  "              \"['resgates','redemptions','live-resgates']\",\n              \"['conquistas','conquests','live-conquistas']\",\n              \"['conquistaHistorico','conquestEvents','live-conquista-historico']\"\n          ]:")
-          replace('.github/workflows/sprint2-current-integration-audit.yml',
-                  "          require(\"clean(window.rotinaSprint2SessionSnapshot?.().role)==='master'\" in store,'coleções novas ficam isoladas ao Master nesta fase')",
-                  "          require(\"['adm_familia','adm_convidado','master'].includes(clean(window.rotinaSprint2SessionSnapshot?.().role))\" in store,'ADM do grupo e Master podem ler Conquistas do grupo')")
-
-          # Build identificável no rodapé.
           replace('sprint2-recompensas-realdata-v1.js',"const APP_BUILD='20260905.3';","const APP_BUILD='20260905.4';")
-
-          # Forçar atualização do Store e da release oficial.
           replace('index-ADMIN-v9.html','sprint2-data-store-v1.js?v=20260905-realtime-rewards-v11','sprint2-data-store-v1.js?v=20260905-group-content-v12')
           replace('sw.js','sprint2-data-store-v1.js?v=20260905-realtime-rewards-v11','sprint2-data-store-v1.js?v=20260905-group-content-v12')
 
@@ -75,7 +63,7 @@ jobs:
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add sprint2-data-store-v1.js sprint2-recompensas-realdata-v1.js index-ADMIN-v9.html index.html manifest.json sw.js .github/workflows/sprint2-current-integration-audit.yml
+          git add sprint2-data-store-v1.js sprint2-recompensas-realdata-v1.js index-ADMIN-v9.html index.html manifest.json sw.js
           git diff --cached --check
           git commit -m 'Show group challenges to group administrators build 20260905.4'
           git push origin HEAD:main
