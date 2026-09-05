@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='tarefas-realdata-v2.6-create-inline-contract';
+const VERSION='tarefas-realdata-v2.7-create-name-fix';
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').trim();
 const esc=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -193,7 +193,7 @@ async function createTask(mobile){
       const participant=profileName(pid),tg=`tg-${stamp}-${Math.random().toString(36).slice(2,8)}`;
       for(const day of days){
         const ref=fs.doc(fs.collection(db,'tarefas'));
-        batch.set(ref,{grupoId:g,nome,icone:icon,perfilNome:participant,perfilId:pid,tarefaGrupoId:tg,horaSugeridaInicio:start,horaSugeridaFim:end,diaSemana:day,tempoLimite:tol,pontosMaximos:points,justificativaObrigatoria:false,status:'Pendente',pontosGanhos:0,horarioInicio:'',horarioTermino:''});
+        batch.set(ref,{grupoId:g,nome:name,icone:icon,perfilNome:participant,perfilId:pid,tarefaGrupoId:tg,horaSugeridaInicio:start,horaSugeridaFim:end,diaSemana:day,tempoLimite:tol,pontosMaximos:points,justificativaObrigatoria:false,status:'Pendente',pontosGanhos:0,horarioInicio:'',horarioTermino:''});
         docs++;
       }
     }
