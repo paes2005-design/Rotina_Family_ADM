@@ -1,6 +1,6 @@
 (async function(){
 'use strict';
-const VERSION='integracao-login-realdata-v1';
+const VERSION='integracao-login-realdata-v1.1-series-normalization';
 const API_ROOT='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
 const LOG_ENDPOINT=`${API_ROOT}/app-log`;
 const ROLE_LABEL={adm_familia:'Administrador principal',adm_convidado:'Administrador convidado',master:'Master'};
@@ -48,8 +48,7 @@ function pointsOf(ex,task){const [a,b]=String(ex?.points||`0/${task?.points||0}`
 function execStatus(doc){const status=clean(doc?.status).toLowerCase();const faixa=clean(doc?.faixaAtraso).toLowerCase();if(status.includes('prazo'))return'ok';if(status.includes('atras')||faixa.includes('atraso'))return'late';if(status.includes('andamento'))return'running';return'pending'}
 function taskIsActive(docs){return !docs.every(d=>d.ativa===false||d.ativo===false||d.active===false||clean(d.status).toLowerCase()==='inativa')}
 function participantIdForDoc(doc){if(doc.perfilId&&runtime.profiles.some(p=>p.id===doc.perfilId))return doc.perfilId;const byName=runtime.profiles.find(p=>clean(p.nome).toLowerCase()===clean(doc.perfilNome).toLowerCase());return byName?.id||''}
-function legacyGroupKey(doc,pid){return `${pid}::legacy::${clean(doc.nome)}::${clean(doc.horaSugeridaInicio)}::${clean(doc.horaSugeridaFim)}::${Number(doc.pontosMaximos)||0}::${Number(doc.tempoLimite)||0}`}
-function recurrenceKey(doc,pid){return doc.tarefaGrupoId?`${pid}::${doc.tarefaGrupoId}`:legacyGroupKey(doc,pid)}
+function recurrenceKey(doc,pid){const status=taskIsActive([doc])?'active':'inactive';return `${pid}::series::${clean(doc.nome)}::${clean(doc.icone)||'✅'}::${clean(doc.horaSugeridaInicio)}::${clean(doc.horaSugeridaFim)}::${Number(doc.pontosMaximos)||0}::${Number(doc.tempoLimite)||0}::${status}::${clean(doc.alarme||doc.horaAlarme)}::${clean(doc.observacao||doc.nota)}`}
 function recurrenceSignature(rec){return JSON.stringify([clean(rec.name),clean(rec.icon),rec.start,rec.end,rec.points,rec.tolerance,[...rec.days].sort().join(','),rec.status])}
 function makeExecution(doc,points){return{start:clean(doc?.horarioInicio),end:clean(doc?.horarioTermino),status:execStatus(doc),points:`${Number(doc?.pontosGanhos)||0}/${Number(doc?.pontosMaximos)||points||0}`}}
 
@@ -58,7 +57,7 @@ function mapRealDataToState(){
   const groups=new Map();
   for(const doc of runtime.taskDocs){const pid=participantIdForDoc(doc);if(!pid)continue;const key=recurrenceKey(doc,pid);if(!groups.has(key))groups.set(key,{pid,docs:[]});groups.get(key).docs.push(doc)}
   const recurrences=[];
-  for(const [key,g] of groups){const docs=g.docs;const base=docs[0]||{};const days=[...new Set(docs.map(d=>FULL_TO_SHORT[d.diaSemana]).filter(Boolean))];recurrences.push({sourceKey:key,pid:g.pid,docs,name:clean(base.nome)||'Tarefa',icon:clean(base.icone)||'✅',start:clean(base.horaSugeridaInicio)||'00:00',end:clean(base.horaSugeridaFim)||'00:00',points:Number(base.pontosMaximos)||0,tolerance:Number(base.tempoLimite)||0,days,status:taskIsActive(docs)?'active':'inactive',alarm:clean(base.alarme||base.horaAlarme),note:clean(base.observacao||base.nota)})}
+  for(const [key,g] of groups){const docs=g.docs;const base=docs[0]||{};const days=[...new Set(docs.map(d=>FULL_TO_SHORT[d.diaSemana]).filter(Boolean))].sort((a,b)=>SHORT_ORDER.indexOf(a)-SHORT_ORDER.indexOf(b));recurrences.push({sourceKey:key,pid:g.pid,docs,name:clean(base.nome)||'Tarefa',icon:clean(base.icone)||'✅',start:clean(base.horaSugeridaInicio)||'00:00',end:clean(base.horaSugeridaFim)||'00:00',points:Number(base.pontosMaximos)||0,tolerance:Number(base.tempoLimite)||0,days,status:taskIsActive(docs)?'active':'inactive',alarm:clean(base.alarme||base.horaAlarme),note:clean(base.observacao||base.nota)})}
   const buckets=new Map();for(const r of recurrences){const sig=recurrenceSignature(r);if(!buckets.has(sig))buckets.set(sig,[]);buckets.get(sig).push(r)}
   const tasks=[];const executions={};let nextId=1;const allPids=participants.map(p=>p.id);
   for(const bucket of buckets.values()){
@@ -101,7 +100,7 @@ function renderAnalysis(){
 }
 function populateAnalysisParticipants(){const s=$('analysisParticipant'),keep=runtime.analysisParticipant;s.innerHTML='<option value="all">Todos</option>'+appState.participants.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');s.value=[...s.options].some(o=>o.value===keep)?keep:'all';runtime.analysisParticipant=s.value}
 function setHomePane(pane){const p=pane==='analysis'?'analysis':'today';document.querySelectorAll('.home-tab').forEach(b=>b.classList.toggle('active',b.dataset.pane===p));document.querySelectorAll('.home-pane').forEach(el=>el.classList.toggle('active',el.id===`pane-${p}`));sessionStorage.setItem('rf-sprint2-integration-realdata-pane',p);if(p==='analysis')renderAnalysis();else renderToday()}
-function navigate(route){const target=route==='tarefas'?'tarefas':'inicio';document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===`view-${target}`));document.querySelectorAll('#mainNav [data-route]').forEach(b=>b.classList.toggle('active',b.dataset.route===target));history.replaceState(null,'',`#${target}`);if(target==='tarefas')renderTasksSafe();else renderToday();$('mainScroll').scrollTop=0;emitLog('sprint2.realdata_navegacao',{rota:target})}
+function navigate(route){const target=route==='tarefas'?'tarefas':'inicio';document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===`view-${target}`));document.querySelectorAll('#mainNav [data-route]').forEach(b=>b.classList.toggle('active',b.dataset-route===target));history.replaceState(null,'',`#${target}`);if(target==='tarefas')renderTasksSafe();else renderToday();$('mainScroll').scrollTop=0;emitLog('sprint2.realdata_navegacao',{rota:target})}
 
 async function workerSession(idToken){const c=new AbortController(),timeout=setTimeout(()=>c.abort(),9000);try{const r=await fetch(`${API_ROOT}/family-session/admin`,{method:'POST',cache:'no-store',signal:c.signal,headers:{authorization:`Bearer ${idToken}`,'content-type':'application/json'},body:'{}'});const data=await r.json().catch(()=>({}));if(!r.ok||!data.token){const e=new Error(data.error||`Falha HTTP ${r.status}`);e.status=r.status;throw e}return data}finally{clearTimeout(timeout)}}
 async function tempAuth(){const app=initializeApp(firebaseConfig,`rotina-s2-temp-${Date.now()}-${Math.random().toString(36).slice(2)}`),a=getAuth(app);await setPersistence(a,inMemoryPersistence);return{app,auth:a}}
