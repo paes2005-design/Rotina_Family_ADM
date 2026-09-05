@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='sprint2-data-store-v1';
+const VERSION='sprint2-data-store-v1.1-live-rewards';
 const SYNC_MS=5*60*1000;
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').trim();
@@ -50,11 +50,18 @@ function publishLive(origin,key,snap,listenerGroup){
 }
 function startLive(expectedGroup=groupId()){
   const g=clean(expectedGroup).toUpperCase();if(!g||g==='SISTEMA'||!fs||!db||data.readyGroup!==g)return false;
-  if(liveGroup===g&&liveUnsubs.length===1)return true;
+  if(liveGroup===g&&liveUnsubs.length===3)return true;
   stopLive();liveGroup=g;
-  const q=fs.query(fs.collection(db,'execucoes'),fs.where('grupoId','==',g));
-  const unsub=fs.onSnapshot(q,{includeMetadataChanges:false},snap=>publishLive('live-execucoes','executions',snap,g),err=>console.warn('Sprint 2 live execucoes:',err));
-  liveUnsubs.push(unsub);
+  const streams=[
+    ['execucoes','executions','live-execucoes'],
+    ['recompensas','rewards','live-recompensas'],
+    ['resgates','redemptions','live-resgates']
+  ];
+  for(const [collectionName,key,origin] of streams){
+    const q=fs.query(fs.collection(db,collectionName),fs.where('grupoId','==',g));
+    const unsub=fs.onSnapshot(q,{includeMetadataChanges:false},snap=>publishLive(origin,key,snap,g),err=>console.warn(`Sprint 2 live ${collectionName}:`,err));
+    liveUnsubs.push(unsub);
+  }
   return true;
 }
 
@@ -121,7 +128,7 @@ async function fullSync(origin='store-intervalo-5min',server=true,insideInitial=
   const run=async()=>{
     if(!await firebaseReady())return false;
     if(data.groupId!==g)reset(g);
-    const liveAlready=liveGroup===g&&liveUnsubs.length===1;
+    const liveAlready=liveGroup===g&&liveUnsubs.length===3;
     const reconcileAll=insideInitial||/manual|inicial-completo/.test(origin)||!liveAlready;
     const names=reconcileAll?['perfis','tarefas','historico','execucoes','despertadores','recompensas','resgates']:['perfis','tarefas','historico','despertadores','recompensas','resgates'];
     const optionalNames=conquestAccess()?['conquistas','conquistaHistorico']:[];
