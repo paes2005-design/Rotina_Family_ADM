@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta name="theme-color" content="#6b35df">
-  <link rel="manifest" href="./manifest.json?v=20260905.3">
+  <link rel="manifest" href="./manifest.json?v=20260905.4">
   <title>Rotina Family ADM</title>
   <style>body{font-family:Segoe UI,Tahoma,sans-serif;background:#f6f7fb;color:#334155;margin:0;display:grid;place-items:center;min-height:100vh}.loading{padding:24px;text-align:center}</style>
 </head>
@@ -14,14 +14,14 @@
   <div class="loading">Carregando Rotina Family ADM...</div>
   <script>
     (async()=>{
-      try{if('serviceWorker' in navigator){const reg=await navigator.serviceWorker.register('./sw.js?v=20260905.3',{updateViaCache:'none'});await reg.update().catch(()=>{});}}catch(_){}
+      try{if('serviceWorker' in navigator){const reg=await navigator.serviceWorker.register('./sw.js?v=20260905.4',{updateViaCache:'none'});await reg.update().catch(()=>{});}}catch(_){}
       const target=new URL('./index-ADMIN-v9.html',location.href);
       const params=new URLSearchParams(location.search);
       params.delete('entry');
-      params.set('release','20260905.3');
+      params.set('release','20260905.4');
       target.search=params.toString();target.hash=location.hash;location.replace(target.href);
     })();
   </script>
-  <noscript><a href="./index-ADMIN-v9.html?release=20260905.3">Abrir Rotina Family ADM</a></noscript>
+  <noscript><a href="./index-ADMIN-v9.html?release=20260905.4">Abrir Rotina Family ADM</a></noscript>
 </body>
 </html>

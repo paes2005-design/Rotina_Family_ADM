@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='sprint2-data-store-v1.1-live-rewards';
+const VERSION='sprint2-data-store-v1.2-live-group-content';
 const SYNC_MS=5*60*1000;
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').trim();
@@ -12,7 +12,7 @@ let data={groupId:'',readyGroup:'',profiles:[],taskDocs:[],history:[],executions
 
 function groupId(){return clean($('topGroup')?.textContent).replace(/^Grupo\s+/i,'').toUpperCase()}
 function copy(list){return (list||[]).map(x=>({...x}))}
-function conquestAccess(){return clean(window.rotinaSprint2SessionSnapshot?.().role)==='master'}
+function conquestAccess(){return ['adm_familia','adm_convidado','master'].includes(clean(window.rotinaSprint2SessionSnapshot?.().role))}
 function reset(g=''){data={groupId:g,readyGroup:'',profiles:[],taskDocs:[],history:[],executions:[],alarms:[],rewards:[],redemptions:[],conquests:[],conquestEvents:[],lastServerSync:0,lastLiveSync:0,lastLocalSync:0,origin:'reset',version:VERSION}}
 function snapshot(){return{...data,profiles:copy(data.profiles),taskDocs:copy(data.taskDocs),history:copy(data.history),executions:copy(data.executions),alarms:copy(data.alarms),rewards:copy(data.rewards),redemptions:copy(data.redemptions),conquests:copy(data.conquests),conquestEvents:copy(data.conquestEvents)}}
 function publish(origin,server=false,failures=0){data.origin=origin;if(server&&failures===0)data.lastServerSync=Date.now();else if(!server)data.lastLocalSync=Date.now();window.dispatchEvent(new CustomEvent('rotina-sprint2-cache-updated',{detail:{groupId:data.groupId,readyGroup:data.readyGroup,origin,server,failures,lastServerSync:data.lastServerSync,lastLiveSync:data.lastLiveSync,version:VERSION}}))}
@@ -50,12 +50,14 @@ function publishLive(origin,key,snap,listenerGroup){
 }
 function startLive(expectedGroup=groupId()){
   const g=clean(expectedGroup).toUpperCase();if(!g||g==='SISTEMA'||!fs||!db||data.readyGroup!==g)return false;
-  if(liveGroup===g&&liveUnsubs.length===3)return true;
+  if(liveGroup===g&&liveUnsubs.length===5)return true;
   stopLive();liveGroup=g;
   const streams=[
     ['execucoes','executions','live-execucoes'],
     ['recompensas','rewards','live-recompensas'],
-    ['resgates','redemptions','live-resgates']
+    ['resgates','redemptions','live-resgates'],
+    ['conquistas','conquests','live-conquistas'],
+    ['conquistaHistorico','conquestEvents','live-conquista-historico']
   ];
   for(const [collectionName,key,origin] of streams){
     const q=fs.query(fs.collection(db,collectionName),fs.where('grupoId','==',g));
@@ -128,7 +130,7 @@ async function fullSync(origin='store-intervalo-5min',server=true,insideInitial=
   const run=async()=>{
     if(!await firebaseReady())return false;
     if(data.groupId!==g)reset(g);
-    const liveAlready=liveGroup===g&&liveUnsubs.length===3;
+    const liveAlready=liveGroup===g&&liveUnsubs.length===5;
     const reconcileAll=insideInitial||/manual|inicial-completo/.test(origin)||!liveAlready;
     const names=reconcileAll?['perfis','tarefas','historico','execucoes','despertadores','recompensas','resgates']:['perfis','tarefas','historico','despertadores','recompensas','resgates'];
     const optionalNames=conquestAccess()?['conquistas','conquistaHistorico']:[];
