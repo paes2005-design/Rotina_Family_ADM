@@ -1,0 +1,71 @@
+name: Sprint 2 Task Status Restore V31
+
+on:
+  push:
+    paths:
+      - '.github/triggers/sprint2-task-status-restore-v31.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Restaurar status Ativa Inativa no editor de Tarefas
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          p=Path('sprint2-tarefas-realdata-v2.js')
+          s=p.read_text(encoding='utf-8')
+
+          reps=[
+            ("const VERSION='tarefas-realdata-v3.0-series-editor';", "const VERSION='tarefas-realdata-v3.1-series-status';"),
+            (".tv3-grid{grid-template-columns:64px 1.5fr 110px 110px 90px 100px}", ".tv3-grid{grid-template-columns:64px 1.5fr 110px 110px 90px 100px 105px}"),
+            ("note:edVal(r,'note')}:{icon:'✅',name:'Nova tarefa',start:'12:00',end:'12:15',points:5,tolerance:0,alarm:'off',note:''}", "note:edVal(r,'note'),active:edVal(r,'active')}:{icon:'✅',name:'Nova tarefa',start:'12:00',end:'12:15',points:5,tolerance:0,alarm:'off',note:'',active:true}"),
+            ("<div><label>Tolerância</label><input id=\"tv3Tolerance\" type=\"number\" min=\"0\" value=\"${v.tolerance}\"></div></div><div class=\"tv3-details\">", "<div><label>Tolerância</label><input id=\"tv3Tolerance\" type=\"number\" min=\"0\" value=\"${v.tolerance}\"></div><div><label>Status</label><select id=\"tv3Active\"><option value=\"active\" ${v.active?'selected':''}>Ativa</option><option value=\"inactive\" ${!v.active?'selected':''}>Inativa</option></select></div></div><div class=\"tv3-details\">"),
+            ("alarm:$('tv3Alarm')?.value||'off',note:clean($('tv3Note')?.value)}", "alarm:$('tv3Alarm')?.value||'off',note:clean($('tv3Note')?.value),active:$('tv3Active')?.value!=='inactive'}"),
+            ("observacao:v.note,status:'Pendente'", "observacao:v.note,ativa:v.active,status:'Pendente'"),
+            ("observacao:v.note,atualizadoEm:now}", "observacao:v.note,ativa:v.active,atualizadoEm:now}"),
+            ("for(const pid of targets){const c=conflict({pid,days,start:v.start,end:v.end});if(c)return toast(`Conflito real em ${clean(c.diaSemana)} com “${clean(c.nome)}”.`)}", "if(v.active)for(const pid of targets){const c=conflict({pid,days,start:v.start,end:v.end});if(c)return toast(`Conflito real em ${clean(c.diaSemana)} com “${clean(c.nome)}”.`)}"),
+            ("mode:v.alarm,now}),{merge:true});await d.commit();log('create_success',{docs:made.length,dias:days.length});", "mode:v.active?v.alarm:'off',now}),{merge:true});await d.commit();log('create_success',{docs:made.length,dias:days.length,ativa:v.active});"),
+            ("const c=conflict({pid:r.pid,days,start:v.start,end:v.end,ignore:r.docs.map(d=>d.id)});if(c)return toast(`Conflito real em ${clean(c.diaSemana)} com “${clean(c.nome)}”.`);", "if(v.active){const c=conflict({pid:r.pid,days,start:v.start,end:v.end,ignore:r.docs.map(d=>d.id)});if(c)return toast(`Conflito real em ${clean(c.diaSemana)} com “${clean(c.nome)}”.`)}"),
+            ("mode:v.alarm,now}),{merge:true});await b.commit();log('edit_series_success',{dias:days.length,docs:kept.length});", "mode:v.active?v.alarm:'off',now}),{merge:true});await b.commit();log('edit_series_success',{dias:days.length,docs:kept.length,ativa:v.active});"),
+            ("const c=conflict({pid:r.pid,days:[day],start:v.start,end:v.end,ignore:r.docs.map(d=>d.id)});if(c)return toast(`Conflito real em ${day} com “${clean(c.nome)}”.`);", "if(v.active){const c=conflict({pid:r.pid,days:[day],start:v.start,end:v.end,ignore:r.docs.map(d=>d.id)});if(c)return toast(`Conflito real em ${day} com “${clean(c.nome)}”.`)}"),
+            ("mode:v.alarm,now}),{merge:true});await b.commit();log('edit_day_success',{dia:day,docs:docs.length,serieDocs:r.docs.length});", "mode:v.active?v.alarm:'off',now}),{merge:true});await b.commit();log('edit_day_success',{dia:day,docs:docs.length,serieDocs:r.docs.length,ativa:v.active});")
+          ]
+
+          for old,new in reps:
+              n=s.count(old)
+              if n!=1:
+                  raise SystemExit(f'Esperado 1 match, encontrado {n}: {old[:90]}')
+              s=s.replace(old,new,1)
+
+          p.write_text(s,encoding='utf-8')
+
+          h=Path('sprint2-integracao-recompensas-v1.html')
+          hs=h.read_text(encoding='utf-8')
+          old='sprint2-tarefas-realdata-v2.js?v=20260905-create-with-details-v28'
+          new='sprint2-tarefas-realdata-v2.js?v=20260905-series-status-v31'
+          if hs.count(old)!=1:
+              raise SystemExit(f'Cache-bust antigo não encontrado exatamente uma vez: {hs.count(old)}')
+          h.write_text(hs.replace(old,new,1),encoding='utf-8')
+          PY
+          node --check sprint2-tarefas-realdata-v2.js
+          grep -q "tarefas-realdata-v3.1-series-status" sprint2-tarefas-realdata-v2.js
+          grep -q 'id="tv3Active"' sprint2-tarefas-realdata-v2.js
+          grep -q 'ativa:v.active' sprint2-tarefas-realdata-v2.js
+          grep -q 'series-status-v31' sprint2-integracao-recompensas-v1.html
+      - name: Commit
+        run: |
+          git config user.name "paes2005-design"
+          git config user.email "paes2005@gmail.com"
+          git add sprint2-tarefas-realdata-v2.js sprint2-integracao-recompensas-v1.html
+          git commit -m "Sprint 2: restaura ativar e desativar tarefas"
+          git push
