@@ -3,7 +3,6 @@
 
 const VERSION='sprint2-data-store-v1.3-cache-first-budget';
 const SYNC_MS=5*60*1000;
-const BASE_NAMES=['perfis','tarefas','historico','resgates'];
 const HOT_NAMES=['perfis','tarefas','execucoes','despertadores','recompensas','resgates','conquistas','conquistaHistorico'];
 const FULL_NAMES=['perfis','tarefas','historico','execucoes','despertadores','recompensas','resgates','conquistas','conquistaHistorico'];
 const $=id=>document.getElementById(id);
