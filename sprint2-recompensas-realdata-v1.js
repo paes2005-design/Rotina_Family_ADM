@@ -7,7 +7,7 @@ const APP_VERSION='2.0.0';
 const APP_BUILD='20260905.2';
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').trim();
-const esc=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+const esc=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db=null,fs=null,app=null,busy=false,editing='';
 let rewards=[],redemptions=[],profiles=[];
 let period='day';
@@ -102,7 +102,8 @@ function productionUi(){
   productionUiQueued=false;
   let style=$('rfProductionUiStyle');
   if(!style){style=document.createElement('style');style.id='rfProductionUiStyle';style.textContent='#rfBuildFooter{padding:18px 8px 10px;text-align:center;color:#8a8fa0;font-size:9px;letter-spacing:.02em}#rfBuildFooter b{color:#666d80;font-weight:800}';document.head.appendChild(style)}
-  document.querySelectorAll('#view-monitor .integration-note,#view-monitor .monitor-note,#view-recompensas .cq-warning,#view-participantes .pv1-readonly').forEach(el=>el.remove());
+  document.querySelectorAll('#view-monitor .integration-note,#view-monitor .monitor-note').forEach(el=>el.remove());
+  document.querySelectorAll('#view-recompensas .cq-warning,#view-participantes .pv1-readonly').forEach(el=>{el.style.display='none'});
   document.querySelectorAll('#view-recompensas .rv1-desc').forEach(el=>{const t=clean(el.textContent);if(t==='Evento real de Conquista.'||t==='Pedido real de resgate.')el.remove()});
   document.querySelectorAll('#view-monitor .mv3-source').forEach(el=>el.remove());
   document.querySelectorAll('#view-monitor .monitor-v2-grid>div').forEach(cell=>{const label=cell.querySelector('small');if(clean(label?.textContent).toLowerCase()==='fonte')cell.remove()});
