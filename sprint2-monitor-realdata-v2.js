@@ -392,10 +392,9 @@ async function render(force=false){
   $('mExpected').textContent=rows.length;$('mDone').textContent=done;$('mRunning').textContent=running;$('mPending').textContent=pending;
   const who=current==='__ALL__'?'todos os participantes':participantName(current);
   $('monitorInfo').innerHTML=`<b>${esc(periodLabel())}</b> · ${esc(who)} · ${done} concluída(s), ${running} em andamento, ${pending} pendente(s)${late?` · ${late} com perda de pontuação`:''}.`;
-  const legend=`<div class="monitor-v2-legend"><span class="result-pending">⚪ Pendente</span><span class="result-running">🔵 Em andamento</span><span class="result-100">🟢 No prazo · 100%</span><span class="result-75">🟡 Atraso leve · 75%</span><span class="result-50">🟠 Atraso maior · 50%</span><span class="result-0">🔴 Tolerância estourada · 0%</span></div>`;
   const header='<div class="monitor-v2-header"><span></span><span>Tarefa</span><span>Previsto / tolerância</span><span>Real / fonte</span><span>Resultado</span><span>Pontos</span><span>Ações</span></div>';
-  $('monitorTimeline').innerHTML=legend+(rows.length?header+rows.map(rowHtml).join(''):'<div class="notice">Nenhuma ocorrência corresponde aos filtros.</div>');
-  $('monitorMobile').innerHTML=legend+(rows.length?rows.map(cardHtml).join(''):'<div class="notice">Nenhuma ocorrência corresponde aos filtros.</div>');
+  $('monitorTimeline').innerHTML=rows.length?header+rows.map(rowHtml).join(''):'<div class="notice">Nenhuma ocorrência corresponde aos filtros.</div>';
+  $('monitorMobile').innerHTML=rows.length?rows.map(cardHtml).join(''):'<div class="notice">Nenhuma ocorrência corresponde aos filtros.</div>';
   bindRowActions($('monitorTimeline'),rows);bindRowActions($('monitorMobile'),rows);
   await log('sprint2.monitor_v3_render',{linhas:rows.length,concluidas:done,andamento:running,atrasos:late,pendentes:pending,conflitosPersistidos:conflicts});
 }
