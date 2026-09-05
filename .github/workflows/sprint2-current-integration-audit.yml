@@ -72,7 +72,7 @@ jobs:
           for legacy in ["$('taskParticipant').onchange","$('taskSearch').oninput","$('taskFilter').onchange"]:
               require(legacy not in bridge,f'Início não reata controle legado {legacy}')
 
-          require("tarefas-realdata-v3.0-series-editor" in tasks,'Tarefas usa o editor de séries recorrentes aprovado')
+          require("tarefas-realdata-v3.1-series-status" in tasks,'Tarefas usa o editor de séries com status restaurado')
           require('data-tv2-more' not in tasks and 'saveDetails' not in tasks,'Tarefas não mantém editor paralelo por três pontos')
           require('tv3Scope' in tasks and 'Toda a tarefa recorrente' in tasks and 'Somente um dia' in tasks,'edição oferece escopo série completa ou um dia')
           require('Dias da semana' in tasks and 'Alarme' in tasks and 'Observação' in tasks,'dias, alarme e observação ficam no mesmo formulário de edição')
@@ -83,6 +83,9 @@ jobs:
           require("fs.doc(db,'despertadores'" in tasks,'edição integrada grava o contrato oficial de despertadores')
           require('observacao:v.note' in tasks,'observação do formulário integrado persiste na tarefa')
           require('(s.alarms||[])' in tasks,'Tarefas lê despertadores pelo Store central')
+          require('tv3Active' in tasks and '>Ativa</option>' in tasks and '>Inativa</option>' in tasks,'editor integrado restaura status Ativa/Inativa')
+          require('ativa:v.active' in tasks,'status ativo/inativo é persistido nos documentos de Tarefas')
+          require("mode:v.active?v.alarm:'off'" in tasks,'tarefa inativa desliga seus alarmes')
 
           require('conquests' in store and 'conquestEvents' in store,'Store central expõe dados de Conquistas')
           require("queryGroup('conquistas'" in store and "queryGroup('conquistaHistorico'" in store,'Store reconcilia Conquistas sem listener extra')
