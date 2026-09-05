@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='tarefas-realdata-v4.1-series-status';
+const VERSION='tarefas-realdata-v4.2-selected-days';
 const DAYS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const WEEKDAYS=['Segunda','Terça','Quarta','Quinta','Sexta'];
 const ICONS=['🛏️','📚','🧹','🎻','🍴','🗑️','🧼','🪥','🐶','✅'];
@@ -13,7 +13,7 @@ let db=null,fs=null,app=null;
 let busy=false,installed=false,pendingDataRefresh=false;
 let profiles=[],series=[];
 let participantFilter='all',dayFilter=todayFull(),statusFilter='all',searchFilter='';
-let editor=null; // {mode,key,scope,day,draft,statusTouched}
+let editor=null; // {mode,key,draft,touched:Set}
 
 function todayFull(){return DAYS[new Date().getDay()]}
 function groupId(){return clean($('topGroup')?.textContent).replace(/^Grupo\s+/i,'').toUpperCase()}
@@ -126,29 +126,21 @@ function build(){
   }
 }
 
-function docDay(r,day){
-  const docs=r.docs.filter(x=>clean(x.diaSemana)===day);
-  if(!docs.length)return null;
-  const s=most(docs.map(sig));
-  return docs.find(x=>sig(x)===s)||docs[0];
-}
-function draftFrom(r,scope='all',day=''){
+function draftFrom(r){
   if(!r){
     return{icon:'✅',name:'Nova tarefa',start:'12:00',end:'12:15',points:5,tolerance:0,active:true,alarm:'off',note:'',days:[...WEEKDAYS]};
   }
-  const d=scope==='day'?docDay(r,day):null;
-  const source=d?cfg(d):r;
   return{
-    icon:source.icon,
-    name:source.name,
-    start:source.start,
-    end:source.end,
-    points:Number(source.points)||0,
-    tolerance:Number(source.tolerance)||0,
-    active:r.mixedActive?r.active:!!source.active,
-    alarm:d?alarmMode(alarmFor(d)):r.alarm,
-    note:source.note||'',
-    days:scope==='day'?[day]:[...r.days]
+    icon:r.icon,
+    name:r.name,
+    start:r.start,
+    end:r.end,
+    points:Number(r.points)||0,
+    tolerance:Number(r.tolerance)||0,
+    active:!!r.active,
+    alarm:r.alarm,
+    note:r.note||'',
+    days:[...r.days]
   };
 }
 function currentSeries(){return editor?.mode==='edit'?series.find(r=>r.key===editor.key)||null:null}
@@ -212,12 +204,6 @@ function createPayload({g,pid,participant,tg,day,v}){
     observacao:v.note,ativa:v.active,status:'Pendente',pontosGanhos:0,horarioInicio:'',horarioTermino:''
   };
 }
-function updatePayload(tg,v,now){
-  return{
-    tarefaGrupoId:tg,nome:v.name,icone:v.icon,horaSugeridaInicio:v.start,horaSugeridaFim:v.end,
-    tempoLimite:v.tolerance,pontosMaximos:v.points,observacao:v.note,ativa:v.active,atualizadoEm:now
-  };
-}
 function validate(v,days){
   if(!ICONS.includes(v.icon)||!v.name||!validTime(v.start,v.end)||!Number.isFinite(Number(v.points))||Number(v.points)<0||!Number.isFinite(Number(v.tolerance))||Number(v.tolerance)<0){
     toast('Revise ícone, nome, horários, pontos e tolerância.');
@@ -257,82 +243,80 @@ async function createTask(v){
   return true;
 }
 
-async function saveAll(r,v){
-  const days=sortDays(v.days);
-  if(!r.canBulk){toast('Esta série tem exceções. Edite um dia por vez.');return false}
+function selectedDocs(r,days){
+  const set=new Set(sortDays(days));
+  return r.docs.filter(d=>set.has(clean(d.diaSemana)));
+}
+function touched(field){return !!editor?.touched?.has(field)}
+function selectedPatch(tg,v,now){
+  const patch={tarefaGrupoId:tg,atualizadoEm:now};
+  if(touched('name'))patch.nome=v.name;
+  if(touched('icon'))patch.icone=v.icon;
+  if(touched('start'))patch.horaSugeridaInicio=v.start;
+  if(touched('end'))patch.horaSugeridaFim=v.end;
+  if(touched('points'))patch.pontosMaximos=v.points;
+  if(touched('tolerance'))patch.tempoLimite=v.tolerance;
+  if(touched('note'))patch.observacao=v.note;
+  if(touched('active'))patch.ativa=v.active;
+  return patch;
+}
+
+async function saveSelected(r,v){
+  const days=sortDays(v.days).filter(d=>r.days.includes(d));
+  if(!days.length){toast('Selecione pelo menos um dia da tarefa.');return false}
+  if(!editor.touched?.size){toast('Nenhuma alteração foi feita.');return false}
   if(!validate(v,days))return false;
 
-  if(v.active){
-    const c=conflict({pid:r.pid,days,start:v.start,end:v.end,ignore:r.docs.map(d=>d.id)});
-    if(c){toast(`Conflito real em ${clean(c.diaSemana)} com “${clean(c.nome)}”.`);return false}
-  }
+  const docs=selectedDocs(r,days);
+  if(!docs.length){toast('Nenhum dia selecionado foi encontrado.');return false}
 
-  const g=groupId(),now=new Date().toISOString(),tg=tgFor(r.docs);
-  const b=fs.writeBatch(db),existing=new Set(r.docs.map(d=>clean(d.diaSemana))),kept=[];
-
-  for(const d of r.docs){
-    const day=clean(d.diaSemana);
-    if(days.includes(day)){
-      b.update(fs.doc(db,'tarefas',d.id),updatePayload(tg,v,now));
-      kept.push({id:d.id,day});
-    }else{
-      b.delete(fs.doc(db,'tarefas',d.id));
-      b.set(fs.doc(db,'despertadores',alarmId(g,r.pid,d.id)),{
-        grupoId:g,perfilId:r.pid,tarefaId:d.id,tarefaGrupoId:tg,
-        ativo:false,bloqueado:false,schedulerPendente:true,schedulerVersao:1,
-        encerradoEm:now,encerradoPor:'ADM',atualizadoEm:now
-      },{merge:true});
+  const ignore=r.docs.map(d=>d.id);
+  for(const d of docs){
+    const base=cfg(d);
+    const start=touched('start')?v.start:base.start;
+    const end=touched('end')?v.end:base.end;
+    const active=touched('active')?v.active:base.active;
+    if(active){
+      const c=conflict({pid:r.pid,days:[clean(d.diaSemana)],start,end,ignore});
+      if(c){toast(`Conflito real em ${clean(d.diaSemana)} com “${clean(c.nome)}”.`);return false}
     }
   }
 
-  for(const day of days){
-    if(existing.has(day))continue;
-    const ref=fs.doc(fs.collection(db,'tarefas'));
-    b.set(ref,createPayload({g,pid:r.pid,participant:r.participant,tg,day,v}));
-    kept.push({id:ref.id,day});
+  const g=groupId(),now=new Date().toISOString(),tg=tgFor(r.docs),b=fs.writeBatch(db);
+  const alarmNeedsUpdate=['name','start','end','active','alarm'].some(touched);
+
+  for(const d of docs){
+    b.update(fs.doc(db,'tarefas',d.id),selectedPatch(tg,v,now));
+
+    if(alarmNeedsUpdate){
+      const base=cfg(d);
+      const name=touched('name')?v.name:base.name;
+      const start=touched('start')?v.start:base.start;
+      const end=touched('end')?v.end:base.end;
+      const active=touched('active')?v.active:base.active;
+      const preservedMode=alarmMode(alarmFor(d));
+      const requestedMode=touched('alarm')?v.alarm:preservedMode;
+      const mode=active?requestedMode:'off';
+
+      b.set(
+        fs.doc(db,'despertadores',alarmId(g,r.pid,d.id)),
+        alarmData({
+          g,pid:r.pid,participant:r.participant,taskId:d.id,tg,
+          name,day:clean(d.diaSemana),start,end,mode,now
+        }),
+        {merge:true}
+      );
+    }
   }
 
-  for(const x of kept){
-    b.set(fs.doc(db,'despertadores',alarmId(g,r.pid,x.id)),
-      alarmData({g,pid:r.pid,participant:r.participant,taskId:x.id,tg,name:v.name,day:x.day,start:v.start,end:v.end,mode:v.active?v.alarm:'off',now}),
-      {merge:true});
-  }
   await b.commit();
-  log('edit_series_success',{dias:days.length,docs:kept.length,ativa:v.active});
-  toast('Toda a tarefa recorrente foi atualizada.');
-  return true;
-}
-
-async function saveDay(r,v){
-  const day=editor.day;
-  const docs=r.docs.filter(d=>clean(d.diaSemana)===day);
-  if(!docs.length||!validate(v,[day]))return false;
-
-  if(v.active){
-    const c=conflict({pid:r.pid,days:[day],start:v.start,end:v.end,ignore:r.docs.map(d=>d.id)});
-    if(c){toast(`Conflito real em ${day} com “${clean(c.nome)}”.`);return false}
-  }
-
-  const g=groupId(),now=new Date().toISOString(),tg=tgFor(r.docs);
-  const b=fs.writeBatch(db),ids=new Set(docs.map(d=>d.id)),statusGlobal=!!editor.statusTouched;
-
-  for(const d of r.docs){
-    const patch=ids.has(d.id)?updatePayload(tg,v,now):{tarefaGrupoId:tg,atualizadoEm:now};
-    if(statusGlobal)patch.ativa=v.active;
-    b.update(fs.doc(db,'tarefas',d.id),patch);
-  }
-
-  const alarmTargets=statusGlobal?r.docs:docs;
-  for(const d of alarmTargets){
-    const selected=ids.has(d.id),base=cfg(d);
-    const mode=!v.active&&statusGlobal?'off':selected?(v.active?v.alarm:'off'):alarmMode(alarmFor(d));
-    b.set(fs.doc(db,'despertadores',alarmId(g,r.pid,d.id)),
-      alarmData({g,pid:r.pid,participant:r.participant,taskId:d.id,tg,name:selected?v.name:base.name,day:clean(d.diaSemana),start:selected?v.start:base.start,end:selected?v.end:base.end,mode,now}),
-      {merge:true});
-  }
-  await b.commit();
-  log('edit_day_success',{dia:day,docs:docs.length,serieDocs:r.docs.length,ativa:v.active,statusGlobal});
-  toast(statusGlobal?`Status da tarefa aplicado a todos os dias; ${day} atualizado.`:`${day}: alteração salva somente neste dia.`);
+  log('edit_selected_success',{
+    dias:days,
+    docs:docs.length,
+    campos:[...editor.touched],
+    ativa:touched('active')?v.active:null
+  });
+  toast(`${days.length} dia${days.length===1?'':'s'} atualizado${days.length===1?'':'s'}.`);
   return true;
 }
 
@@ -353,21 +337,23 @@ async function saveEditor(){
   if(!await firebaseReady()){toast('Firebase indisponível para edição.');return}
 
   setBusyUI(true);
-  log('save_start',{modo:editor.mode,escopo:editor.scope,dias:v.days.length,key:editor.key||'',statusTocado:!!editor.statusTouched});
+  log('save_start',{
+    modo:editor.mode,
+    dias:v.days.length,
+    key:editor.key||'',
+    campos:editor.mode==='edit'?[...editor.touched]:['create']
+  });
   try{
-    let ok=false;
-    if(editor.mode==='create')ok=await createTask(v);
-    else if(editor.scope==='all')ok=await saveAll(r,v);
-    else ok=await saveDay(r,v);
+    const ok=editor.mode==='create'?await createTask(v):await saveSelected(r,v);
     if(!ok)return;
 
     editor=null;
     pendingDataRefresh=false;
-    await window.rotinaSprint2SyncLocal?.('tarefas-v4-save');
+    await window.rotinaSprint2SyncLocal?.('tarefas-v42-save');
     render();
   }catch(e){
     console.error(e);
-    log('save_error',{codigo:clean(e?.code)||'erro',mensagem:clean(e?.message)||String(e),escopo:editor?.scope||''},'error');
+    log('save_error',{codigo:clean(e?.code)||'erro',mensagem:clean(e?.message)||String(e)},'error');
     toast('Não foi possível salvar. A edição foi mantida.');
   }finally{
     setBusyUI(false);
@@ -378,7 +364,7 @@ async function saveEditor(){
 function startCreate(){
   if(busy||editor||!canWrite())return;
   if(!profiles.length){toast('Cadastre um participante primeiro.');return}
-  editor={mode:'create',key:'',scope:'all',day:'',draft:draftFrom(null),statusTouched:false};
+  editor={mode:'create',key:'',draft:draftFrom(null),touched:new Set()};
   log('create_open',{todos:participantFilter==='all'});
   render();
 }
@@ -386,42 +372,22 @@ function startEdit(key){
   if(busy||editor)return;
   const r=series.find(x=>x.key===key);
   if(!r)return;
-  const day=r.days.includes(dayFilter)?dayFilter:r.days.includes(todayFull())?todayFull():r.days[0];
-  const scope=r.canBulk?'all':'day';
-  editor={mode:'edit',key,scope,day,draft:draftFrom(r,scope,day),statusTouched:false};
-  log('edit_open',{bulkDisponivel:r.canBulk,dias:r.days.length,docs:r.docs.length,inline:true,statusMisto:r.mixedActive});
+  editor={mode:'edit',key,draft:draftFrom(r),touched:new Set()};
+  log('edit_open',{dias:r.days.length,docs:r.docs.length,inline:true,statusMisto:r.mixedActive});
   render();
 }
 function cancelEdit(){
   if(!editor||busy)return;
-  log('edit_cancel',{modo:editor.mode,escopo:editor.scope});
+  log('edit_cancel',{modo:editor.mode});
   editor=null;
   const shouldRefresh=pendingDataRefresh;pendingDataRefresh=false;
   render();
   if(shouldRefresh)render();
 }
-function changeScope(scope){
-  const r=currentSeries();
-  if(!r||editor.mode!=='edit')return;
-  if(scope==='all'&&!r.canBulk){toast('Esta série tem exceções. Edite um dia por vez.');return}
-  editor.scope=scope;
-  editor.statusTouched=false;
-  if(scope==='day'&&!r.days.includes(editor.day))editor.day=r.days[0];
-  editor.draft=draftFrom(r,scope,editor.day);
-  log('scope_change',{escopo:scope,dia:editor.day||''});
-  render();
-}
-function changeEditDay(day){
-  const r=currentSeries();
-  if(!r||!r.days.includes(day))return;
-  editor.day=day;
-  editor.statusTouched=false;
-  editor.draft=draftFrom(r,'day',day);
-  log('day_change',{dia:day});
-  render();
-}
 function toggleDraftDay(day){
-  if(!editor||editor.scope==='day'||!DAYS.includes(day))return;
+  if(!editor||!DAYS.includes(day))return;
+  const r=currentSeries();
+  if(editor.mode==='edit'&&r&&!r.days.includes(day))return;
   const set=new Set(editor.draft.days);
   set.has(day)?set.delete(day):set.add(day);
   editor.draft.days=sortDays([...set]);
@@ -429,9 +395,16 @@ function toggleDraftDay(day){
 }
 function updateDraft(field,value){
   if(!editor)return;
+  if(field==='active'&&value==='keep'){
+    editor.touched?.delete('active');
+    return;
+  }
   if(field==='points'||field==='tolerance')editor.draft[field]=value;
-  else if(field==='active'){editor.draft.active=value==='active';editor.statusTouched=true}
+  else if(field==='active')editor.draft.active=value==='active';
   else editor.draft[field]=value;
+
+  if(editor.mode==='edit')editor.touched.add(field);
+
   if(field==='icon'){
     document.querySelectorAll('[data-icon-face]').forEach(el=>el.textContent=value);
   }
@@ -458,9 +431,9 @@ function style(){
 .tv4-edit-main td{background:#fffdf8;border-top:2px solid #cab9f5}.tv4-edit-main .tv4-task-edit{display:grid;grid-template-columns:48px minmax(150px,1fr);gap:7px;align-items:end}
 .tv4-icon{position:relative;height:38px;display:grid;place-items:center;border:1px solid #dcdde7;border-radius:9px;background:#fff}.tv4-icon span{font-size:21px}.tv4-icon select{position:absolute;inset:0;opacity:0}
 .tv4-time{display:grid;grid-template-columns:1fr 1fr;gap:5px}.tv4-inline-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
-.tv4-detail-row td{padding:0;background:#fbfaff}.tv4-details{padding:14px 16px 16px;display:grid;grid-template-columns:1fr 1.2fr .8fr 1.2fr;gap:10px;border-bottom:1px solid #ded8f5}
+.tv4-detail-row td{padding:0;background:#fbfaff}.tv4-details{padding:14px 16px 16px;display:grid;grid-template-columns:1.25fr .8fr 1.2fr;gap:10px;border-bottom:1px solid #ded8f5}
 .tv4-box{background:#fff;border:1px solid #e4def2;border-radius:12px;padding:10px}.tv4-box textarea{min-height:64px;resize:vertical}
-.tv4-days{display:flex;gap:5px;flex-wrap:wrap}.tv4-day{border:1px solid #d9d2ef;background:#fff;color:#5e32bc;border-radius:999px;padding:6px 8px;font-size:9px;font-weight:850;cursor:pointer}.tv4-day.on{background:#6b35df;color:#fff}.tv4-day:disabled{opacity:.45}
+.tv4-days{display:flex;gap:5px;flex-wrap:wrap}.tv4-day{border:1px solid #d9d2ef;background:#fff;color:#5e32bc;border-radius:999px;padding:6px 8px;font-size:9px;font-weight:850;cursor:pointer}.tv4-day.on{background:#6b35df;color:#fff}.tv4-day:disabled{opacity:.28;cursor:not-allowed}
 .tv4-note,.tv4-warning{grid-column:1/-1;padding:8px 10px;border-radius:9px;font-size:10px}.tv4-note{background:#f4efff;color:#5e4c85}.tv4-warning{background:#fff6e8;border:1px solid #f4d8a6;color:#805315}
 .tv4-mobile{display:none;padding:9px}.tv4-mcard{border:1px solid #e6e8f0;border-radius:13px;padding:12px;margin-bottom:9px}.tv4-mhead{display:flex;justify-content:space-between;gap:8px}.tv4-mgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.tv4-mcell{background:#faf9fd;border-radius:9px;padding:8px}
 .tv4-mobile-edit{border:2px solid #cab9f5;background:#fffdf8}.tv4-mobile-form{display:grid;gap:9px;margin-top:10px}.tv4-mobile-form .tv4-time{grid-template-columns:1fr 1fr}
@@ -474,7 +447,7 @@ function style(){
 function view(){
   return`<div class="tv4-card">
     <div class="tv4-head">
-      <div><div class="crumb">Tarefas • séries recorrentes</div><h2>Agenda de tarefas</h2><p class="tv4-muted">Edição acontece na própria linha da tarefa. Nenhum editor paralelo.</p></div>
+      <div><div class="crumb">Tarefas</div><h2>Agenda de tarefas</h2><p class="tv4-muted">Organize horários, pontos e dias de cada tarefa.</p></div>
       <button id="tv4Add" class="tv4-primary" data-action="create">＋ Nova tarefa</button>
     </div>
     <div class="tv4-filters">
@@ -514,7 +487,7 @@ function statusBadge(r){return r.mixedActive?'<span class="tv4-pill tv4-partial"
 function normalRow(r){
   const disabled=editor||busy?'disabled':'';
   return`<tr>
-    <td><div class="tv4-name"><span>${esc(r.icon)}</span><div><b>${esc(r.name)}</b><small class="tv4-muted">${r.days.length} dia(s) na série</small>${r.canBulk?'':'<small class="tv4-muted tv4-var">Há variação entre dias</small>'}</div></div></td>
+    <td><div class="tv4-name"><span>${esc(r.icon)}</span><div><b>${esc(r.name)}</b><small class="tv4-muted">${r.days.length} dia(s) na semana</small>${r.canBulk?'':'<small class="tv4-muted tv4-var">Há variação entre dias</small>'}</div></div></td>
     <td>${esc(r.participant)}</td><td>${esc(daySummary(r.days))}</td>
     <td>${displayValue(r,'start')} → ${displayValue(r,'end')}</td>
     <td>${displayValue(r,'points')}</td><td>${displayValue(r,'tolerance',' min')}</td>
@@ -525,21 +498,26 @@ function normalRow(r){
 function iconField(v){
   return`<label class="tv4-icon"><span data-icon-face>${esc(v)}</span><select data-field="icon">${ICONS.map(i=>`<option value="${i}" ${i===v?'selected':''}>${i}</option>`).join('')}</select></label>`;
 }
-function dayButtons(days,disabled=false){
-  return DAYS.map(d=>`<button type="button" class="tv4-day ${days.includes(d)?'on':''}" data-action="toggle-day" data-day="${d}" ${disabled?'disabled':''}>${d.slice(0,3)}</button>`).join('');
+function dayButtons(days,available=null){
+  return DAYS.map(d=>{
+    const disabled=available&&!available.includes(d);
+    return`<button type="button" class="tv4-day ${days.includes(d)?'on':''}" data-action="toggle-day" data-day="${d}" ${disabled?'disabled':''}>${d.slice(0,3)}</button>`;
+  }).join('');
 }
-function scopeBox(r){
-  if(!r)return'<div class="tv4-box"><label>Aplicação</label><b>'+esc(participantFilter==='all'?'Todos os participantes':pname(participantFilter))+'</b></div>';
-  return`<div class="tv4-box"><label>Escopo da alteração</label><select data-action="scope">
-    <option value="all" ${editor.scope==='all'?'selected':''} ${r.canBulk?'':'disabled'}>Toda a tarefa recorrente</option>
-    <option value="day" ${editor.scope==='day'?'selected':''}>Somente um dia</option>
-  </select>${editor.scope==='day'?`<label style="margin-top:8px">Dia</label><select data-action="edit-day">${r.days.map(d=>`<option ${d===editor.day?'selected':''}>${d}</option>`).join('')}</select>`:''}</div>`;
+function statusField(r,d){
+  if(r?.mixedActive&&!touched('active')){
+    return`<select data-field="active"><option value="keep" selected>Varia por dia</option><option value="active">Ativa</option><option value="inactive">Inativa</option></select>`;
+  }
+  return`<select data-field="active"><option value="active" ${d.active?'selected':''}>Ativa</option><option value="inactive" ${!d.active?'selected':''}>Inativa</option></select>`;
+}
+function applicationBox(r,d){
+  if(!r)return`<div class="tv4-box"><label>Aplicação</label><b>${esc(participantFilter==='all'?'Todos os participantes':pname(participantFilter))}</b></div>`;
+  return`<div class="tv4-box"><label>Aplicar alterações nos dias</label><div class="tv4-days">${dayButtons(d.days,r.days)}</div><small class="tv4-muted">Todos os dias desta tarefa vêm selecionados. Desmarque os dias que não deseja alterar.</small></div>`;
 }
 function detailRow(r,d){
-  const statusNote=r&&editor.scope==='day'?'<div class="tv4-note">Horário, pontos, tolerância, alarme e observação ficam neste dia. Ao mudar o Status, Ativa/Inativa passa a valer para a tarefa inteira.</div>':'';
   return`<tr class="tv4-detail-row"><td colspan="8"><div class="tv4-details">
-    ${scopeBox(r)}
-    <div class="tv4-box"><label>${editor.scope==='day'?'Dia desta ocorrência':'Dias da semana'}</label><div class="tv4-days">${dayButtons(d.days,editor.scope==='day')}</div></div>
+    ${applicationBox(r,d)}
+    ${r?'':`<div class="tv4-box"><label>Dias da semana</label><div class="tv4-days">${dayButtons(d.days)}</div></div>`}
     <div class="tv4-box"><label>Alarme</label><select data-field="alarm">
       <option value="off" ${d.alarm==='off'?'selected':''}>Desligado</option>
       <option value="start" ${d.alarm==='start'?'selected':''}>No início</option>
@@ -547,13 +525,11 @@ function detailRow(r,d){
       <option value="both" ${d.alarm==='both'?'selected':''}>No início e no fim</option>
     </select></div>
     <div class="tv4-box"><label>Observação</label><textarea data-field="note">${esc(d.note)}</textarea></div>
-    ${statusNote}
-    ${r?(r.canBulk?'<div class="tv4-note">A série está uniforme: pode editar toda a recorrência ou somente um dia.</div>':'<div class="tv4-warning">Há exceções entre os dias. Para preservá-las, os demais campos são editados um dia por vez.</div>'):''}
+    ${r&&!r.canBulk?'<div class="tv4-warning">Há variações entre os dias. Somente os campos que você alterar serão aplicados aos dias selecionados; os demais valores permanecem como estão.</div>':''}
   </div></td></tr>`;
 }
 function editRows(r){
-  const d=editor.draft,label=editor.mode==='create'?'Criar tarefa':editor.scope==='all'?'Salvar série':'Salvar dia';
-  const statusLabel=r&&editor.scope==='day'?'Status da tarefa inteira':'Status';
+  const d=editor.draft,label=editor.mode==='create'?'Criar tarefa':'Salvar alterações';
   return`<tr class="tv4-edit-main tv4-edit">
     <td><div class="tv4-task-edit">${iconField(d.icon)}<div><label>Nome</label><input data-field="name" value="${esc(d.name)}"></div></div></td>
     <td><b>${esc(r?r.participant:(participantFilter==='all'?'Todos':pname(participantFilter)))}</b></td>
@@ -561,7 +537,7 @@ function editRows(r){
     <td><div class="tv4-time"><div><label>Início</label><input data-field="start" type="time" value="${esc(d.start)}"></div><div><label>Fim</label><input data-field="end" type="time" value="${esc(d.end)}"></div></div></td>
     <td><label>Pontos</label><input data-field="points" type="number" min="0" value="${esc(d.points)}"></td>
     <td><label>Tolerância</label><input data-field="tolerance" type="number" min="0" value="${esc(d.tolerance)}"></td>
-    <td><label>${statusLabel}</label><select data-field="active"><option value="active" ${d.active?'selected':''}>Ativa</option><option value="inactive" ${!d.active?'selected':''}>Inativa</option></select></td>
+    <td><label>Status</label>${statusField(r,d)}</td>
     <td><div class="tv4-inline-actions"><button class="tv4-primary" data-action="save" data-label="${label}">${label}</button><button class="tv4-btn" data-action="cancel">Cancelar</button></div></td>
   </tr>${detailRow(r,d)}`;
 }
@@ -574,8 +550,7 @@ function mobileNormal(r){
   </article>`;
 }
 function mobileEdit(r){
-  const d=editor.draft,label=editor.mode==='create'?'Criar tarefa':editor.scope==='all'?'Salvar série':'Salvar dia';
-  const statusLabel=r&&editor.scope==='day'?'Status da tarefa inteira':'Status';
+  const d=editor.draft,label=editor.mode==='create'?'Criar tarefa':'Salvar alterações';
   return`<article class="tv4-mcard tv4-mobile-edit tv4-edit">
     <div class="tv4-mhead"><b>${editor.mode==='create'?'Nova tarefa':`Editar · ${esc(r.name)}`}</b><button class="tv4-btn" data-action="cancel">Cancelar</button></div>
     <div class="tv4-mobile-form">
@@ -583,12 +558,12 @@ function mobileEdit(r){
       <div><label>Nome</label><input data-field="name" value="${esc(d.name)}"></div>
       <div class="tv4-time"><div><label>Início</label><input data-field="start" type="time" value="${esc(d.start)}"></div><div><label>Fim</label><input data-field="end" type="time" value="${esc(d.end)}"></div></div>
       <div class="tv4-time"><div><label>Pontos</label><input data-field="points" type="number" min="0" value="${esc(d.points)}"></div><div><label>Tolerância</label><input data-field="tolerance" type="number" min="0" value="${esc(d.tolerance)}"></div></div>
-      <div><label>${statusLabel}</label><select data-field="active"><option value="active" ${d.active?'selected':''}>Ativa</option><option value="inactive" ${!d.active?'selected':''}>Inativa</option></select></div>
-      ${scopeBox(r)}
-      <div class="tv4-box"><label>${editor.scope==='day'?'Dia desta ocorrência':'Dias da semana'}</label><div class="tv4-days">${dayButtons(d.days,editor.scope==='day')}</div></div>
+      <div><label>Status</label>${statusField(r,d)}</div>
+      ${applicationBox(r,d)}
+      ${r?'':`<div class="tv4-box"><label>Dias da semana</label><div class="tv4-days">${dayButtons(d.days)}</div></div>`}
       <div><label>Alarme</label><select data-field="alarm"><option value="off" ${d.alarm==='off'?'selected':''}>Desligado</option><option value="start" ${d.alarm==='start'?'selected':''}>No início</option><option value="end" ${d.alarm==='end'?'selected':''}>No fim</option><option value="both" ${d.alarm==='both'?'selected':''}>No início e no fim</option></select></div>
       <div><label>Observação</label><textarea data-field="note">${esc(d.note)}</textarea></div>
-      ${r&&editor.scope==='day'?'<div class="tv4-note">Ao mudar o Status, a alteração vale para todos os dias desta tarefa.</div>':''}
+      ${r&&!r.canBulk?'<div class="tv4-warning">Há variações entre os dias. Somente os campos alterados serão aplicados aos dias selecionados.</div>':''}
       <button class="tv4-primary" data-action="save" data-label="${label}">${label}</button>
     </div>
   </article>`;
@@ -644,7 +619,7 @@ function bindOnce(v){
     else if(action==='refresh'){
       if(busy||editor)return;
       busy=true;render();
-      try{await window.rotinaSprint2SyncHot?.('tarefas-v4-manual-refresh')}
+      try{await window.rotinaSprint2SyncHot?.('tarefas-v42-manual-refresh')}
       finally{busy=false;render()}
     }
   });
@@ -654,8 +629,6 @@ function bindOnce(v){
     if(target.id==='tv4Participant'){participantFilter=target.value;editor=null;render();return}
     if(target.id==='tv4Day'){dayFilter=target.value;editor=null;render();return}
     if(target.id==='tv4Status'){statusFilter=target.value;editor=null;render();return}
-    if(target.dataset.action==='scope'){changeScope(target.value);return}
-    if(target.dataset.action==='edit-day'){changeEditDay(target.value);return}
     if(target.dataset.field){updateDraft(target.dataset.field,target.value)}
   });
 
