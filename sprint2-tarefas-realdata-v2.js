@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='tarefas-realdata-v2.7-create-name-fix';
+const VERSION='tarefas-realdata-v2.8-create-with-details';
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').trim();
 const esc=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -125,6 +125,8 @@ function isoDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart
 function dateForDay(day){const idx=DAYS.indexOf(day),d=mondayOfWeek();d.setDate(d.getDate()+(idx===0?6:idx-1));return isoDate(d)}
 function alarmDocId(g,pid,taskId){return [g,pid,taskId].map(v=>String(v||'').replaceAll('/','_')).join('__')}
 function agendaFields(day,start,end){const date=dateForDay(day),mk=t=>`${date}T${t}:00`;return{dataAgendada:date,semanaInicio:isoDate(mondayOfWeek()),inicioEm:mk(start),fimEm:mk(end)}}
+function alarmMoments(mode){return mode==='both'?['inicio','fim']:mode==='end'?['fim']:['inicio']}
+function alarmData({g,pid,participant,taskId,tg,name,day,start,end,mode,now}){const common={grupoId:g,perfilId:pid,perfilNome:participant,tarefaId:taskId,tarefaGrupoId:tg,nomeTarefa:name,diaSemana:day,horaSugeridaInicio:start,horaSugeridaFim:end,...agendaFields(day,start,end),versaoAgenda:3,origem:'ADM',schedulerPendente:true,schedulerVersao:1,schedulerSolicitadoEm:now,atualizadoEm:now};return mode==='off'?{...common,ativo:false,bloqueado:false,encerradoEm:now,encerradoPor:'ADM'}:{...common,momentos:alarmMoments(mode),ativo:true,bloqueado:true,acionadoEm:now,acionadoPor:'ADM'}}
 function conflictForDay(row,day){const own=new Set(row.docs.map(d=>d.id));for(const d of snapshot().taskDocs||[]){if(own.has(d.id)||!sameGroup(d,groupId())||!activeDoc(d)||profileIdFor(d)!==row.pid||clean(d.diaSemana)!==day)continue;const a=clean(d.horaSugeridaInicio),b=clean(d.horaSugeridaFim);if(validTime(a,b)&&row.start<b&&row.end>a)return d}return null}
 async function saveDetails(token){
   const row=rows.find(r=>detailToken(r.key)===token);if(!row||busy||!canWrite()||!await firebaseReady())return;
@@ -137,16 +139,20 @@ async function saveDetails(token){
     const batch=fs.writeBatch(db),g=groupId(),now=new Date().toISOString(),base=row.docs[0]||{},tg=row.taskGroupId||`tg-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,byDay=new Map(row.docs.map(d=>[clean(d.diaSemana),d])),kept=[];
     for(const d of row.docs){const day=clean(d.diaSemana);if(days.includes(day)){batch.update(fs.doc(db,'tarefas',d.id),{tarefaGrupoId:tg,observacao:note,atualizadoEm:now});kept.push({id:d.id,day})}else{batch.delete(fs.doc(db,'tarefas',d.id));const aid=alarmDocId(g,row.pid,d.id);batch.set(fs.doc(db,'despertadores',aid),{grupoId:g,perfilId:row.pid,tarefaId:d.id,tarefaGrupoId:tg,ativo:false,bloqueado:false,schedulerPendente:true,schedulerVersao:1,schedulerSolicitadoEm:now,encerradoEm:now,encerradoPor:'ADM',atualizadoEm:now},{merge:true})}}
     for(const day of days){if(byDay.has(day))continue;const ref=fs.doc(fs.collection(db,'tarefas'));batch.set(ref,{grupoId:g,nome:row.name,icone:clean(base.icone)||row.icon,perfilNome:clean(base.perfilNome)||row.participant,perfilId:row.pid,tarefaGrupoId:tg,horaSugeridaInicio:row.start,horaSugeridaFim:row.end,diaSemana:day,tempoLimite:row.tolerance,pontosMaximos:row.points,justificativaObrigatoria:base.justificativaObrigatoria===true,observacao:note,status:'Pendente',pontosGanhos:0,horarioInicio:'',horarioTermino:'',criadoEm:now,atualizadoEm:now});kept.push({id:ref.id,day})}
-    const momentos=mode==='both'?['inicio','fim']:mode==='end'?['fim']:['inicio'];
-    for(const item of kept){const agenda=agendaFields(item.day,row.start,row.end),aid=alarmDocId(g,row.pid,item.id),common={grupoId:g,perfilId:row.pid,perfilNome:row.participant,tarefaId:item.id,tarefaGrupoId:tg,nomeTarefa:row.name,diaSemana:item.day,horaSugeridaInicio:row.start,horaSugeridaFim:row.end,...agenda,versaoAgenda:3,origem:'ADM',schedulerPendente:true,schedulerVersao:1,schedulerSolicitadoEm:now,atualizadoEm:now};batch.set(fs.doc(db,'despertadores',aid),mode==='off'?{...common,ativo:false,bloqueado:false,encerradoEm:now,encerradoPor:'ADM'}:{...common,momentos,ativo:true,bloqueado:true,acionadoEm:now,acionadoPor:'ADM'},{merge:true})}
+    for(const item of kept){const aid=alarmDocId(g,row.pid,item.id);batch.set(fs.doc(db,'despertadores',aid),alarmData({g,pid:row.pid,participant:row.participant,taskId:item.id,tg,name:row.name,day:item.day,start:row.start,end:row.end,mode,now}),{merge:true})}
     await batch.commit();await window.rotinaSprint2SyncLocal?.('tarefas-detalhes-editar-real');accept();render();log('details_save_success',{dias:days.length,alarme:mode!=='off'});toast('Detalhes da tarefa atualizados.');
   }catch(e){console.error('Tarefas V2 detalhes:',e);log('details_save_error',{codigo:clean(e?.code)||'erro'},'error');toast('Não foi possível salvar os detalhes.')}finally{busy=false;render()}
 }
 
 function iconOptions(current){return ICONS.map(i=>`<option value="${esc(i)}" ${i===current?'selected':''}>${esc(i)}</option>`).join('')}
 function iconPicker(id,current){return `<label class="tv2-icon-picker" title="Trocar ícone"><span class="tv2-icon-face" aria-hidden="true">${esc(current)}</span><select id="${esc(id)}" aria-label="Ícone da tarefa">${iconOptions(current)}</select><span class="tv2-icon-chevron" aria-hidden="true">⌄</span></label>`}
-function createDesktop(){return `<tr class="tv2-create"><td><div class="tv2-editgrid">${iconPicker('tv2-new-icon','✅')}<input id="tv2-new-name" value="Nova tarefa" aria-label="Nome da nova tarefa"></div></td><td><b>${esc(draftParticipantLabel())}</b><small class="tv2-muted">${participantFilter==='all'?'Será aplicada a todos':'Participante selecionado'}</small></td><td>${esc(WEEKDAYS.join(', '))}</td><td><input id="tv2-new-start" type="time" value="12:00"></td><td><input id="tv2-new-end" type="time" value="12:15"></td><td><input id="tv2-new-points" type="number" min="0" step="1" value="5"></td><td><input id="tv2-new-tol" type="number" min="0" step="1" value="0"></td><td><span class="tv2-pill tv2-on">ATIVA</span></td><td><div class="tv2-actions"><button class="tv2-btn" data-tv2-create-save>Salvar</button><button class="tv2-btn" data-tv2-create-cancel>Cancelar</button></div></td></tr>`}
-function createMobile(){return `<article class="tv2-mcard tv2-create"><div class="tv2-mhead"><div><b>＋ Nova tarefa</b><small class="tv2-muted">${esc(draftParticipantLabel())} · ${esc(WEEKDAYS.join(', '))}</small></div><span class="tv2-pill tv2-on">ATIVA</span></div><div class="tv2-medit">${iconPicker('tv2-m-new-icon','✅')}<input id="tv2-m-new-name" value="Nova tarefa" aria-label="Nome da nova tarefa"><div class="tv2-mgrid"><div><small>Início</small><input id="tv2-m-new-start" type="time" value="12:00"></div><div><small>Fim</small><input id="tv2-m-new-end" type="time" value="12:15"></div><div><small>Pontos</small><input id="tv2-m-new-points" type="number" min="0" value="5"></div><div><small>Tolerância</small><input id="tv2-m-new-tol" type="number" min="0" value="0"></div></div><div class="tv2-actions"><button class="tv2-btn" data-tv2-create-save data-mobile="1">Salvar</button><button class="tv2-btn" data-tv2-create-cancel>Cancelar</button></div></div></article>`}
+function createDetailFields(mobile=false){
+  const prefix=mobile?'tv2-m-new-':'tv2-new-',week=DAYS.map(d=>`<button type="button" class="tv2-day-choice ${WEEKDAYS.includes(d)?'on':''}" data-tv2-create-day data-day="${esc(d)}">${esc(d.slice(0,3))}</button>`).join('');
+  return `<div class="${mobile?'tv2-mdetails':''}"><div class="tv2-details"><div class="tv2-detail"><small>Semana</small><div class="tv2-days">${week}</div><span class="tv2-muted">Defina os dias já no cadastro.</span></div><div class="tv2-detail"><small>Alarme</small><select id="${prefix}alarm"><option value="off">Desligado</option><option value="start">No início</option><option value="end">No fim</option><option value="both">No início e no fim</option></select><span class="tv2-muted">O despertador nasce junto com a tarefa quando ativado.</span></div><div class="tv2-detail"><small>Observação</small><textarea id="${prefix}note" placeholder="Opcional"></textarea><span class="tv2-muted">Depois de criada, edite estes detalhes pelos três pontos.</span></div></div></div>`;
+}
+function createSelectedDays(mobile=false){const root=mobile?$('tv2Mobile'):$('tv2Body');return root?[...root.querySelectorAll('[data-tv2-create-day].on')].map(b=>b.dataset.day):[]}
+function createDesktop(){return `<tr class="tv2-create"><td><div class="tv2-editgrid">${iconPicker('tv2-new-icon','✅')}<input id="tv2-new-name" value="Nova tarefa" aria-label="Nome da nova tarefa"></div></td><td><b>${esc(draftParticipantLabel())}</b><small class="tv2-muted">${participantFilter==='all'?'Será aplicada a todos':'Participante selecionado'}</small></td><td><span class="tv2-muted">Defina abaixo</span></td><td><input id="tv2-new-start" type="time" value="12:00"></td><td><input id="tv2-new-end" type="time" value="12:15"></td><td><input id="tv2-new-points" type="number" min="0" step="1" value="5"></td><td><input id="tv2-new-tol" type="number" min="0" step="1" value="0"></td><td><span class="tv2-pill tv2-on">ATIVA</span></td><td><div class="tv2-actions"><button class="tv2-btn" data-tv2-create-save>Salvar</button><button class="tv2-btn" data-tv2-create-cancel>Cancelar</button></div></td></tr><tr class="tv2-details-row"><td colspan="9">${createDetailFields(false)}</td></tr>`}
+function createMobile(){return `<article class="tv2-mcard tv2-create"><div class="tv2-mhead"><div><b>＋ Nova tarefa</b><small class="tv2-muted">${esc(draftParticipantLabel())}</small></div><span class="tv2-pill tv2-on">ATIVA</span></div><div class="tv2-medit">${iconPicker('tv2-m-new-icon','✅')}<input id="tv2-m-new-name" value="Nova tarefa" aria-label="Nome da nova tarefa"><div class="tv2-mgrid"><div><small>Início</small><input id="tv2-m-new-start" type="time" value="12:00"></div><div><small>Fim</small><input id="tv2-m-new-end" type="time" value="12:15"></div><div><small>Pontos</small><input id="tv2-m-new-points" type="number" min="0" value="5"></div><div><small>Tolerância</small><input id="tv2-m-new-tol" type="number" min="0" value="0"></div></div>${createDetailFields(true)}<div class="tv2-actions"><button class="tv2-btn" data-tv2-create-save data-mobile="1">Salvar</button><button class="tv2-btn" data-tv2-create-cancel>Cancelar</button></div></div></article>`}
 function editDesktop(r){return `<tr class="tv2-edit"><td><div class="tv2-editgrid">${iconPicker('tv2-icon-'+r.key,r.icon)}<input id="tv2-name-${esc(r.key)}" value="${esc(r.name)}"></div></td><td>${esc(r.participant)}</td><td>${esc(r.days.join(', '))}</td><td><input id="tv2-start-${esc(r.key)}" type="time" value="${esc(r.start)}"></td><td><input id="tv2-end-${esc(r.key)}" type="time" value="${esc(r.end)}"></td><td><input id="tv2-points-${esc(r.key)}" type="number" min="0" step="1" value="${r.points}"></td><td><input id="tv2-tol-${esc(r.key)}" type="number" min="0" step="1" value="${r.tolerance}"></td><td><span class="tv2-pill ${r.active?'tv2-on':'tv2-off'}">${r.active?'ATIVA':'INATIVA'}</span></td><td><div class="tv2-actions"><button class="tv2-btn" data-tv2-save="${esc(r.key)}">Salvar</button><button class="tv2-btn" data-tv2-cancel>Cancelar</button></div></td></tr>`}
 function readDesktop(r){
   const main=`<tr><td><div class="tv2-name"><span>${esc(r.icon)}</span><div><b>${esc(r.name)}</b><small class="tv2-muted">${r.docs.length} ocorrência(s) recorrente(s)</small></div></div></td><td>${esc(r.participant)}</td><td>${esc(r.days.join(', '))}</td><td>${esc(r.start||'—')}</td><td>${esc(r.end||'—')}</td><td>${r.points}</td><td>${r.tolerance} min</td><td><span class="tv2-pill ${r.active?'tv2-on':'tv2-off'}">${r.active?'ATIVA':'INATIVA'}</span></td><td><div class="tv2-actions"><button class="tv2-btn" data-tv2-edit="${esc(r.key)}" ${canWrite()?'':'disabled'}>✎ Editar</button><button class="tv2-more" data-tv2-more="${esc(r.key)}" aria-label="Detalhes de ${esc(r.name)}" title="Detalhes">⋮</button></div></td></tr>`;
@@ -163,6 +169,7 @@ function bindRows(){
   root?.querySelectorAll('[data-tv2-save]').forEach(b=>b.onclick=()=>save(b.dataset.tv2Save,b.dataset.mobile==='1'));
   root?.querySelectorAll('[data-tv2-create-save]').forEach(b=>b.onclick=()=>createTask(b.dataset.mobile==='1'));
   root?.querySelectorAll('[data-tv2-create-cancel]').forEach(b=>b.onclick=()=>{creating=false;render()});
+  root?.querySelectorAll('[data-tv2-create-day]').forEach(b=>b.onclick=()=>b.classList.toggle('on'));
   root?.querySelectorAll('.tv2-icon-picker select').forEach(sel=>sel.onchange=()=>{const face=sel.closest('.tv2-icon-picker')?.querySelector('.tv2-icon-face');if(face)face.textContent=sel.value});
   root?.querySelectorAll('[data-tv2-more]').forEach(b=>b.onclick=()=>{opened=opened===b.dataset.tv2More?'':b.dataset.tv2More;log('details_toggle',{aberto:!!opened});render()});
   root?.querySelectorAll('[data-tv2-detail-day]').forEach(b=>b.onclick=()=>b.classList.toggle('on'));
@@ -181,11 +188,12 @@ async function createTask(mobile){
   if(!creating||busy||!canWrite())return;
   if(!await firebaseReady()){log('create_error',{etapa:'firebase_ready',codigo:'firebase-nao-pronto',mensagem:'Aplicativo Firebase da Sprint 2 não disponível.'},'error');return toast('Não foi possível preparar a gravação da tarefa.');}
   const prefix=mobile?'tv2-m-new-':'tv2-new-';
-  const icon=clean($(prefix+'icon')?.value),name=clean($(prefix+'name')?.value),start=clean($(prefix+'start')?.value),end=clean($(prefix+'end')?.value),points=Number($(prefix+'points')?.value),tol=Number($(prefix+'tol')?.value),targets=draftTargets(),days=WEEKDAYS.slice();
+  const icon=clean($(prefix+'icon')?.value),name=clean($(prefix+'name')?.value),start=clean($(prefix+'start')?.value),end=clean($(prefix+'end')?.value),points=Number($(prefix+'points')?.value),tol=Number($(prefix+'tol')?.value),note=clean($(prefix+'note')?.value),alarm=$(prefix+'alarm')?.value||'off',targets=draftTargets(),days=createSelectedDays(mobile);
   if(!targets.length)return toast('Cadastre ou selecione pelo menos um participante.');
+  if(!days.length)return toast('Selecione pelo menos um dia da semana.');
   if(!ICONS.includes(icon)||!name||!validTime(start,end)||!Number.isFinite(points)||points<0||!Number.isFinite(tol)||tol<0)return toast('Revise ícone, nome, horários, pontos e tolerância.');
   for(const pid of targets){const conflict=draftConflict(pid,days,start,end);if(conflict)return toast(`Conflito de horário para ${profileName(pid)} com "${clean(conflict.nome)||'outra tarefa'}".`)}
-  const g=groupId(),role=clean(session().role);let stage='prepare',committed=false,docs=0;
+  const g=groupId(),role=clean(session().role);let stage='prepare',committed=false,detailsCommitted=false,docs=0;const created=[];
   busy=true;render();
   try{
     const batch=fs.writeBatch(db),stamp=Date.now();
@@ -194,29 +202,45 @@ async function createTask(mobile){
       for(const day of days){
         const ref=fs.doc(fs.collection(db,'tarefas'));
         batch.set(ref,{grupoId:g,nome:name,icone:icon,perfilNome:participant,perfilId:pid,tarefaGrupoId:tg,horaSugeridaInicio:start,horaSugeridaFim:end,diaSemana:day,tempoLimite:tol,pontosMaximos:points,justificativaObrigatoria:false,status:'Pendente',pontosGanhos:0,horarioInicio:'',horarioTermino:''});
-        docs++;
+        created.push({id:ref.id,pid,participant,tg,day});docs++;
       }
     }
-    stage='commit';
+    stage='commit_task';
     await batch.commit();
     committed=true;
     log('create_commit_success',{grupo:g,papel:role,participantes:targets.length,dias:days.length,docs});
+
+    if(note||alarm!=='off'){
+      stage='commit_details';
+      const detailsBatch=fs.writeBatch(db),now=new Date().toISOString();
+      for(const item of created){
+        if(note)detailsBatch.update(fs.doc(db,'tarefas',item.id),{observacao:note,atualizadoEm:now});
+        if(alarm!=='off'){
+          const aid=alarmDocId(g,item.pid,item.id);
+          detailsBatch.set(fs.doc(db,'despertadores',aid),alarmData({g,pid:item.pid,participant:item.participant,taskId:item.id,tg:item.tg,name,day:item.day,start,end,mode:alarm,now}),{merge:true});
+        }
+      }
+      await detailsBatch.commit();
+      detailsCommitted=true;
+      log('create_details_success',{grupo:g,papel:role,dias:days.length,docs,alarme:alarm!=='off',observacao:!!note});
+    }
+
     creating=false;
     stage='sync';
     try{
-      const synced=await window.rotinaSprint2SyncNow?.('tarefas-criar-real-v26');
+      const synced=await window.rotinaSprint2SyncNow?.('tarefas-criar-real-v28');
       if(synced===false)log('create_sync_warning',{grupo:g,papel:role,participantes:targets.length,docs,mensagem:'Sincronização pós-criação retornou false.'},'warning');
     }catch(syncError){
       log('create_sync_warning',{grupo:g,papel:role,participantes:targets.length,docs,codigo:clean(syncError?.code)||'erro',mensagem:clean(syncError?.message)||String(syncError),tipo:clean(syncError?.name)||'Error'},'warning');
     }
     stage='render';
     accept();render();
-    log('create_success',{grupo:g,papel:role,participantes:targets.length,dias:days.length,docs});
+    log('create_success',{grupo:g,papel:role,participantes:targets.length,dias:days.length,docs,detalhes:detailsCommitted||(!note&&alarm==='off')});
     toast(targets.length>1?'Tarefa criada para todos os participantes.':'Nova tarefa criada.');
   }catch(e){
     console.error('Tarefas V2 criar:',e);
-    log('create_error',{etapa:stage,commitRealizado:committed,grupo:g,papel:role,participantes:targets.length,dias:days.length,docs,codigo:clean(e?.code)||'erro',mensagem:clean(e?.message)||String(e),tipo:clean(e?.name)||'Error'},'error');
-    toast(committed?'A tarefa foi gravada, mas a tela não conseguiu atualizar. Use ↻ Atualizar.':'Não foi possível criar a tarefa.');
+    log('create_error',{etapa:stage,commitRealizado:committed,detalhesRealizados:detailsCommitted,grupo:g,papel:role,participantes:targets.length,dias:days.length,docs,codigo:clean(e?.code)||'erro',mensagem:clean(e?.message)||String(e),tipo:clean(e?.name)||'Error'},'error');
+    toast(committed?'A tarefa foi criada, mas algum detalhe não foi salvo. Use os três pontos para revisar.':'Não foi possível criar a tarefa.');
   }finally{busy=false;render()}
 }
 async function save(key,mobile){

@@ -48,7 +48,7 @@
   if(!document.getElementById('sprint2MasterRealDataScript')){
     const script=document.createElement('script');
     script.id='sprint2MasterRealDataScript';
-    script.src='sprint2-master-realdata-v1.js?v=20260905-master-realdata-v12-visibility-gated';
+    script.src='sprint2-master-realdata-v1.js?v=20260905-master-realdata-v13-role-visibility';
     script.async=true;
     script.onerror=()=>techLog('master_realdata_load_error',{bridge:1},'error');
     document.head.appendChild(script);
