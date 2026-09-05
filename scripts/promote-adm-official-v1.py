@@ -1,0 +1,165 @@
+from pathlib import Path
+import json
+
+BUILD='20260905.1'
+SOURCE=Path('sprint2-integracao-recompensas-v1.html')
+TARGET=Path('index-ADMIN-v9.html')
+html=SOURCE.read_text(encoding='utf-8')
+
+required=[
+    'sprint2-teste-core.js',
+    'sprint2-observability-v1.js',
+    'sprint2-integracao-login-realdata-bridge-v1.js',
+    'sprint2-integracao-login-realdata-v1.js?v=20260903-tasks-ownership-v1',
+    'sprint2-data-store-v1.js?v=20260903-conquistas-v1',
+    'sprint2-tarefas-realdata-v2.js?v=20260905-inline-owner-v40',
+    'sprint2-participantes-realdata-v1.js',
+    'sprint2-recompensas-realdata-v1.js?v=20260903-conquistas-v1',
+    'sprint2-conquistas-realdata-v1.js?v=20260903-deadline-v1',
+    'sprint2-monitor-realdata-v2.js?v=20260905-monitor-result-v31'
+]
+for item in required:
+    if item not in html:
+        raise SystemExit('Módulo obrigatório ausente na integração: '+item)
+
+replacements={
+    '<title>Rotina Family — Sprint 2 • Recompensas V1</title>':'<title>Rotina Family ADM</title>',
+    '<div class="eyebrow">Sprint 2 · conexão real</div>':'<div class="eyebrow">Acesso administrativo</div>',
+    '<p>Use uma conta administrativa existente. Depois do login, esta versão carrega somente os dados do grupo autorizado.</p>':'<p>Use sua conta administrativa para acessar o grupo autorizado.</p>',
+    'Painel Administrador • Sprint 2':'Painel Administrador',
+    '<a class="memory-link" href="sprint2-continuidade-atual.html" target="_blank">📌 Memória Sprint 2</a>':'',
+    '<p>Sprint 2 • dados reais • versão anterior preservada</p>':'<p>Painel administrativo do grupo</p>',
+    '<div class="realdata-strip"><span>🔗</span><b>Firebase real</b><span id="syncStatus">Autenticando e carregando…</span><span>•</span><span>Store central • operação controlada</span></div>':'<div class="realdata-strip"><span>🔄</span><span id="syncStatus">Carregando…</span></div>',
+    '<section class="view active" id="view-inicio"><div class="integration-note"><b>Integração 5:</b> Login + Início + Tarefas + Monitor + Participantes + Recompensas usando a mesma sessão e o Store central.</div>':'<section class="view active" id="view-inicio">',
+    '<div class="crumb">Início • conectado ao grupo autenticado</div>':'<div class="crumb">Início</div>',
+    '<span class="pill activepill">DADOS REAIS</span>':'',
+    '<div class="analysis-purpose"><b>Análise:</b> nesta rodada os pontos históricos vêm do Firebase; métricas de execução usam a agenda atual do grupo.</div>':'<div class="analysis-purpose"><b>Análise:</b> acompanhe pontos, execução e desempenho do grupo no período selecionado.</div>',
+    '<section class="view" id="view-monitor"><div class="integration-note"><b>Monitor conectado:</b> esta tela usa a mesma agenda real já validada em Tarefas e mostra somente as ocorrências previstas para hoje.</div>':'<section class="view" id="view-monitor">',
+    '<div class="crumb">Monitor • dados reais de hoje</div>':'<div class="crumb">Monitor</div>',
+    'Este incremento não grava nada no Firebase. Primeiro validamos se o Monitor representa corretamente o que está acontecendo no grupo.':'O Monitor é somente leitura.',
+    '<div class="version">Sprint 2 • Recompensas V1 integrado</div>':''
+}
+for old,new in replacements.items():
+    if old not in html:
+        raise SystemExit('Texto esperado não encontrado para limpeza: '+old[:100])
+    html=html.replace(old,new,1)
+
+theme='<meta name="theme-color" content="#6b35df">'
+if theme not in html:
+    raise SystemExit('meta theme-color ausente')
+html=html.replace(theme,theme+f'<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"><link rel="manifest" href="./manifest.json?v={BUILD}">',1)
+boot=f'''<script>\nwindow.ROTINA_OFFICIAL_BUILD={{channel:'production',version:'{BUILD}'}};\nif('serviceWorker' in navigator){{navigator.serviceWorker.register('./sw.js?v={BUILD}',{{updateViaCache:'none'}}).then(r=>r.update()).catch(()=>{{}});}}\n</script>'''
+if '</body>' not in html:
+    raise SystemExit('HTML oficial sem fechamento body')
+html=html.replace('</body>',boot+'</body>',1)
+TARGET.write_text(html,encoding='utf-8')
+
+module_replacements={
+    'sprint2-participantes-realdata-v1.js':{
+        'Participantes • dados reais':'Participantes',
+        'Perfis do grupo usando o mesmo contrato oficial do Rotina Family.':'Perfis cadastrados no grupo familiar.',
+        'Nome, tema e PIN de 4 a 6 dígitos. O PIN nunca é exibido e é gravado somente como hash. Exclusão permanece fora desta etapa para proteger vínculos históricos.':'Nome, tema e PIN de 4 a 6 dígitos. O PIN nunca é exibido e é armazenado de forma protegida.'
+    },
+    'sprint2-recompensas-realdata-v1.js':{
+        '<div class="rv1-note"><b>Integração real:</b> Recompensas e Conquistas usam o Store central, sem criar listener novo nesta tela.</div>':'',
+        'Recompensas • dados reais':'Recompensas',
+        'Recompensas de um lado, Conquistas do outro e Histórico logo abaixo, conforme a tela aprovada.':'Recompensas, Conquistas e Histórico em um único painel.',
+        'Catálogo real do grupo.':'Catálogo do grupo.'
+    },
+    'sprint2-conquistas-realdata-v1.js':{
+        'Metas, prêmios e ciclos da tela aprovada.':'Metas, prêmios e ciclos.',
+        "${canWrite()?'':'<div class=\"cq-warning\">Nesta fase isolada, a gravação de Conquistas está habilitada no Master. As regras de produção dos administradores permanecem inalteradas até a promoção final.</div>'}":"${canWrite()?'':'<div class=\"cq-warning\">A criação e a edição de Conquistas são exclusivas da conta Master.</div>'}"
+    },
+    'sprint2-master-realdata-v1.js':{
+        'Master • conexão real':'Master',
+        'MASTER V2 · REALDATA':'ACESSO MASTER',
+        '<h4>Arquitetura Sprint 2</h4><strong>1 listener</strong><p>Escuta contínua permanece somente em execuções no Store central.</p>':'<h4>Integração do sistema</h4><strong>Operacional</strong><p>Serviços centrais conectados e disponíveis.</p>',
+        '<div class="m-version">${VERSION} · Master V2 aprovado ligado aos contratos reais do Worker · produção antiga preservada.</div>':''
+    }
+}
+for fname,reps in module_replacements.items():
+    p=Path(fname)
+    text=p.read_text(encoding='utf-8')
+    for old,new in reps.items():
+        if old not in text:
+            raise SystemExit(f'{fname}: texto esperado não encontrado: {old[:100]}')
+        text=text.replace(old,new,1)
+    p.write_text(text,encoding='utf-8')
+
+p=Path('sprint2-integracao-login-realdata-v1.js')
+text=p.read_text(encoding='utf-8').replace('Núcleo de Tarefas da Sprint 2 não carregou.','Núcleo de Tarefas não carregou.')
+p.write_text(text,encoding='utf-8')
+p=Path('sprint2-tarefas-realdata-v2.js')
+text=p.read_text(encoding='utf-8').replace('Aplicação Firebase da Sprint 2 não inicializada','Aplicação Firebase do ADM não inicializada')
+p.write_text(text,encoding='utf-8')
+p=Path('sprint2-master-realdata-v1.js')
+text=p.read_text(encoding='utf-8').replace('Firebase da Sprint 2 não iniciado.','Firebase do ADM não iniciado.')
+p.write_text(text,encoding='utf-8')
+
+index=f'''<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta name="theme-color" content="#6b35df">
+  <link rel="manifest" href="./manifest.json?v={BUILD}">
+  <title>Rotina Family ADM</title>
+  <style>body{{font-family:Segoe UI,Tahoma,sans-serif;background:#f6f7fb;color:#334155;margin:0;display:grid;place-items:center;min-height:100vh}}.loading{{padding:24px;text-align:center}}</style>
+</head>
+<body>
+  <div class="loading">Carregando Rotina Family ADM...</div>
+  <script>
+    (async()=>{{
+      try{{if('serviceWorker' in navigator){{const reg=await navigator.serviceWorker.register('./sw.js?v={BUILD}',{{updateViaCache:'none'}});await reg.update().catch(()=>{{}});}}}}catch(_){{}}
+      const target=new URL('./index-ADMIN-v9.html',location.href);
+      const params=new URLSearchParams(location.search);
+      params.delete('entry');
+      params.set('release','{BUILD}');
+      target.search=params.toString();target.hash=location.hash;location.replace(target.href);
+    }})();
+  </script>
+  <noscript><a href="./index-ADMIN-v9.html?release={BUILD}">Abrir Rotina Family ADM</a></noscript>
+</body>
+</html>'''
+Path('index.html').write_text(index,encoding='utf-8')
+
+manifest=json.loads(Path('manifest.json').read_text(encoding='utf-8'))
+manifest['name']='Rotina Family ADM'
+manifest['short_name']='Rotina Family ADM'
+manifest['description']='Painel de administração do Rotina Family'
+manifest['start_url']=f'./index.html?release={BUILD}'
+manifest['theme_color']='#6b35df'
+manifest['background_color']='#f6f7fb'
+Path('manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+sw=f'''const CACHE_NAME='rotina-family-adm-v90-production-{BUILD}';
+const ROTINA_SW_VERSION='90';
+const ROTINA_BUILD_ID='{BUILD}';
+const APP_MAIN_URL=new URL('./index-ADMIN-v9.html',self.location.href).href;
+const ENTRY_URL=new URL('./index.html',self.location.href).href;
+const LEGACY_MAIN_PATH=new URL('./index-ADMIN-v8.html',self.location.href).pathname;
+const APP_SHELL=[
+  './','./index.html','./index-ADMIN-v9.html','./manifest.json?v={BUILD}',
+  './icon-administrador-192.png','./icon-administrador-512.png',
+  './sprint2-teste-atual.css?v=20260905-hidden-semantic-v1',
+  './sprint2-teste-core.js','./sprint2-observability-v1.js','./sprint2-integracao-login-realdata-bridge-v1.js',
+  './sprint2-integracao-login-realdata-v1.js?v=20260903-tasks-ownership-v1',
+  './sprint2-data-store-v1.js?v=20260903-conquistas-v1',
+  './sprint2-tarefas-realdata-v2.js?v=20260905-inline-owner-v40',
+  './sprint2-participantes-realdata-v1.js',
+  './sprint2-recompensas-realdata-v1.js?v=20260903-conquistas-v1',
+  './sprint2-conquistas-realdata-v1.js?v=20260903-deadline-v1',
+  './sprint2-monitor-realdata-v2.js?v=20260905-monitor-result-v31',
+  './sprint2-master-realdata-v1.js?v=20260905-master-realdata-v13-role-visibility'
+];
+const MODULE_ROOTS=['https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js'];
+async function cacheModuleTree(url,cache,seen=new Set()){{if(seen.has(url))return;seen.add(url);try{{const response=await fetch(url,{{mode:'cors',cache:'no-store'}});if(!response.ok)return;await cache.put(url,response.clone());const text=await response.text();const specs=[...text.matchAll(/(?:from\\s*|import\\s*)[\"']([^\"']+)[\"']/g)].map(m=>m[1]);await Promise.allSettled(specs.map(spec=>{{const next=new URL(spec,url).href;return next.startsWith('https://www.gstatic.com/firebasejs/')?cacheModuleTree(next,cache,seen):Promise.resolve();}}));}}catch(_){{}}}}
+self.addEventListener('install',event=>{{event.waitUntil((async()=>{{const cache=await caches.open(CACHE_NAME);await cache.addAll(APP_SHELL);await Promise.allSettled(MODULE_ROOTS.map(url=>cacheModuleTree(url,cache)));}})());self.skipWaiting();}});
+self.addEventListener('activate',event=>{{event.waitUntil((async()=>{{const keys=await caches.keys();await Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)));await self.clients.claim();}})());}});
+self.addEventListener('fetch',event=>{{if(event.request.method!=='GET')return;const url=new URL(event.request.url);const sameOrigin=url.origin===self.location.origin;const staticCdn=url.hostname==='www.gstatic.com'&&url.pathname.startsWith('/firebasejs/');if(!sameOrigin&&!staticCdn)return;if(event.request.mode==='navigate'){{if(sameOrigin&&url.pathname===LEGACY_MAIN_PATH){{event.respondWith(Promise.resolve(Response.redirect(new URL('./index-ADMIN-v9.html?release={BUILD}',self.location.href).href,302)));return;}}event.respondWith((async()=>{{const isEntry=url.href===ENTRY_URL||url.pathname.endsWith('/');const alvo=isEntry?ENTRY_URL:event.request;try{{const response=await fetch(alvo,{{cache:'no-store'}});if(response&&response.ok){{const cache=await caches.open(CACHE_NAME);await cache.put(alvo,response.clone());}}return response;}}catch(_){{return (await caches.match(alvo))||(await caches.match(APP_MAIN_URL))||(await caches.match(ENTRY_URL));}}}})());return;}}const isAppAsset=sameOrigin&&(/\\.(?:js|css|html|json)$/.test(url.pathname));if(isAppAsset){{event.respondWith((async()=>{{try{{const response=await fetch(event.request,{{cache:'no-store'}});if(response&&response.ok){{const cache=await caches.open(CACHE_NAME);await cache.put(event.request,response.clone());}}return response;}}catch(_){{return caches.match(event.request);}}}})());return;}}event.respondWith((async()=>{{const cached=await caches.match(event.request);if(cached)return cached;const response=await fetch(event.request);if(response&&(response.ok||response.type==='opaque')){{const cache=await caches.open(CACHE_NAME);await cache.put(event.request,response.clone());}}return response;}})());}});
+self.addEventListener('message',event=>{{if(event.data?.type!=='ROTINA_GET_BUILD_INFO')return;event.source?.postMessage({{type:'ROTINA_BUILD_INFO',token:event.data?.token||'',swVersion:ROTINA_SW_VERSION,build:ROTINA_BUILD_ID,cacheName:CACHE_NAME}});}});
+self.addEventListener('notificationclick',event=>{{event.notification.close();const destino=new URL(event.notification.data?.url||'./?abrir=resgates',self.location.href).href;event.waitUntil((async()=>{{const janelas=await clients.matchAll({{type:'window',includeUncontrolled:true}});const aberta=janelas.find(j=>new URL(j.url).origin===self.location.origin);if(aberta){{await aberta.focus();if('navigate' in aberta)await aberta.navigate(destino);return;}}if(clients.openWindow)await clients.openWindow(destino);}})());}});
+'''
+Path('sw.js').write_text(sw,encoding='utf-8')
