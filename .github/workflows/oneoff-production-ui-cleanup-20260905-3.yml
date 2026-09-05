@@ -1,4 +1,4 @@
-name: One-off production UI cleanup 20260905.3
+name: One-off production fix 20260905.4
 
 on:
   push:
@@ -16,97 +16,66 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Apply production cleanup and bump build
+      - name: Enable group-admin challenge visibility and bump build
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
 
-          def replace(path, old, new, count=None):
-              p = Path(path)
-              text = p.read_text(encoding='utf-8')
+          def replace(path, old, new):
+              p=Path(path)
+              text=p.read_text(encoding='utf-8')
               if old not in text:
-                  raise SystemExit(f'Expected text not found in {path}: {old[:120]}')
-              text = text.replace(old, new, -1 if count is None else count)
-              p.write_text(text, encoding='utf-8')
+                  raise SystemExit(f'Expected text not found in {path}: {old[:140]}')
+              p.write_text(text.replace(old,new),encoding='utf-8')
 
-          # 1) Faixa superior: manter apenas a confirmação útil de sincronização.
-          replace(
-              'sprint2-integracao-login-realdata-v1.js',
-              "const VERSION='integracao-login-realdata-v1.1-series-normalization';",
-              "const VERSION='integracao-login-realdata-v1.2-production-clean';"
-          )
-          replace(
-              'sprint2-integracao-login-realdata-v1.js',
-              "$('syncStatus').textContent=`${runtime.profiles.length} participantes • ${runtime.taskDocs.length} registros de agenda • sincronizado agora`;",
-              "$('syncStatus').textContent='Sincronizado agora';"
-          )
+          # Store: desafios/conquistas devem ser lidos pelo ADM do próprio grupo, não apenas pelo Master.
+          replace('sprint2-data-store-v1.js',
+                  "const VERSION='sprint2-data-store-v1.1-live-rewards';",
+                  "const VERSION='sprint2-data-store-v1.2-live-group-content';")
+          replace('sprint2-data-store-v1.js',
+                  "function conquestAccess(){return clean(window.rotinaSprint2SessionSnapshot?.().role)==='master'}",
+                  "function conquestAccess(){return ['adm_familia','adm_convidado','master'].includes(clean(window.rotinaSprint2SessionSnapshot?.().role))}")
+          replace('sprint2-data-store-v1.js',
+                  "if(liveGroup===g&&liveUnsubs.length===3)return true;",
+                  "if(liveGroup===g&&liveUnsubs.length===5)return true;")
+          replace('sprint2-data-store-v1.js',
+                  "['resgates','redemptions','live-resgates']\n  ];",
+                  "['resgates','redemptions','live-resgates'],\n    ['conquistas','conquests','live-conquistas'],\n    ['conquistaHistorico','conquestEvents','live-conquista-historico']\n  ];")
+          replace('sprint2-data-store-v1.js',
+                  "const liveAlready=liveGroup===g&&liveUnsubs.length===3;",
+                  "const liveAlready=liveGroup===g&&liveUnsubs.length===5;")
 
-          # 2) Monitor: remover explicações internas e o selo técnico.
-          replace(
-              'sprint2-monitor-realdata-v2.js',
-              "const VERSION='monitor-realdata-v3.1-result-colors';",
-              "const VERSION='monitor-realdata-v3.2-production-clean';"
-          )
-          replace(
-              'sprint2-monitor-realdata-v2.js',
-              "injectStyle();ensureControls();const note=$('view-monitor')?.querySelector('.integration-note');if(note)note.innerHTML='<b>Monitor V3:</b> o ADM não recalcula a execução. Ele lê a ocorrência oficial registrada pelo Participante; sem ocorrência, a tarefa permanece Pendente.';\n  const pill=$('view-monitor')?.querySelector('.activepill');if(pill)pill.textContent='V3 • FONTE ÚNICA';\n  const n=$('view-monitor')?.querySelector('.monitor-note');if(n){n.className='monitor-v2-warning monitor-note';n.textContent='Arquitetura desta etapa: ADM configura a regra; Participante registra a execução; Monitor apenas acompanha o resultado. Store central: execuções e conclusões chegam automaticamente; a reconciliação remota periódica permanece como segurança e o botão Atualizar força uma conferência imediata.'}\n  const title=$('view-monitor')?.querySelector('h2');if(title)title.textContent='Acompanhamento operacional';const desc=$('view-monitor')?.querySelector('.head p');if(desc)desc.textContent='Previsto x realizado, resultado operacional em uma única leitura, pontos e revisão de justificativas.';const lastKpi=$('mPending')?.parentElement?.querySelector('small');if(lastKpi)lastKpi.textContent='Pendentes';",
-              "injectStyle();ensureControls();const note=$('view-monitor')?.querySelector('.integration-note');if(note)note.remove();\n  const pill=$('view-monitor')?.querySelector('.activepill');if(pill)pill.remove();\n  const n=$('view-monitor')?.querySelector('.monitor-note');if(n)n.remove();\n  const title=$('view-monitor')?.querySelector('h2');if(title)title.textContent='Acompanhamento operacional';const desc=$('view-monitor')?.querySelector('.head p');if(desc)desc.remove();const lastKpi=$('mPending')?.parentElement?.querySelector('small');if(lastKpi)lastKpi.textContent='Pendentes';"
-          )
+          # Auditoria: leitura de Conquistas passa a ser do ADM do grupo + Master; escrita continua Master-only.
+          replace('.github/workflows/sprint2-current-integration-audit.yml',
+                  "              \"['resgates','redemptions','live-resgates']\"\n          ]:",
+                  "              \"['resgates','redemptions','live-resgates']\",\n              \"['conquistas','conquests','live-conquistas']\",\n              \"['conquistaHistorico','conquestEvents','live-conquista-historico']\"\n          ]:")
+          replace('.github/workflows/sprint2-current-integration-audit.yml',
+                  "          require(\"clean(window.rotinaSprint2SessionSnapshot?.().role)==='master'\" in store,'coleções novas ficam isoladas ao Master nesta fase')",
+                  "          require(\"['adm_familia','adm_convidado','master'].includes(clean(window.rotinaSprint2SessionSnapshot?.().role))\" in store,'ADM do grupo e Master podem ler Conquistas do grupo')")
 
-          # 3) Limpeza global da interface e identificação da build.
-          replace(
-              'sprint2-recompensas-realdata-v1.js',
-              "const VERSION='recompensas-realdata-v1.2-production-ui';",
-              "const VERSION='recompensas-realdata-v1.3-production-ui';"
-          )
-          replace(
-              'sprint2-recompensas-realdata-v1.js',
-              "const APP_BUILD='20260905.2';",
-              "const APP_BUILD='20260905.3';"
-          )
-          replace(
-              'sprint2-recompensas-realdata-v1.js',
-              "document.querySelectorAll('#view-monitor .integration-note,#view-monitor .monitor-note').forEach(el=>el.remove());",
-              "document.querySelectorAll('#view-monitor .integration-note,#view-monitor .monitor-note,#view-monitor .head p,#view-monitor .activepill').forEach(el=>el.remove());"
-          )
-          replace(
-              'sprint2-recompensas-realdata-v1.js',
-              "const pill=$('view-monitor')?.querySelector('.activepill');if(pill&&/V3|FONTE ÚNICA/i.test(clean(pill.textContent)))pill.textContent='SOMENTE LEITURA';",
-              "const pill=$('view-monitor')?.querySelector('.activepill');if(pill)pill.remove();"
-          )
+          # Build identificável no rodapé.
+          replace('sprint2-recompensas-realdata-v1.js',"const APP_BUILD='20260905.3';","const APP_BUILD='20260905.4';")
 
-          # 4) Cache-busters e release oficial da V9.
-          replace('index-ADMIN-v9.html', './manifest.json?v=20260905.1', './manifest.json?v=20260905.3')
-          replace('index-ADMIN-v9.html', 'sprint2-integracao-login-realdata-v1.js?v=20260903-tasks-ownership-v1', 'sprint2-integracao-login-realdata-v1.js?v=20260905-production-clean-v12')
-          replace('index-ADMIN-v9.html', 'sprint2-data-store-v1.js?v=20260903-conquistas-v1', 'sprint2-data-store-v1.js?v=20260905-realtime-rewards-v11')
-          replace('index-ADMIN-v9.html', 'sprint2-recompensas-realdata-v1.js?v=20260903-conquistas-v1', 'sprint2-recompensas-realdata-v1.js?v=20260905-production-ui-v13')
-          replace('index-ADMIN-v9.html', 'sprint2-monitor-realdata-v2.js?v=20260905-monitor-result-v31', 'sprint2-monitor-realdata-v2.js?v=20260905-monitor-clean-v32')
+          # Forçar atualização do Store e da release oficial.
+          replace('index-ADMIN-v9.html','sprint2-data-store-v1.js?v=20260905-realtime-rewards-v11','sprint2-data-store-v1.js?v=20260905-group-content-v12')
+          replace('sw.js','sprint2-data-store-v1.js?v=20260905-realtime-rewards-v11','sprint2-data-store-v1.js?v=20260905-group-content-v12')
 
-          replace('sw.js', "const CACHE_NAME='rotina-family-adm-v91-production-20260905.2';", "const CACHE_NAME='rotina-family-adm-v92-production-20260905.3';")
-          replace('sw.js', "const ROTINA_SW_VERSION='91';", "const ROTINA_SW_VERSION='92';")
-          replace('sw.js', "const ROTINA_BUILD_ID='20260905.2';", "const ROTINA_BUILD_ID='20260905.3';")
-          replace('sw.js', './manifest.json?v=20260905.1', './manifest.json?v=20260905.3')
-          replace('sw.js', 'sprint2-integracao-login-realdata-v1.js?v=20260903-tasks-ownership-v1', 'sprint2-integracao-login-realdata-v1.js?v=20260905-production-clean-v12')
-          replace('sw.js', 'sprint2-data-store-v1.js?v=20260903-conquistas-v1', 'sprint2-data-store-v1.js?v=20260905-realtime-rewards-v11')
-          replace('sw.js', 'sprint2-recompensas-realdata-v1.js?v=20260903-conquistas-v1', 'sprint2-recompensas-realdata-v1.js?v=20260905-production-ui-v13')
-          replace('sw.js', 'sprint2-monitor-realdata-v2.js?v=20260905-monitor-result-v31', 'sprint2-monitor-realdata-v2.js?v=20260905-monitor-clean-v32')
-          replace('sw.js', 'release=20260905.2', 'release=20260905.3')
-
-          replace('index.html', '20260905.2', '20260905.3')
-          replace('manifest.json', './index.html?release=20260905.1', './index.html?release=20260905.3')
+          for path in ['index-ADMIN-v9.html','index.html','manifest.json','sw.js']:
+              p=Path(path); t=p.read_text(encoding='utf-8'); p.write_text(t.replace('20260905.3','20260905.4'),encoding='utf-8')
+          replace('sw.js',"const CACHE_NAME='rotina-family-adm-v92-production-20260905.4';","const CACHE_NAME='rotina-family-adm-v93-production-20260905.4';")
+          replace('sw.js',"const ROTINA_SW_VERSION='92';","const ROTINA_SW_VERSION='93';")
           PY
 
-          node --check sprint2-integracao-login-realdata-v1.js
-          node --check sprint2-monitor-realdata-v2.js
-          node --check sprint2-recompensas-realdata-v1.js
           node --check sprint2-data-store-v1.js
+          node --check sprint2-conquistas-realdata-v1.js
+          node --check sprint2-recompensas-realdata-v1.js
           node --check sw.js
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add sprint2-integracao-login-realdata-v1.js sprint2-monitor-realdata-v2.js sprint2-recompensas-realdata-v1.js index-ADMIN-v9.html sw.js index.html manifest.json
+          git add sprint2-data-store-v1.js sprint2-recompensas-realdata-v1.js index-ADMIN-v9.html index.html manifest.json sw.js .github/workflows/sprint2-current-integration-audit.yml
           git diff --cached --check
-          git commit -m 'Clean production monitor UI and bump build 20260905.3'
+          git commit -m 'Show group challenges to group administrators build 20260905.4'
           git push origin HEAD:main
