@@ -94,7 +94,9 @@ jobs:
           require('cq1Preview' in conquests,'Conquistas mantém prévia do participante')
           require('cqFormDeadline' in conquests and 'cqFormDeadlineValue' in conquests and 'cqFormDeadlineUnit' in conquests,'regra de pontos preserva configuração de prazo aprovada')
           require('prazo:deadline' in conquests and 'prazoValor:' in conquests and 'prazoUnidade:' in conquests,'prazo de pontos é persistido no contrato da Conquista')
-          require('não há expiração automática inventada' in conquests,'prazo não introduz semântica automática não aprovada')
+          progress = conquests.split('function progressFor(c,pid){',1)[1].split('function derived',1)[0]
+          require('prazo' not in progress.lower() and 'deadline' not in progress.lower(),'prazo configurado não altera automaticamente o cálculo do progresso')
+          require('expir' not in conquests.lower(),'Conquistas não introduz expiração automática não aprovada')
 
           require('id="rv1ConquestsPanel"' in rewards,'layout integrado reserva painel de Conquistas ao lado de Recompensas')
           require('rv1HistoryType' in rewards and 'window.rotinaSprint2ConquestHistoryRows' in conquests,'Histórico unifica Recompensas e eventos de Conquistas')
