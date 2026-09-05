@@ -1,0 +1,46 @@
+name: Sprint 2 Tarefas V40 Publish Owner
+
+on:
+  push:
+    paths:
+      - '.github/triggers/sprint2-tarefas-v40-publish-owner.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair V4 validada do workflow de preparação
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import re,base64,gzip
+          from pathlib import Path
+          source=Path('.github/workflows/sprint2-tarefas-v40-inline-owner.yml').read_text(encoding='utf-8')
+          m=re.search(r"payload='''([A-Za-z0-9+/=]+)'''",source)
+          if not m: raise SystemExit('payload V4 não encontrado')
+          Path('sprint2-tarefas-realdata-v2.js').write_bytes(gzip.decompress(base64.b64decode(m.group(1))))
+          h=Path('sprint2-integracao-recompensas-v1.html')
+          s=h.read_text(encoding='utf-8')
+          old='sprint2-tarefas-realdata-v2.js?v=20260905-series-status-v31'
+          new='sprint2-tarefas-realdata-v2.js?v=20260905-inline-owner-v40'
+          if s.count(old)!=1: raise SystemExit(f'cache-bust esperado 1x, encontrado {s.count(old)}')
+          h.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+          node --check sprint2-tarefas-realdata-v2.js
+          grep -q "tarefas-realdata-v4.0-inline-owner" sprint2-tarefas-realdata-v2.js
+          grep -q 'tv4-edit-main' sprint2-tarefas-realdata-v2.js
+          grep -q 'tv4-mobile-edit' sprint2-tarefas-realdata-v2.js
+          grep -q "if(!await firebaseReady())" sprint2-tarefas-realdata-v2.js
+          grep -q "origin==='live-execucoes'" sprint2-tarefas-realdata-v2.js
+          ! grep -q 'id="tv3Editor"' sprint2-tarefas-realdata-v2.js
+      - name: Commit somente do proprietário e carregador
+        run: |
+          git config user.name "paes2005-design"
+          git config user.email "paes2005@gmail.com"
+          git add sprint2-tarefas-realdata-v2.js sprint2-integracao-recompensas-v1.html
+          git commit -m "Sprint 2: refatora Tarefas sem editor paralelo"
+          git push
