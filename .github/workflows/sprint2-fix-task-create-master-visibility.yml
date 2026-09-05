@@ -1,0 +1,86 @@
+name: Sprint2 Fix Task Create Master Visibility
+
+on:
+  push:
+    paths:
+      - '.github/workflows/sprint2-fix-task-create-master-visibility.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Aplicar correções
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new, label):
+              p=Path(path)
+              s=p.read_text(encoding='utf-8')
+              count=s.count(old)
+              assert count==1, f'{label}: esperado 1, encontrado {count}'
+              p.write_text(s.replace(old,new,1),encoding='utf-8')
+
+          replace_once(
+              'sprint2-tarefas-realdata-v2.js',
+              "const VERSION='tarefas-realdata-v2.6-create-inline-contract';",
+              "const VERSION='tarefas-realdata-v2.7-create-name-fix';",
+              'versao tarefas')
+          replace_once(
+              'sprint2-tarefas-realdata-v2.js',
+              "batch.set(ref,{grupoId:g,nome,icone:icon,",
+              "batch.set(ref,{grupoId:g,nome:name,icone:icon,",
+              'nome da nova tarefa')
+
+          replace_once(
+              'sprint2-master-realdata-v1.js',
+              "const VERSION='master-realdata-v1.1-idempotent';",
+              "const VERSION='master-realdata-v1.2-visibility-gated';",
+              'versao master')
+          old_activate="async function activate(){if(!isMaster()){installed=false;hideMasterForNonMaster();return false}if(installed)return true;if(activationPromise)return activationPromise;activationPromise=(async()=>{injectStyle();ensureView();masterNav();try{await validateMaster();installed=true;log('ready',{version:VERSION});return true}catch(e){const b=$('masterNavButton');if(b){b.disabled=true;b.title='Acesso Master não confirmado'}return false}})();try{return await activationPromise}finally{activationPromise=null}}"
+          new_activate="async function activate(){if(!isMaster()){installed=false;hideMasterForNonMaster();return false}if(installed)return true;if(activationPromise)return activationPromise;activationPromise=(async()=>{injectStyle();ensureView();hideMasterForNonMaster();try{await validateMaster();masterNav();installed=true;log('ready',{version:VERSION});return true}catch(e){hideMasterForNonMaster();const b=$('masterNavButton');if(b){b.disabled=true;b.title='Acesso Master não confirmado'}return false}})();try{return await activationPromise}finally{activationPromise=null}}"
+          replace_once('sprint2-master-realdata-v1.js',old_activate,new_activate,'gate visual master')
+
+          replace_once(
+              'sprint2-integracao-login-realdata-bridge-v1.js',
+              "script.src='sprint2-master-realdata-v1.js?v=20260904-master-realdata-v1-idempotent';",
+              "script.src='sprint2-master-realdata-v1.js?v=20260905-master-realdata-v12-visibility-gated';",
+              'cache master')
+
+          replace_once(
+              'sprint2-integracao-recompensas-v1.html',
+              ".next-stage{opacity:.48;cursor:not-allowed}",
+              ".next-stage{opacity:.48;cursor:not-allowed}#masterNavButton[hidden]{display:none!important}",
+              'css master oculto')
+          replace_once(
+              'sprint2-integracao-recompensas-v1.html',
+              '<button class="next-stage" disabled><span class="ico">🔐</span>Master</button>',
+              '<button id="masterNavButton" class="next-stage" hidden disabled aria-hidden="true"><span class="ico">🔐</span>Master</button>',
+              'botao master oculto')
+          replace_once(
+              'sprint2-integracao-recompensas-v1.html',
+              'sprint2-tarefas-realdata-v2.js?v=20260904-create-inline-v26',
+              'sprint2-tarefas-realdata-v2.js?v=20260905-create-name-fix-v27',
+              'cache tarefas')
+          PY
+
+          node --check sprint2-tarefas-realdata-v2.js
+          node --check sprint2-master-realdata-v1.js
+          node --check sprint2-integracao-login-realdata-bridge-v1.js
+          grep -q "tarefas-realdata-v2.7-create-name-fix" sprint2-tarefas-realdata-v2.js
+          grep -q "nome:name,icone:icon" sprint2-tarefas-realdata-v2.js
+          grep -q "master-realdata-v1.2-visibility-gated" sprint2-master-realdata-v1.js
+          grep -q 'id="masterNavButton" class="next-stage" hidden disabled' sprint2-integracao-recompensas-v1.html
+          grep -q '20260905-create-name-fix-v27' sprint2-integracao-recompensas-v1.html
+          grep -q '20260905-master-realdata-v12-visibility-gated' sprint2-integracao-login-realdata-bridge-v1.js
+      - name: Publicar correções
+        run: |
+          git config user.name 'paes2005-design'
+          git config user.email 'paes2005@gmail.com'
+          git add sprint2-tarefas-realdata-v2.js sprint2-master-realdata-v1.js sprint2-integracao-login-realdata-bridge-v1.js sprint2-integracao-recompensas-v1.html
+          git commit -m 'Sprint 2: corrige cadastro de tarefas e restringe aba Master'
+          git push
