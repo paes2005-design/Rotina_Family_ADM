@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='monitor-realdata-v3-readmodel';
+const VERSION='monitor-realdata-v3.1-result-colors';
 const PAGE='sprint2-integracao-monitor-v2.html';
 const API_ROOT='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
 const TIME_ZONE='America/Bahia';
@@ -99,14 +99,14 @@ function injectStyle(){
   .mv3-periods button.active{background:#6b35df;border-color:#6b35df;color:#fff}
   .mv3-nav input,.mv3-selects select{border:1px solid #dcdde7;border-radius:9px;padding:8px;background:#fff}
   .mv3-source{font-size:9px;color:#7d8294;margin-top:3px}.mv3-source b{color:#4f5568}.mv3-past{opacity:.9}
-  .monitor-v2-row,.monitor-v2-header{display:grid;grid-template-columns:38px minmax(170px,1.35fr) minmax(118px,.8fr) minmax(155px,1fr) minmax(145px,1fr) 82px 92px minmax(150px,1fr);gap:9px;align-items:center;padding:10px 12px;border-bottom:1px solid #edf0f4;font-size:11px}
+  .monitor-v2-row,.monitor-v2-header{display:grid;grid-template-columns:38px minmax(170px,1.35fr) minmax(118px,.8fr) minmax(155px,1fr) minmax(190px,1.15fr) 92px minmax(150px,1fr);gap:9px;align-items:center;padding:10px 12px;border-bottom:1px solid #edf0f4;font-size:11px}
   .monitor-v2-header{font-size:9px;text-transform:uppercase;font-weight:900;color:#73798d;background:#fafbfc;border:1px solid #e6e8f0;border-radius:12px 12px 0 0}.monitor-v2-row{background:#fff}.monitor-v2-title b{display:block;font-size:12px}.monitor-v2-title small,.monitor-v2-real small{display:block;color:#7a8092;margin-top:2px;line-height:1.35}
-  .score-band{display:inline-flex;align-items:center;justify-content:center;min-width:50px;padding:6px 8px;border-radius:999px;font-weight:900}.score-100{background:#dcfce7;color:#166534}.score-75{background:#fef3c7;color:#92400e}.score-50{background:#ffedd5;color:#9a3412}.score-0{background:#fee2e2;color:#991b1b}.score-na{background:#f1f5f9;color:#64748b}
+  .result-pill{display:inline-flex;align-items:center;gap:5px;justify-content:center;padding:6px 9px;border-radius:999px;font-weight:900;line-height:1.2}.result-100{background:#dcfce7;color:#166534}.result-75{background:#fef3c7;color:#92400e}.result-50{background:#ffedd5;color:#9a3412}.result-0{background:#fee2e2;color:#991b1b}.result-running{background:#dbeafe;color:#1d4ed8}.result-pending{background:#f1f5f9;color:#64748b}.result-neutral{background:#eef2f7;color:#475569}.review-tag{display:inline-block;margin-top:3px;padding:2px 6px;border-radius:999px;background:#ede9fe;color:#6d28d9;font-size:8px;font-weight:900;text-transform:uppercase}.monitor-v2-result-wide{grid-column:1/-1}
   .monitor-v2-status{font-weight:850;line-height:1.35}.monitor-v2-actions{display:flex;gap:6px;flex-wrap:wrap}.monitor-v2-actions button{border:1px solid #d8dce6;border-radius:9px;background:#fff;padding:7px 8px;font-size:10px;font-weight:850;cursor:pointer}.monitor-v2-actions .alarm-on{border-color:#f87171;color:#991b1b;background:#fff7f7}.monitor-v2-actions .just-btn{border-color:#f5c15c;color:#8a4b00;background:#fffaf0}.monitor-v2-actions button:disabled{opacity:.45;cursor:not-allowed}
   .monitor-v2-card{border:1px solid #e6e8f0;border-radius:15px;padding:12px;background:#fff;margin-bottom:10px}.monitor-v2-card-head{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:8px;align-items:center}.monitor-v2-card-head b{font-size:12px}.monitor-v2-card-head small{display:block;color:#7a8092;font-size:10px;margin-top:2px}.monitor-v2-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.monitor-v2-grid>div{padding:8px;border-radius:10px;background:#f8f9fc}.monitor-v2-grid small{display:block;font-size:8px;text-transform:uppercase;color:#7d8294}.monitor-v2-grid b{display:block;font-size:11px;margin-top:3px;line-height:1.35}.monitor-v2-card .monitor-v2-actions{margin-top:10px}.monitor-v2-legend{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px;font-size:10px}.monitor-v2-legend span{padding:5px 8px;border-radius:999px}
   .mv2-modal{position:fixed;inset:0;z-index:80000;background:rgba(15,23,42,.62);display:flex;align-items:center;justify-content:center;padding:16px}.mv2-modal-card{width:min(520px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:20px;padding:20px;box-shadow:0 24px 70px rgba(15,23,42,.28)}.mv2-modal-card h2{margin:0 42px 6px 0;font-size:20px}.mv2-modal-card p{color:#64748b;font-size:12px;line-height:1.5}.mv2-close{float:right;border:0;background:#f1f5f9;border-radius:50%;width:34px;height:34px;font-size:20px}.mv2-box{padding:12px;border-radius:12px;background:#f8fafc;margin:10px 0;font-size:12px;line-height:1.5}.mv2-just{background:#fffbeb;border:1px solid #fde68a;white-space:pre-wrap}.mv2-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.mv2-actions button{border:0;border-radius:11px;padding:11px;font-weight:850}.mv2-primary{background:#6b35df;color:#fff}.mv2-danger{background:#fee2e2;color:#991b1b}.mv2-neutral{background:#e2e8f0;color:#334155}.mv2-msg{font-size:11px;color:#64748b;min-height:18px;margin-top:8px}.mv2-select{width:100%;padding:11px;border:1px solid #d6dae5;border-radius:10px;margin:6px 0 10px}
   .monitor-v2-warning{border:1px solid #c7d7f7;background:#f6f9ff;color:#35527d;padding:10px 12px;border-radius:11px;font-size:10px;margin-bottom:12px}
-  @media(max-width:1100px){.monitor-v2-row,.monitor-v2-header{grid-template-columns:34px minmax(150px,1fr) 110px 140px 130px 72px 80px minmax(130px,.9fr)}}
+  @media(max-width:1100px){.monitor-v2-row,.monitor-v2-header{grid-template-columns:34px minmax(150px,1fr) 110px 140px minmax(165px,1fr) 80px minmax(130px,.9fr)}}
   @media(max-width:900px){.monitor-v2-header,.monitor-v2-row{display:none}.monitor-v2-card{display:block}.mv2-actions{grid-template-columns:1fr}.monitor-v2-grid{grid-template-columns:1fr 1fr}.mv3-controls{padding:9px}.mv3-nav,.mv3-selects{display:grid;grid-template-columns:1fr 1fr}.mv3-nav input{width:100%}}
   `;
   document.head.appendChild(s);
@@ -177,22 +177,43 @@ function formatClock(v,fallback='—'){
 }
 function maxPoints(x){return Number(x.pontosMaximos??x.__task?.points)||0}
 function wonPoints(x){return x.__state==='pending'?0:(Number(x.pontosGanhos)||0)}
-function storedPercentage(x){
-  if(x.__state!=='final')return null;
-  for(const v of [x.percentualRevisado,x.percentualAplicado]){
-    if(v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v)))return Math.max(0,Math.min(100,Math.round(Number(v))));
-  }
-  const faixa=clean(x.faixaAtraso).toLowerCase();
+function statusPercentage(x){
+  const raw=clean(x?.status);
+  const explicit=raw.match(/(?:^|[^\d])(100|75|50|0)%/);
+  if(explicit)return Number(explicit[1]);
+  if(/atraso\s+leve/i.test(raw))return 75;
+  if(/atraso\s+maior/i.test(raw))return 50;
+  if(/atrasado|toler[aâ]ncia\s+estourada/i.test(raw))return 0;
+  if(/prazo/i.test(raw))return 100;
+  return null;
+}
+function bandPercentage(x){
+  const faixa=clean(x?.faixaAtraso).toLowerCase();
   if(faixa==='dentro-limites')return 100;
   if(faixa==='atraso-leve')return 75;
   if(faixa==='atraso-maior')return 50;
   if(faixa==='estourado')return 0;
-  const raw=clean(x.status);
-  if(/75%/.test(raw))return 75;
-  if(/50%/.test(raw))return 50;
-  if(/(^|[^\d])0%/.test(raw)||/atrasado/i.test(raw))return 0;
-  if(/prazo/i.test(raw))return 100;
   return null;
+}
+function numericPercentage(v){
+  if(v===null||v===undefined||v===''||!Number.isFinite(Number(v)))return null;
+  return Math.max(0,Math.min(100,Math.round(Number(v))));
+}
+function operationalPercentage(x){
+  if(x.__state!=='final')return null;
+  const fromStatus=statusPercentage(x);if(fromStatus!==null)return fromStatus;
+  const fromBand=bandPercentage(x);if(fromBand!==null)return fromBand;
+  const original=numericPercentage(x.percentualOriginal);if(original!==null)return original;
+  return numericPercentage(x.percentualAplicado);
+}
+function reviewedPercentage(x){
+  const revised=numericPercentage(x.percentualRevisado);
+  return revised!==null?revised:operationalPercentage(x);
+}
+function resultConflict(x){
+  if(x.__state!=='final')return false;
+  const values=[statusPercentage(x),bandPercentage(x),numericPercentage(x.percentualOriginal),numericPercentage(x.percentualAplicado)].filter(v=>v!==null);
+  return new Set(values).size>1;
 }
 function schedulePassed(x){
   if(x.__date!==todayIso()||x.__state!=='pending')return false;
@@ -201,18 +222,22 @@ function schedulePassed(x){
   return nowHm().slice(0,5)>end;
 }
 function statusInfo(x){
-  if(x.__state==='pending')return schedulePassed(x)?{label:'Pendente · horário previsto passou',icon:'⏳'}:{label:'Pendente',icon:'⏳'};
-  if(x.__state==='running')return{label:'Em andamento',icon:'▶️'};
-  const pct=storedPercentage(x),raw=clean(x.status),faixa=clean(x.faixaAtraso).toLowerCase();
-  if(x.inicioAntecipado===true&&(pct===100||/prazo/i.test(raw)))return{label:'No prazo · início antecipado',icon:'🔵'};
-  if(pct===100||/prazo/i.test(raw))return{label:'No prazo · 100%',icon:'✅'};
-  if(pct===75||faixa==='atraso-leve')return{label:'Atraso leve · 75%',icon:'🟡'};
-  if(pct===50||faixa==='atraso-maior')return{label:'Atraso maior · 50%',icon:'🟠'};
-  if(pct===0||faixa==='estourado'||/atrasado/i.test(raw))return{label:'Tolerância estourada · 0%',icon:'🔴'};
-  return{label:raw||'Concluída',icon:'✅'};
+  if(x.__state==='pending')return schedulePassed(x)?{label:'Pendente · horário previsto passou',icon:'⏳',kind:'pending'}:{label:'Pendente',icon:'⏳',kind:'pending'};
+  if(x.__state==='running')return{label:'Em andamento',icon:'▶️',kind:'running'};
+  const pct=operationalPercentage(x),raw=clean(x.status);
+  if(x.inicioAntecipado===true&&pct===100)return{label:'No prazo · início antecipado · 100%',icon:'🔵',kind:'100'};
+  if(pct===100)return{label:'No prazo · 100%',icon:'✅',kind:'100'};
+  if(pct===75)return{label:'Atraso leve · 75%',icon:'🟡',kind:'75'};
+  if(pct===50)return{label:'Atraso maior · 50%',icon:'🟠',kind:'50'};
+  if(pct===0)return{label:'Tolerância estourada · 0%',icon:'🔴',kind:'0'};
+  return{label:raw||'Concluída',icon:'✅',kind:'neutral'};
 }
-function scoreClass(p){if(p===null)return'score-na';if(p===100)return'score-100';if(p===75)return'score-75';if(p===50)return'score-50';return'score-0'}
-function scoreText(p){return p===null?'—':`${p}%`}
+function resultClass(x){const st=statusInfo(x);return `result-${st.kind}`}
+function resultHtml(x){const st=statusInfo(x);return `<span class="result-pill ${resultClass(x)}">${st.icon} ${esc(st.label)}</span>`}
+function pointsHtml(x){
+  const reviewed=x.revisaoStatus==='revisado'&&!!x.revisaoDecisao;
+  return `<b>${wonPoints(x)}/${maxPoints(x)}</b><br><small>pts</small>${reviewed?'<span class="review-tag">Revisado</span>':''}`;
+}
 function toleranceText(x){
   const base=Math.max(0,Number(x.tempoLimite??x.__task?.tolerance)||0)*60;
   const used=x.__state==='pending'?null:(x.toleranciaConsumidaSeg!==null&&x.toleranciaConsumidaSeg!==undefined?Number(x.toleranciaConsumidaSeg):(x.toleranciaConsumidaMin!==null&&x.toleranciaConsumidaMin!==undefined?Number(x.toleranciaConsumidaMin)*60:null));
@@ -253,7 +278,7 @@ function appRows(){
         if(current!=='__ALL__'&&pid!==current)continue;
         const x=occurrenceFor(task,pid,date);
         if(statusFilter!=='all'){
-          const key=x.__state==='pending'?'pending':x.__state==='running'?'running':storedPercentage(x)===100?'ok':'late';
+          const key=x.__state==='pending'?'pending':x.__state==='running'?'running':operationalPercentage(x)===100?'ok':'late';
           if(key!==statusFilter)continue;
         }
         out.push(x);
@@ -343,12 +368,11 @@ function actionsHtml(x){
   return `<div class="monitor-v2-actions"><button type="button" class="mv2-alarm ${a?.ativo?'alarm-on':''}" data-source="${esc(x.__sourceId)}" data-pid="${esc(x.__pid)}" data-date="${esc(x.__date)}" ${past||!x.__sourceId?'disabled':''}>${alarmLabel}</button>${j?`<button type="button" class="just-btn mv2-just-open" data-history="${esc(x.__historyId)}" data-source="${esc(x.__sourceId)}" data-pid="${esc(x.__pid)}" data-date="${esc(x.__date)}">${esc(j.label)}</button>`:''}</div>`;
 }
 function rowHtml(x){
-  const st=statusInfo(x),pct=storedPercentage(x),dateLabel=period==='day'?'':`<small>${esc(x.__date.split('-').reverse().join('/'))}</small>`;
-  return `<div class="monitor-v2-row ${x.__date<todayIso()?'mv3-past':''}" data-family-task-id="${esc(x.__sourceId)}" data-family-profile-id="${esc(x.__pid)}"><span style="font-size:18px">${st.icon}</span><span class="monitor-v2-title"><b>${esc(x.__task.icon||'✅')} ${esc(x.__task.name)}</b><small>${esc(participantName(x.__pid))}</small>${dateLabel}</span><span><b>${esc(x.__task.start)}–${esc(x.__task.end)}</b><br><small>${esc(toleranceText(x))}</small></span><span class="monitor-v2-real"><b>${esc(actualText(x))}</b><small>${x.inicioAntecipado===true?'Início antecipado':''}</small><div class="mv3-source">Fonte: <b>${esc(sourceLabel(x))}</b></div></span><span class="monitor-v2-status">${esc(st.label)}</span><span><span class="score-band ${scoreClass(pct)}">${scoreText(pct)}</span></span><span><b>${wonPoints(x)}/${maxPoints(x)}</b><br><small>pts</small></span><span>${actionsHtml(x)}</span></div>`;
+  const dateLabel=period==='day'?'':`<small>${esc(x.__date.split('-').reverse().join('/'))}</small>`;
+  return `<div class="monitor-v2-row ${x.__date<todayIso()?'mv3-past':''}" data-family-task-id="${esc(x.__sourceId)}" data-family-profile-id="${esc(x.__pid)}"><span style="font-size:18px">${statusInfo(x).icon}</span><span class="monitor-v2-title"><b>${esc(x.__task.icon||'✅')} ${esc(x.__task.name)}</b><small>${esc(participantName(x.__pid))}</small>${dateLabel}</span><span><b>${esc(x.__task.start)}–${esc(x.__task.end)}</b><br><small>${esc(toleranceText(x))}</small></span><span class="monitor-v2-real"><b>${esc(actualText(x))}</b><small>${x.inicioAntecipado===true?'Início antecipado':''}</small><div class="mv3-source">Fonte: <b>${esc(sourceLabel(x))}</b></div></span><span class="monitor-v2-status">${resultHtml(x)}</span><span>${pointsHtml(x)}</span><span>${actionsHtml(x)}</span></div>`;
 }
 function cardHtml(x){
-  const st=statusInfo(x),pct=storedPercentage(x);
-  return `<article class="monitor-v2-card" data-family-task-id="${esc(x.__sourceId)}" data-family-profile-id="${esc(x.__pid)}"><div class="monitor-v2-card-head"><span style="font-size:19px">${st.icon}</span><div><b>${esc(x.__task.icon||'✅')} ${esc(x.__task.name)}</b><small>${esc(participantName(x.__pid))} · ${esc(x.__date.split('-').reverse().join('/'))}</small></div><span class="score-band ${scoreClass(pct)}">${scoreText(pct)}</span></div><div class="monitor-v2-grid"><div><small>Previsto</small><b>${esc(x.__task.start)}–${esc(x.__task.end)}</b></div><div><small>Real</small><b>${esc(actualText(x))}</b></div><div><small>Situação</small><b>${esc(st.label)}</b></div><div><small>Pontos</small><b>${wonPoints(x)}/${maxPoints(x)} pts</b></div><div><small>Tolerância</small><b>${esc(toleranceText(x))}</b></div><div><small>Fonte</small><b>${esc(sourceLabel(x))}</b></div></div>${actionsHtml(x)}</article>`;
+  return `<article class="monitor-v2-card" data-family-task-id="${esc(x.__sourceId)}" data-family-profile-id="${esc(x.__pid)}"><div class="monitor-v2-card-head"><span style="font-size:19px">${statusInfo(x).icon}</span><div><b>${esc(x.__task.icon||'✅')} ${esc(x.__task.name)}</b><small>${esc(participantName(x.__pid))} · ${esc(x.__date.split('-').reverse().join('/'))}</small></div></div><div class="monitor-v2-grid"><div class="monitor-v2-result-wide"><small>Resultado</small>${resultHtml(x)}</div><div><small>Previsto</small><b>${esc(x.__task.start)}–${esc(x.__task.end)}</b></div><div><small>Real</small><b>${esc(actualText(x))}</b></div><div><small>Pontos</small>${pointsHtml(x)}</div><div><small>Tolerância</small><b>${esc(toleranceText(x))}</b></div><div><small>Fonte</small><b>${esc(sourceLabel(x))}</b></div></div>${actionsHtml(x)}</article>`;
 }
 function bindRowActions(container,rows){
   container.querySelectorAll('.mv2-alarm').forEach(b=>b.onclick=()=>{const x=rows.find(r=>r.__sourceId===b.dataset.source&&r.__pid===b.dataset.pid&&r.__date===b.dataset.date);if(x)openAlarm(x)});
@@ -363,16 +387,17 @@ async function render(force=false){
   const done=rows.filter(x=>x.__state==='final').length;
   const running=rows.filter(x=>x.__state==='running').length;
   const pending=rows.filter(x=>x.__state==='pending').length;
-  const late=rows.filter(x=>x.__state==='final'&&[75,50,0].includes(storedPercentage(x))).length;
+  const late=rows.filter(x=>x.__state==='final'&&[75,50,0].includes(operationalPercentage(x))).length;
+  const conflicts=rows.filter(resultConflict).length;
   $('mExpected').textContent=rows.length;$('mDone').textContent=done;$('mRunning').textContent=running;$('mPending').textContent=pending;
   const who=current==='__ALL__'?'todos os participantes':participantName(current);
   $('monitorInfo').innerHTML=`<b>${esc(periodLabel())}</b> · ${esc(who)} · ${done} concluída(s), ${running} em andamento, ${pending} pendente(s)${late?` · ${late} com perda de pontuação`:''}.`;
-  const legend=`<div class="monitor-v2-legend"><span class="score-na">Pendente não é atraso</span><span class="score-100">100% no prazo</span><span class="score-75">75% atraso leve</span><span class="score-50">50% atraso maior</span><span class="score-0">0% tolerância estourada</span></div>`;
-  const header='<div class="monitor-v2-header"><span></span><span>Tarefa</span><span>Previsto / tolerância</span><span>Real / fonte</span><span>Situação oficial</span><span>Faixa</span><span>Pontos</span><span>Ações</span></div>';
+  const legend=`<div class="monitor-v2-legend"><span class="result-pending">⚪ Pendente</span><span class="result-running">🔵 Em andamento</span><span class="result-100">🟢 No prazo · 100%</span><span class="result-75">🟡 Atraso leve · 75%</span><span class="result-50">🟠 Atraso maior · 50%</span><span class="result-0">🔴 Tolerância estourada · 0%</span></div>`;
+  const header='<div class="monitor-v2-header"><span></span><span>Tarefa</span><span>Previsto / tolerância</span><span>Real / fonte</span><span>Resultado</span><span>Pontos</span><span>Ações</span></div>';
   $('monitorTimeline').innerHTML=legend+(rows.length?header+rows.map(rowHtml).join(''):'<div class="notice">Nenhuma ocorrência corresponde aos filtros.</div>');
   $('monitorMobile').innerHTML=legend+(rows.length?rows.map(cardHtml).join(''):'<div class="notice">Nenhuma ocorrência corresponde aos filtros.</div>');
   bindRowActions($('monitorTimeline'),rows);bindRowActions($('monitorMobile'),rows);
-  await log('sprint2.monitor_v3_render',{linhas:rows.length,concluidas:done,andamento:running,atrasos:late,pendentes:pending});
+  await log('sprint2.monitor_v3_render',{linhas:rows.length,concluidas:done,andamento:running,atrasos:late,pendentes:pending,conflitosPersistidos:conflicts});
 }
 
 function closeModal(){document.querySelector('.mv2-modal')?.remove()}
@@ -406,7 +431,7 @@ async function openAlarm(x){
   m.querySelector('#mv2AlarmOn').onclick=()=>command(true);m.querySelector('#mv2AlarmOff').onclick=()=>command(false);
 }
 function originalOutcome(x){
-  const max=maxPoints(x),points=Number.isFinite(Number(x.pontosOriginais))?Number(x.pontosOriginais):wonPoints(x),pct=Number.isFinite(Number(x.percentualOriginal))?Number(x.percentualOriginal):(storedPercentage(x)??0);return{max,points,pct};
+  const max=maxPoints(x),points=Number.isFinite(Number(x.pontosOriginais))?Number(x.pontosOriginais):wonPoints(x),pct=operationalPercentage(x)??0;return{max,points,pct};
 }
 async function applyReview(x,type,targetPct=null,msg){
   try{
@@ -423,7 +448,7 @@ async function applyReview(x,type,targetPct=null,msg){
 async function openJustification(x){
   const j=justificationState(x);if(!j)return;const o=originalOutcome(x),reviewed=x.revisaoStatus==='revisado'&&!!x.revisaoDecisao;
   const buttons=reviewed?'<button class="mv2-danger" data-review="reverter">↩️ Reverter decisão</button>':'<button class="mv2-neutral" data-review="manter">Manter resultado automático</button><button class="mv2-neutral" data-review="devolver" data-pct="50">Devolver até 50%</button><button class="mv2-neutral" data-review="devolver" data-pct="75">Devolver até 75%</button><button class="mv2-primary" data-review="devolver" data-pct="100">Devolver até 100%</button>';
-  const m=modalBase('🚩 Revisar justificativa',`<p><strong>${esc(x.__task.name)}</strong> · ${esc(participantName(x.__pid))}<br>${esc(x.__task.start)}–${esc(x.__task.end)} · ${esc(x.__date.split('-').reverse().join('/'))}</p><div class="mv2-box mv2-just">${esc(j.text)}</div><div class="mv2-box">Resultado registrado pelo Participante: <strong>${o.pct}%</strong> · <strong>${o.points}/${o.max} pts</strong>${reviewed?`<br>Resultado revisado: <strong>${storedPercentage(x)}%</strong> · <strong>${wonPoints(x)}/${o.max} pts</strong>`:''}</div><div class="mv2-actions">${buttons}</div><div class="mv2-msg" id="mv2JustMsg">${reviewed?'Esta ocorrência já possui decisão. Reverta para escolher novamente.':''}</div>`);
+  const m=modalBase('🚩 Revisar justificativa',`<p><strong>${esc(x.__task.name)}</strong> · ${esc(participantName(x.__pid))}<br>${esc(x.__task.start)}–${esc(x.__task.end)} · ${esc(x.__date.split('-').reverse().join('/'))}</p><div class="mv2-box mv2-just">${esc(j.text)}</div><div class="mv2-box">Resultado registrado pelo Participante: <strong>${o.pct}%</strong> · <strong>${o.points}/${o.max} pts</strong>${reviewed?`<br>Resultado revisado: <strong>${reviewedPercentage(x)}%</strong> · <strong>${wonPoints(x)}/${o.max} pts</strong>`:''}</div><div class="mv2-actions">${buttons}</div><div class="mv2-msg" id="mv2JustMsg">${reviewed?'Esta ocorrência já possui decisão. Reverta para escolher novamente.':''}</div>`);
   await log('sprint2.monitor_v3_justificativa_abrir',{temHistorico:!!x.__historyId,revisada:reviewed});
   m.querySelectorAll('[data-review]').forEach(b=>b.onclick=()=>{const msg=m.querySelector('#mv2JustMsg');msg.textContent='Registrando…';m.querySelectorAll('[data-review]').forEach(btn=>btn.disabled=true);applyReview(x,b.dataset.review,b.dataset.pct?Number(b.dataset.pct):null,msg)});
 }
@@ -432,7 +457,7 @@ function patchUi(){
   injectStyle();ensureControls();const note=$('view-monitor')?.querySelector('.integration-note');if(note)note.innerHTML='<b>Monitor V3:</b> o ADM não recalcula a execução. Ele lê a ocorrência oficial registrada pelo Participante; sem ocorrência, a tarefa permanece Pendente.';
   const pill=$('view-monitor')?.querySelector('.activepill');if(pill)pill.textContent='V3 • FONTE ÚNICA';
   const n=$('view-monitor')?.querySelector('.monitor-note');if(n){n.className='monitor-v2-warning monitor-note';n.textContent='Arquitetura desta etapa: ADM configura a regra; Participante registra a execução; Monitor apenas acompanha o resultado. Store central: execuções e conclusões chegam automaticamente; a reconciliação remota periódica permanece como segurança e o botão Atualizar força uma conferência imediata.'}
-  const title=$('view-monitor')?.querySelector('h2');if(title)title.textContent='Acompanhamento operacional';const desc=$('view-monitor')?.querySelector('.head p');if(desc)desc.textContent='Previsto x realizado, resultado oficial do Participante, alarmes e revisão de justificativas.';const lastKpi=$('mPending')?.parentElement?.querySelector('small');if(lastKpi)lastKpi.textContent='Pendentes';
+  const title=$('view-monitor')?.querySelector('h2');if(title)title.textContent='Acompanhamento operacional';const desc=$('view-monitor')?.querySelector('.head p');if(desc)desc.textContent='Previsto x realizado, resultado operacional em uma única leitura, pontos e revisão de justificativas.';const lastKpi=$('mPending')?.parentElement?.querySelector('small');if(lastKpi)lastKpi.textContent='Pendentes';
 }
 function reorderMenu(){const nav=$('mainNav'),monitor=$('monitorNavButton');if(!nav||!monitor)return;const participants=[...nav.children].find(b=>/Participantes/.test(b.textContent));if(participants&&monitor.nextElementSibling!==participants)nav.insertBefore(monitor,participants)}
 function openMonitor(logOpen=true){
