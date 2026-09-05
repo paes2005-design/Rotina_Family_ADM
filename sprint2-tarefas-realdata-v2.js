@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='tarefas-realdata-v4.0-inline-owner';
+const VERSION='tarefas-realdata-v4.1-series-status';
 const DAYS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const WEEKDAYS=['Segunda','Terça','Quarta','Quinta','Sexta'];
 const ICONS=['🛏️','📚','🧹','🎻','🍴','🗑️','🧼','🪥','🐶','✅'];
@@ -13,7 +13,7 @@ let db=null,fs=null,app=null;
 let busy=false,installed=false,pendingDataRefresh=false;
 let profiles=[],series=[];
 let participantFilter='all',dayFilter=todayFull(),statusFilter='all',searchFilter='';
-let editor=null; // {mode:'create'|'edit', key, scope:'all'|'day', day, draft:{}}
+let editor=null; // {mode,key,scope,day,draft,statusTouched}
 
 function todayFull(){return DAYS[new Date().getDay()]}
 function groupId(){return clean($('topGroup')?.textContent).replace(/^Grupo\s+/i,'').toUpperCase()}
@@ -87,7 +87,6 @@ function build(){
     raw.get(key).docs.push(d);
   }
 
-  // Normaliza somente séries uniformes que vieram fragmentadas por IDs antigos.
   const merged=new Map();
   for(const r of raw.values()){
     const signatures=[...new Set(r.docs.map(sig))];
@@ -104,11 +103,16 @@ function build(){
     const alarms=docs.map(d=>alarmMode(alarmFor(d)));
     const configUniform=new Set(docs.map(sig)).size===1;
     const alarmUniform=new Set(alarms).size<=1;
+    const activeCount=docs.filter(isActive).length;
+    const inactiveCount=docs.length-activeCount;
     return{
       key:r.key,pid:r.pid,docs,
       participant:pname(r.pid,baseDoc),
       days:sortDays(docs.map(d=>clean(d.diaSemana))),
       ...base,
+      active:activeCount>0,
+      allActive:inactiveCount===0,
+      mixedActive:activeCount>0&&inactiveCount>0,
       alarm:alarms[0]||'off',
       canBulk:configUniform&&alarmUniform,
       configUniform,
@@ -141,7 +145,7 @@ function draftFrom(r,scope='all',day=''){
     end:source.end,
     points:Number(source.points)||0,
     tolerance:Number(source.tolerance)||0,
-    active:!!source.active,
+    active:r.mixedActive?r.active:!!source.active,
     alarm:d?alarmMode(alarmFor(d)):r.alarm,
     note:source.note||'',
     days:scope==='day'?[day]:[...r.days]
@@ -310,20 +314,25 @@ async function saveDay(r,v){
   }
 
   const g=groupId(),now=new Date().toISOString(),tg=tgFor(r.docs);
-  const b=fs.writeBatch(db),ids=new Set(docs.map(d=>d.id));
+  const b=fs.writeBatch(db),ids=new Set(docs.map(d=>d.id)),statusGlobal=!!editor.statusTouched;
 
-  // Normaliza o grupo da série sem sobrescrever os demais dias.
   for(const d of r.docs){
-    b.update(fs.doc(db,'tarefas',d.id),ids.has(d.id)?updatePayload(tg,v,now):{tarefaGrupoId:tg,atualizadoEm:now});
+    const patch=ids.has(d.id)?updatePayload(tg,v,now):{tarefaGrupoId:tg,atualizadoEm:now};
+    if(statusGlobal)patch.ativa=v.active;
+    b.update(fs.doc(db,'tarefas',d.id),patch);
   }
-  for(const d of docs){
+
+  const alarmTargets=statusGlobal?r.docs:docs;
+  for(const d of alarmTargets){
+    const selected=ids.has(d.id),base=cfg(d);
+    const mode=!v.active&&statusGlobal?'off':selected?(v.active?v.alarm:'off'):alarmMode(alarmFor(d));
     b.set(fs.doc(db,'despertadores',alarmId(g,r.pid,d.id)),
-      alarmData({g,pid:r.pid,participant:r.participant,taskId:d.id,tg,name:v.name,day,start:v.start,end:v.end,mode:v.active?v.alarm:'off',now}),
+      alarmData({g,pid:r.pid,participant:r.participant,taskId:d.id,tg,name:selected?v.name:base.name,day:clean(d.diaSemana),start:selected?v.start:base.start,end:selected?v.end:base.end,mode,now}),
       {merge:true});
   }
   await b.commit();
-  log('edit_day_success',{dia:day,docs:docs.length,serieDocs:r.docs.length,ativa:v.active});
-  toast(`${day}: alteração salva somente neste dia.`);
+  log('edit_day_success',{dia:day,docs:docs.length,serieDocs:r.docs.length,ativa:v.active,statusGlobal});
+  toast(statusGlobal?`Status da tarefa aplicado a todos os dias; ${day} atualizado.`:`${day}: alteração salva somente neste dia.`);
   return true;
 }
 
@@ -344,7 +353,7 @@ async function saveEditor(){
   if(!await firebaseReady()){toast('Firebase indisponível para edição.');return}
 
   setBusyUI(true);
-  log('save_start',{modo:editor.mode,escopo:editor.scope,dias:v.days.length,key:editor.key||''});
+  log('save_start',{modo:editor.mode,escopo:editor.scope,dias:v.days.length,key:editor.key||'',statusTocado:!!editor.statusTouched});
   try{
     let ok=false;
     if(editor.mode==='create')ok=await createTask(v);
@@ -354,7 +363,7 @@ async function saveEditor(){
 
     editor=null;
     pendingDataRefresh=false;
-    await window.rotinaSprint2SyncNow?.('tarefas-v4-save');
+    await window.rotinaSprint2SyncLocal?.('tarefas-v4-save');
     render();
   }catch(e){
     console.error(e);
@@ -369,7 +378,7 @@ async function saveEditor(){
 function startCreate(){
   if(busy||editor||!canWrite())return;
   if(!profiles.length){toast('Cadastre um participante primeiro.');return}
-  editor={mode:'create',key:'',scope:'all',day:'',draft:draftFrom(null)};
+  editor={mode:'create',key:'',scope:'all',day:'',draft:draftFrom(null),statusTouched:false};
   log('create_open',{todos:participantFilter==='all'});
   render();
 }
@@ -379,8 +388,8 @@ function startEdit(key){
   if(!r)return;
   const day=r.days.includes(dayFilter)?dayFilter:r.days.includes(todayFull())?todayFull():r.days[0];
   const scope=r.canBulk?'all':'day';
-  editor={mode:'edit',key,scope,day,draft:draftFrom(r,scope,day)};
-  log('edit_open',{bulkDisponivel:r.canBulk,dias:r.days.length,docs:r.docs.length,inline:true});
+  editor={mode:'edit',key,scope,day,draft:draftFrom(r,scope,day),statusTouched:false};
+  log('edit_open',{bulkDisponivel:r.canBulk,dias:r.days.length,docs:r.docs.length,inline:true,statusMisto:r.mixedActive});
   render();
 }
 function cancelEdit(){
@@ -396,6 +405,7 @@ function changeScope(scope){
   if(!r||editor.mode!=='edit')return;
   if(scope==='all'&&!r.canBulk){toast('Esta série tem exceções. Edite um dia por vez.');return}
   editor.scope=scope;
+  editor.statusTouched=false;
   if(scope==='day'&&!r.days.includes(editor.day))editor.day=r.days[0];
   editor.draft=draftFrom(r,scope,editor.day);
   log('scope_change',{escopo:scope,dia:editor.day||''});
@@ -405,6 +415,7 @@ function changeEditDay(day){
   const r=currentSeries();
   if(!r||!r.days.includes(day))return;
   editor.day=day;
+  editor.statusTouched=false;
   editor.draft=draftFrom(r,'day',day);
   log('day_change',{dia:day});
   render();
@@ -419,7 +430,7 @@ function toggleDraftDay(day){
 function updateDraft(field,value){
   if(!editor)return;
   if(field==='points'||field==='tolerance')editor.draft[field]=value;
-  else if(field==='active')editor.draft.active=value==='active';
+  else if(field==='active'){editor.draft.active=value==='active';editor.statusTouched=true}
   else editor.draft[field]=value;
   if(field==='icon'){
     document.querySelectorAll('[data-icon-face]').forEach(el=>el.textContent=value);
@@ -443,7 +454,7 @@ function style(){
 .tv4-table th{background:#f7f3ff;color:#514c75;text-transform:uppercase;font-size:9px;text-align:left;padding:10px}
 .tv4-table td{padding:10px;border-bottom:1px solid #eef0f4;font-size:11px;vertical-align:middle}
 .tv4-name{display:flex;gap:8px;align-items:center}.tv4-name>span{font-size:18px}
-.tv4-pill{display:inline-block;border-radius:999px;padding:5px 8px;font-size:9px;font-weight:850}.tv4-on{background:#e7f8ef;color:#17744e}.tv4-off{background:#f1f2f5;color:#666}.tv4-var{color:#8a5b10;font-weight:800}
+.tv4-pill{display:inline-block;border-radius:999px;padding:5px 8px;font-size:9px;font-weight:850}.tv4-on{background:#e7f8ef;color:#17744e}.tv4-off{background:#f1f2f5;color:#666}.tv4-partial{background:#fff3d7;color:#8a5b10}.tv4-var{color:#8a5b10;font-weight:800}
 .tv4-edit-main td{background:#fffdf8;border-top:2px solid #cab9f5}.tv4-edit-main .tv4-task-edit{display:grid;grid-template-columns:48px minmax(150px,1fr);gap:7px;align-items:end}
 .tv4-icon{position:relative;height:38px;display:grid;place-items:center;border:1px solid #dcdde7;border-radius:9px;background:#fff}.tv4-icon span{font-size:21px}.tv4-icon select{position:absolute;inset:0;opacity:0}
 .tv4-time{display:grid;grid-template-columns:1fr 1fr;gap:5px}.tv4-inline-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
@@ -499,6 +510,7 @@ function displayValue(r,k,suffix=''){
   const vals=new Set(r.docs.map(d=>String(cfg(d)[k])));
   return vals.size===1?esc([...vals][0])+suffix:'Varia por dia';
 }
+function statusBadge(r){return r.mixedActive?'<span class="tv4-pill tv4-partial">PARCIAL</span>':`<span class="tv4-pill ${r.active?'tv4-on':'tv4-off'}">${r.active?'ATIVA':'INATIVA'}</span>`}
 function normalRow(r){
   const disabled=editor||busy?'disabled':'';
   return`<tr>
@@ -506,7 +518,7 @@ function normalRow(r){
     <td>${esc(r.participant)}</td><td>${esc(daySummary(r.days))}</td>
     <td>${displayValue(r,'start')} → ${displayValue(r,'end')}</td>
     <td>${displayValue(r,'points')}</td><td>${displayValue(r,'tolerance',' min')}</td>
-    <td><span class="tv4-pill ${r.active?'tv4-on':'tv4-off'}">${r.active?'ATIVA':'INATIVA'}</span></td>
+    <td>${statusBadge(r)}</td>
     <td><button class="tv4-btn" data-action="edit" data-key="${esc(r.key)}" ${disabled}>✎ Editar</button></td>
   </tr>`;
 }
@@ -524,6 +536,7 @@ function scopeBox(r){
   </select>${editor.scope==='day'?`<label style="margin-top:8px">Dia</label><select data-action="edit-day">${r.days.map(d=>`<option ${d===editor.day?'selected':''}>${d}</option>`).join('')}</select>`:''}</div>`;
 }
 function detailRow(r,d){
+  const statusNote=r&&editor.scope==='day'?'<div class="tv4-note">Horário, pontos, tolerância, alarme e observação ficam neste dia. Ao mudar o Status, Ativa/Inativa passa a valer para a tarefa inteira.</div>':'';
   return`<tr class="tv4-detail-row"><td colspan="8"><div class="tv4-details">
     ${scopeBox(r)}
     <div class="tv4-box"><label>${editor.scope==='day'?'Dia desta ocorrência':'Dias da semana'}</label><div class="tv4-days">${dayButtons(d.days,editor.scope==='day')}</div></div>
@@ -534,11 +547,13 @@ function detailRow(r,d){
       <option value="both" ${d.alarm==='both'?'selected':''}>No início e no fim</option>
     </select></div>
     <div class="tv4-box"><label>Observação</label><textarea data-field="note">${esc(d.note)}</textarea></div>
-    ${r?(r.canBulk?'<div class="tv4-note">A série está uniforme: pode editar toda a recorrência ou somente um dia.</div>':'<div class="tv4-warning">Há exceções entre os dias. Para preservá-las, a edição é feita um dia por vez.</div>'):''}
+    ${statusNote}
+    ${r?(r.canBulk?'<div class="tv4-note">A série está uniforme: pode editar toda a recorrência ou somente um dia.</div>':'<div class="tv4-warning">Há exceções entre os dias. Para preservá-las, os demais campos são editados um dia por vez.</div>'):''}
   </div></td></tr>`;
 }
 function editRows(r){
   const d=editor.draft,label=editor.mode==='create'?'Criar tarefa':editor.scope==='all'?'Salvar série':'Salvar dia';
+  const statusLabel=r&&editor.scope==='day'?'Status da tarefa inteira':'Status';
   return`<tr class="tv4-edit-main tv4-edit">
     <td><div class="tv4-task-edit">${iconField(d.icon)}<div><label>Nome</label><input data-field="name" value="${esc(d.name)}"></div></div></td>
     <td><b>${esc(r?r.participant:(participantFilter==='all'?'Todos':pname(participantFilter)))}</b></td>
@@ -546,20 +561,21 @@ function editRows(r){
     <td><div class="tv4-time"><div><label>Início</label><input data-field="start" type="time" value="${esc(d.start)}"></div><div><label>Fim</label><input data-field="end" type="time" value="${esc(d.end)}"></div></div></td>
     <td><label>Pontos</label><input data-field="points" type="number" min="0" value="${esc(d.points)}"></td>
     <td><label>Tolerância</label><input data-field="tolerance" type="number" min="0" value="${esc(d.tolerance)}"></td>
-    <td><label>Status</label><select data-field="active"><option value="active" ${d.active?'selected':''}>Ativa</option><option value="inactive" ${!d.active?'selected':''}>Inativa</option></select></td>
+    <td><label>${statusLabel}</label><select data-field="active"><option value="active" ${d.active?'selected':''}>Ativa</option><option value="inactive" ${!d.active?'selected':''}>Inativa</option></select></td>
     <td><div class="tv4-inline-actions"><button class="tv4-primary" data-action="save" data-label="${label}">${label}</button><button class="tv4-btn" data-action="cancel">Cancelar</button></div></td>
   </tr>${detailRow(r,d)}`;
 }
 function mobileNormal(r){
   const disabled=editor||busy?'disabled':'';
   return`<article class="tv4-mcard">
-    <div class="tv4-mhead"><div class="tv4-name"><span>${esc(r.icon)}</span><div><b>${esc(r.name)}</b><small class="tv4-muted">${esc(r.participant)} · ${esc(daySummary(r.days))}</small>${r.canBulk?'':'<small class="tv4-muted tv4-var">Há variação entre dias</small>'}</div></div><span class="tv4-pill ${r.active?'tv4-on':'tv4-off'}">${r.active?'ATIVA':'INATIVA'}</span></div>
+    <div class="tv4-mhead"><div class="tv4-name"><span>${esc(r.icon)}</span><div><b>${esc(r.name)}</b><small class="tv4-muted">${esc(r.participant)} · ${esc(daySummary(r.days))}</small>${r.canBulk?'':'<small class="tv4-muted tv4-var">Há variação entre dias</small>'}</div></div>${statusBadge(r)}</div>
     <div class="tv4-mgrid"><div class="tv4-mcell"><small>Horário</small><b>${displayValue(r,'start')} → ${displayValue(r,'end')}</b></div><div class="tv4-mcell"><small>Pontos / tolerância</small><b>${displayValue(r,'points')} pts · ${displayValue(r,'tolerance')} min</b></div></div>
     <div class="tv4-inline-actions" style="margin-top:9px"><button class="tv4-btn" data-action="edit" data-key="${esc(r.key)}" ${disabled}>✎ Editar</button></div>
   </article>`;
 }
 function mobileEdit(r){
   const d=editor.draft,label=editor.mode==='create'?'Criar tarefa':editor.scope==='all'?'Salvar série':'Salvar dia';
+  const statusLabel=r&&editor.scope==='day'?'Status da tarefa inteira':'Status';
   return`<article class="tv4-mcard tv4-mobile-edit tv4-edit">
     <div class="tv4-mhead"><b>${editor.mode==='create'?'Nova tarefa':`Editar · ${esc(r.name)}`}</b><button class="tv4-btn" data-action="cancel">Cancelar</button></div>
     <div class="tv4-mobile-form">
@@ -567,11 +583,12 @@ function mobileEdit(r){
       <div><label>Nome</label><input data-field="name" value="${esc(d.name)}"></div>
       <div class="tv4-time"><div><label>Início</label><input data-field="start" type="time" value="${esc(d.start)}"></div><div><label>Fim</label><input data-field="end" type="time" value="${esc(d.end)}"></div></div>
       <div class="tv4-time"><div><label>Pontos</label><input data-field="points" type="number" min="0" value="${esc(d.points)}"></div><div><label>Tolerância</label><input data-field="tolerance" type="number" min="0" value="${esc(d.tolerance)}"></div></div>
-      <div><label>Status</label><select data-field="active"><option value="active" ${d.active?'selected':''}>Ativa</option><option value="inactive" ${!d.active?'selected':''}>Inativa</option></select></div>
+      <div><label>${statusLabel}</label><select data-field="active"><option value="active" ${d.active?'selected':''}>Ativa</option><option value="inactive" ${!d.active?'selected':''}>Inativa</option></select></div>
       ${scopeBox(r)}
       <div class="tv4-box"><label>${editor.scope==='day'?'Dia desta ocorrência':'Dias da semana'}</label><div class="tv4-days">${dayButtons(d.days,editor.scope==='day')}</div></div>
       <div><label>Alarme</label><select data-field="alarm"><option value="off" ${d.alarm==='off'?'selected':''}>Desligado</option><option value="start" ${d.alarm==='start'?'selected':''}>No início</option><option value="end" ${d.alarm==='end'?'selected':''}>No fim</option><option value="both" ${d.alarm==='both'?'selected':''}>No início e no fim</option></select></div>
       <div><label>Observação</label><textarea data-field="note">${esc(d.note)}</textarea></div>
+      ${r&&editor.scope==='day'?'<div class="tv4-note">Ao mudar o Status, a alteração vale para todos os dias desta tarefa.</div>':''}
       <button class="tv4-primary" data-action="save" data-label="${label}">${label}</button>
     </div>
   </article>`;
@@ -627,7 +644,7 @@ function bindOnce(v){
     else if(action==='refresh'){
       if(busy||editor)return;
       busy=true;render();
-      try{await window.rotinaSprint2SyncNow?.('tarefas-v4-manual-refresh')}
+      try{await window.rotinaSprint2SyncHot?.('tarefas-v4-manual-refresh')}
       finally{busy=false;render()}
     }
   });
@@ -665,7 +682,6 @@ function install(){
     if(!$('view-tarefas')?.classList.contains('active'))return;
     const origin=clean(event?.detail?.origin);
 
-    // Execuções ao vivo não alteram a definição de tarefas e não devem resetar um editor aberto.
     if(origin==='live-execucoes')return;
 
     if(editor){
