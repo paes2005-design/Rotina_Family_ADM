@@ -1,21 +1,26 @@
 (function(){
 'use strict';
 
-const VERSION='sprint2-data-store-v1.2-live-group-content';
+const VERSION='sprint2-data-store-v1.3-cache-first-budget';
 const SYNC_MS=5*60*1000;
+const BASE_NAMES=['perfis','tarefas','historico','resgates'];
+const HOT_NAMES=['perfis','tarefas','execucoes','despertadores','recompensas','resgates','conquistas','conquistaHistorico'];
+const FULL_NAMES=['perfis','tarefas','historico','execucoes','despertadores','recompensas','resgates','conquistas','conquistaHistorico'];
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').trim();
 
-let db=null,fs=null,app=null,timer=null,syncing=null,installed=false,liveGroup='';
-let liveUnsubs=[];
-let data={groupId:'',readyGroup:'',profiles:[],taskDocs:[],history:[],executions:[],alarms:[],rewards:[],redemptions:[],conquests:[],conquestEvents:[],lastServerSync:0,lastLiveSync:0,lastLocalSync:0,origin:'empty',version:VERSION};
+let db=null,fs=null,app=null,timer=null,syncing=null,installed=false;
+let data={groupId:'',readyGroup:'',profiles:[],taskDocs:[],history:[],executions:[],alarms:[],rewards:[],redemptions:[],conquests:[],conquestEvents:[],lastServerSync:0,lastLocalSync:0,origin:'empty',version:VERSION};
 
 function groupId(){return clean($('topGroup')?.textContent).replace(/^Grupo\s+/i,'').toUpperCase()}
 function copy(list){return (list||[]).map(x=>({...x}))}
 function conquestAccess(){return ['adm_familia','adm_convidado','master'].includes(clean(window.rotinaSprint2SessionSnapshot?.().role))}
-function reset(g=''){data={groupId:g,readyGroup:'',profiles:[],taskDocs:[],history:[],executions:[],alarms:[],rewards:[],redemptions:[],conquests:[],conquestEvents:[],lastServerSync:0,lastLiveSync:0,lastLocalSync:0,origin:'reset',version:VERSION}}
+function storageKey(g){return `rf-adm-last-server-sync:${clean(g).toUpperCase()}`}
+function storedServerSync(g){try{return Number(localStorage.getItem(storageKey(g)))||0}catch(_){return 0}}
+function rememberServerSync(g,at=Date.now()){data.lastServerSync=at;try{localStorage.setItem(storageKey(g),String(at))}catch(_){ }scheduleNext();return at}
+function reset(g=''){data={groupId:g,readyGroup:'',profiles:[],taskDocs:[],history:[],executions:[],alarms:[],rewards:[],redemptions:[],conquests:[],conquestEvents:[],lastServerSync:storedServerSync(g),lastLocalSync:0,origin:'reset',version:VERSION}}
 function snapshot(){return{...data,profiles:copy(data.profiles),taskDocs:copy(data.taskDocs),history:copy(data.history),executions:copy(data.executions),alarms:copy(data.alarms),rewards:copy(data.rewards),redemptions:copy(data.redemptions),conquests:copy(data.conquests),conquestEvents:copy(data.conquestEvents)}}
-function publish(origin,server=false,failures=0){data.origin=origin;if(server&&failures===0)data.lastServerSync=Date.now();else if(!server)data.lastLocalSync=Date.now();window.dispatchEvent(new CustomEvent('rotina-sprint2-cache-updated',{detail:{groupId:data.groupId,readyGroup:data.readyGroup,origin,server,failures,lastServerSync:data.lastServerSync,lastLiveSync:data.lastLiveSync,version:VERSION}}))}
+function publish(origin,{server=false,failures=0}={}){data.origin=origin;if(server&&failures===0)rememberServerSync(data.groupId);else data.lastLocalSync=Date.now();window.dispatchEvent(new CustomEvent('rotina-sprint2-cache-updated',{detail:{groupId:data.groupId,readyGroup:data.readyGroup,origin,server,failures,lastServerSync:data.lastServerSync,version:VERSION}}))}
 
 function syncNavSelection(route){
   const nav=$('mainNav');if(!nav)return;
@@ -36,37 +41,6 @@ function installNavSelectionGuard(){
   },true);
 }
 
-function stopLive(){
-  for(const unsub of liveUnsubs.splice(0)){try{unsub()}catch(_){ }}
-  liveGroup='';
-}
-function publishLive(origin,key,snap,listenerGroup){
-  const current=groupId();
-  if(!listenerGroup||listenerGroup!==current||data.groupId!==listenerGroup||data.readyGroup!==listenerGroup)return;
-  data[key]=snap.docs.map(d=>({id:d.id,...d.data()}));
-  data.origin=origin;data.lastLocalSync=Date.now();
-  const fromCache=!!snap.metadata?.fromCache;if(!fromCache)data.lastLiveSync=Date.now();
-  window.dispatchEvent(new CustomEvent('rotina-sprint2-cache-updated',{detail:{groupId:data.groupId,readyGroup:data.readyGroup,origin,server:!fromCache,live:true,failures:0,lastServerSync:data.lastServerSync,lastLiveSync:data.lastLiveSync,version:VERSION}}));
-}
-function startLive(expectedGroup=groupId()){
-  const g=clean(expectedGroup).toUpperCase();if(!g||g==='SISTEMA'||!fs||!db||data.readyGroup!==g)return false;
-  if(liveGroup===g&&liveUnsubs.length===5)return true;
-  stopLive();liveGroup=g;
-  const streams=[
-    ['execucoes','executions','live-execucoes'],
-    ['recompensas','rewards','live-recompensas'],
-    ['resgates','redemptions','live-resgates'],
-    ['conquistas','conquests','live-conquistas'],
-    ['conquistaHistorico','conquestEvents','live-conquista-historico']
-  ];
-  for(const [collectionName,key,origin] of streams){
-    const q=fs.query(fs.collection(db,collectionName),fs.where('grupoId','==',g));
-    const unsub=fs.onSnapshot(q,{includeMetadataChanges:false},snap=>publishLive(origin,key,snap,g),err=>console.warn(`Sprint 2 live ${collectionName}:`,err));
-    liveUnsubs.push(unsub);
-  }
-  return true;
-}
-
 function seedFromLogin(){
   const base=window.rotinaSprint2BaseSnapshot?.();
   const g=groupId();
@@ -75,8 +49,9 @@ function seedFromLogin(){
   data.profiles=copy(base.profiles);
   data.taskDocs=copy(base.taskDocs);
   data.history=copy(base.history);
+  data.redemptions=copy(base.redemptions||[]);
   data.readyGroup=g;
-  data.lastServerSync=Math.max(data.lastServerSync,Number(base.lastLoadedAt)||0);
+  data.lastServerSync=Math.max(data.lastServerSync,Number(base.lastLoadedAt)||0,storedServerSync(g));
   data.origin='login-seed';
   return true;
 }
@@ -92,86 +67,86 @@ async function firebaseReady(){
   }catch(e){console.warn('Sprint 2 data store Firebase:',e);return false}
 }
 
+function namesForAccess(names){return conquestAccess()?names:names.filter(n=>n!=='conquistas'&&n!=='conquistaHistorico')}
+function assign(name,value){if(name==='perfis')data.profiles=value;else if(name==='tarefas')data.taskDocs=value;else if(name==='historico')data.history=value;else if(name==='execucoes')data.executions=value;else if(name==='despertadores')data.alarms=value;else if(name==='recompensas')data.rewards=value;else if(name==='resgates')data.redemptions=value;else if(name==='conquistas')data.conquests=value;else if(name==='conquistaHistorico')data.conquestEvents=value}
 async function queryGroup(collectionName,server=true,expectedGroup=groupId()){
-  const g=clean(expectedGroup).toUpperCase();
-  if(!g)throw new Error('Grupo não identificado');
+  const g=clean(expectedGroup).toUpperCase();if(!g)throw new Error('Grupo não identificado');
   const q=fs.query(fs.collection(db,collectionName),fs.where('grupoId','==',g));
   const snap=server?await fs.getDocsFromServer(q):await fs.getDocsFromCache(q);
   return snap.docs.map(d=>({id:d.id,...d.data()}));
 }
-
-async function supplementInitial(){
+async function syncNames(names,origin,server=true){
   const g=groupId();if(!g||g==='SISTEMA')return false;
+  if(!await firebaseReady())return false;
+  if(data.groupId!==g)reset(g);
+  const selected=namesForAccess(names);
+  const results=await Promise.allSettled(selected.map(name=>queryGroup(name,server,g)));
+  if(groupId()!==g)return false;
+  results.forEach((r,i)=>{if(r.status==='fulfilled')assign(selected[i],r.value)});
+  const failures=results.filter(r=>r.status==='rejected').length;
+  if(failures===0)data.readyGroup=g;
+  publish(origin,{server,failures});
+  return failures===0;
+}
+
+async function hydrateCache(origin='store-cache-inicial'){
+  const g=groupId();if(!g||g==='SISTEMA')return false;
+  if(!await firebaseReady())return false;
+  seedFromLogin();
+  return syncNames(FULL_NAMES,origin,false);
+}
+async function fullSync(origin='store-manual',includeHistory=true){
   if(syncing)return syncing;
-  syncing=(async()=>{
-    if(!await firebaseReady())return false;
-    const seeded=seedFromLogin();
-    if(!seeded)return fullSync('store-inicial-completo',true,true);
-    startLive(g);
-    const results=await Promise.allSettled([queryGroup('despertadores',true,g),queryGroup('recompensas',true,g),queryGroup('resgates',true,g)]);
-    if(results[0].status==='fulfilled')data.alarms=results[0].value;
-    if(results[1].status==='fulfilled')data.rewards=results[1].value;
-    if(results[2].status==='fulfilled')data.redemptions=results[2].value;
-    if(conquestAccess()){
-      const optional=await Promise.allSettled([queryGroup('conquistas',true,g),queryGroup('conquistaHistorico',true,g)]);
-      if(optional[0].status==='fulfilled')data.conquests=optional[0].value;
-      if(optional[1].status==='fulfilled')data.conquestEvents=optional[1].value;
-    }else{data.conquests=[];data.conquestEvents=[]}
-    const failures=results.filter(x=>x.status==='rejected').length;
-    publish('store-inicial-complementar',true,failures);
-    return failures===0;
-  })();
-  try{return await syncing}finally{syncing=null}
+  const run=syncNames(includeHistory?FULL_NAMES:HOT_NAMES,origin,true);
+  syncing=run;
+  try{return await run}finally{syncing=null}
 }
+async function hotSync(origin='store-intervalo-5min'){return fullSync(origin,false)}
 
-async function fullSync(origin='store-intervalo-5min',server=true,insideInitial=false){
-  const g=groupId();if(!g||g==='SISTEMA')return false;
-  if(syncing&&!insideInitial)return syncing;
-  const run=async()=>{
-    if(!await firebaseReady())return false;
-    if(data.groupId!==g)reset(g);
-    const liveAlready=liveGroup===g&&liveUnsubs.length===5;
-    const reconcileAll=insideInitial||/manual|inicial-completo/.test(origin)||!liveAlready;
-    const names=reconcileAll?['perfis','tarefas','historico','execucoes','despertadores','recompensas','resgates']:['perfis','tarefas','historico','despertadores','recompensas','resgates'];
-    const optionalNames=conquestAccess()?['conquistas','conquistaHistorico']:[];
-    const allNames=[...names,...optionalNames];
-    const results=await Promise.allSettled(allNames.map(c=>queryGroup(c,server,g)));
-    if(groupId()!==g)return false;
-    results.forEach((r,i)=>{if(r.status!=='fulfilled')return;const name=allNames[i];if(name==='perfis')data.profiles=r.value;else if(name==='tarefas')data.taskDocs=r.value;else if(name==='historico')data.history=r.value;else if(name==='execucoes')data.executions=r.value;else if(name==='despertadores')data.alarms=r.value;else if(name==='recompensas')data.rewards=r.value;else if(name==='resgates')data.redemptions=r.value;else if(name==='conquistas')data.conquests=r.value;else if(name==='conquistaHistorico')data.conquestEvents=r.value});
-    const failures=results.slice(0,names.length).filter(x=>x.status==='rejected').length;
-    if(failures===0)data.readyGroup=g;
-    publish(origin,server,failures);
-    if(failures===0)startLive(g);
-    return failures===0;
-  };
-  if(insideInitial)return run();
-  syncing=run();
-  try{return await syncing}finally{syncing=null}
+function scheduleNext(){
+  clearTimeout(timer);timer=null;
+  if(!document.body?.classList.contains('rf-auth-ready'))return;
+  const last=Math.max(data.lastServerSync,storedServerSync(groupId()));
+  const delay=Math.max(1000,SYNC_MS-Math.max(0,Date.now()-last));
+  timer=setTimeout(()=>{timer=null;if(!document.hidden&&document.body.classList.contains('rf-auth-ready'))hotSync('store-intervalo-5min').catch(()=>{});else scheduleNext()},delay);
 }
-
-async function ensure(){
+function markServerActivity(origin='acao-servidor'){
   const g=groupId();if(!g||g==='SISTEMA')return false;
-  if(data.groupId!==g||data.readyGroup!==g||(!data.taskDocs.length&&!data.history.length&&!data.executions.length))return supplementInitial();
-  if(await firebaseReady())startLive(g);
+  if(data.groupId!==g)reset(g);
+  rememberServerSync(g);
+  data.origin=origin;
+  window.dispatchEvent(new CustomEvent('rotina-sprint2-server-activity',{detail:{groupId:g,origin,lastServerSync:data.lastServerSync,version:VERSION}}));
   return true;
 }
-function schedule(){
-  if(timer)return;
-  timer=setInterval(()=>{if(!document.hidden&&document.body.classList.contains('rf-auth-ready'))fullSync('store-intervalo-5min',true).catch(()=>{})},SYNC_MS);
+async function localSync(origin='acao-local-cache',markActivity=true){
+  const ok=await syncNames(FULL_NAMES,origin,false);
+  if(markActivity)markServerActivity(origin);
+  return ok;
 }
+async function ensure(){
+  const g=groupId();if(!g||g==='SISTEMA')return false;
+  if(data.groupId!==g)reset(g);
+  seedFromLogin();
+  await hydrateCache('store-cache-inicial');
+  const last=Math.max(data.lastServerSync,storedServerSync(g));
+  if(!last||Date.now()-last>=SYNC_MS)hotSync('store-servidor-inicial-stale').catch(()=>{});else scheduleNext();
+  return data.readyGroup===g;
+}
+
 function install(){
   if(installed)return;installed=true;
   installNavSelectionGuard();
   window.rotinaSprint2DataSnapshot=snapshot;
   window.rotinaSprint2EnsureData=ensure;
-  window.rotinaSprint2SyncNow=(origin='manual')=>fullSync(origin,true);
-  window.rotinaSprint2SyncLocal=(origin='acao-local-cache')=>fullSync(origin,false);
-  schedule();
-  const start=()=>{if(document.body.classList.contains('rf-auth-ready'))setTimeout(()=>ensure().catch(()=>{}),0);else stopLive()};
-  const bodyObserver=new MutationObserver(start);bodyObserver.observe(document.body,{attributes:true,attributeFilter:['class']});
-  const top=$('topGroup');if(top)new MutationObserver(()=>{const g=groupId();if(g&&g!==data.groupId){stopLive();reset(g);setTimeout(()=>ensure().catch(()=>{}),0)}}).observe(top,{childList:true,subtree:true,characterData:true});
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&document.body.classList.contains('rf-auth-ready')&&Date.now()-data.lastServerSync>=SYNC_MS)fullSync('store-retorno-visivel-stale',true).catch(()=>{})});
-  window.addEventListener('online',()=>{if(document.body.classList.contains('rf-auth-ready')&&Date.now()-data.lastServerSync>=SYNC_MS)fullSync('store-reconectado-stale',true).catch(()=>{})});
+  window.rotinaSprint2SyncNow=(origin='manual')=>origin==='tarefas-v4-save'?localSync(origin,true):fullSync(origin,true);
+  window.rotinaSprint2SyncHot=(origin='manual-hot')=>hotSync(origin);
+  window.rotinaSprint2SyncLocal=(origin='acao-local-cache')=>localSync(origin,true);
+  window.rotinaSprint2MarkServerActivity=markServerActivity;
+  const start=()=>{if(document.body.classList.contains('rf-auth-ready'))setTimeout(()=>ensure().catch(()=>{}),0);else{clearTimeout(timer);timer=null}};
+  new MutationObserver(start).observe(document.body,{attributes:true,attributeFilter:['class']});
+  const top=$('topGroup');if(top)new MutationObserver(()=>{const g=groupId();if(g&&g!==data.groupId){reset(g);setTimeout(()=>ensure().catch(()=>{}),0)}}).observe(top,{childList:true,subtree:true,characterData:true});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)return;const stale=Date.now()-Math.max(data.lastServerSync,storedServerSync(groupId()))>=SYNC_MS;if(document.body.classList.contains('rf-auth-ready')&&stale)hotSync('store-retorno-visivel-stale').catch(()=>{});else scheduleNext()});
+  window.addEventListener('online',()=>{const stale=Date.now()-Math.max(data.lastServerSync,storedServerSync(groupId()))>=SYNC_MS;if(document.body.classList.contains('rf-auth-ready')&&stale)hotSync('store-reconectado-stale').catch(()=>{});else scheduleNext()});
   start();
 }
 
