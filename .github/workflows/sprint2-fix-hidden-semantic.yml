@@ -55,3 +55,5 @@ jobs:
           fi
           git commit -m 'Sprint 2: respeita hidden na navegacao Master'
           git push
+
+# trigger: 2026-09-05-hidden-v1
