@@ -1,6 +1,6 @@
 (async function(){
 'use strict';
-const VERSION='integracao-login-realdata-v1.2-production-clean';
+const VERSION='integracao-login-realdata-v1.3-cache-first';
 const API_ROOT='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
 const LOG_ENDPOINT=`${API_ROOT}/app-log`;
 const ROLE_LABEL={adm_familia:'Administrador principal',adm_convidado:'Administrador convidado',master:'Master'};
@@ -11,16 +11,27 @@ const $=id=>document.getElementById(id);
 const esc=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clean=v=>String(v??'').trim();
 const clamp=(n,min=0,max=100)=>Math.min(max,Math.max(min,Number(n)||0));
-const runtime={role:'',groupId:'',profiles:[],taskDocs:[],history:[],redemptions:[],analysisPeriod:'day',analysisRef:'',analysisParticipant:'all',manualLogin:false,loading:false};
+const runtime={role:'',groupId:'',profiles:[],taskDocs:[],history:[],redemptions:[],analysisPeriod:'day',analysisRef:'',analysisParticipant:'all',manualLogin:false,loading:false,lastLoadedAt:0};
 const appState=window.RF_APP?.state;
 if(!appState) throw new Error('Núcleo de Tarefas não carregou.');
+
+const authCard=document.querySelector('.auth-card');
+let bootNode=null;
+function showBoot(text='Carregando Rotina Family…'){
+  if(authCard)authCard.style.visibility='hidden';
+  if(!bootNode){bootNode=document.createElement('div');bootNode.id='rfAdmBoot';bootNode.style.cssText='position:fixed;inset:0;z-index:70001;display:grid;place-items:center;padding:24px;color:#625c7a;font:700 14px Inter,system-ui,sans-serif;background:linear-gradient(180deg,#f7f4ff,#f6f7fb)';document.body.appendChild(bootNode)}
+  bootNode.textContent=text;
+}
+function hideBoot(){bootNode?.remove();bootNode=null}
+function showLoginGate(){hideBoot();if(authCard)authCard.style.visibility='visible'}
+showBoot();
 
 const appMod=await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
 const authMod=await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
 const fsMod=await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
 const {initializeApp,deleteApp}=appMod;
 const {getAuth,browserLocalPersistence,inMemoryPersistence,setPersistence,signInWithEmailAndPassword,signInWithCustomToken,signOut,onAuthStateChanged}=authMod;
-const {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,query,where,getDocsFromServer}=fsMod;
+const {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,query,where,getDocsFromServer,getDocsFromCache}=fsMod;
 const mainApp=initializeApp(firebaseConfig,'rotina-sprint2-integracao-realdata');
 const auth=getAuth(mainApp);
 await setPersistence(auth,browserLocalPersistence);
@@ -36,10 +47,10 @@ function setLoginBusy(on){$('loginButton').disabled=!!on;$('loginButton').textCo
 function roleLabel(role){return ROLE_LABEL[role]||role||'Administrador'}
 function normalizeGroupId(value){const v=clean(value).toUpperCase();if(!v)return'';if(/^CLI-\d+$/.test(v))return v;if(/^\d+$/.test(v))return`CLI-${v}`;return v}
 function setMasterGroupMessage(text='',bad=false){const el=$('masterGroupMessage');if(!el)return;el.textContent=text;el.className=`master-group-message${bad?' bad':''}`}
-function showMasterGroupPicker(){runtime.role='master';runtime.groupId='';$('loginForm').hidden=true;$('masterGroupPanel').hidden=false;$('masterGroupInput').value=normalizeGroupId(sessionStorage.getItem('rf-sprint2-master-selected-group'))||'CLI-4071';setMasterGroupMessage('Conta Master autenticada. Escolha o grupo que deseja visualizar.');setLoginMessage('')}
-function resetAuthGate(){$('loginForm').hidden=false;$('masterGroupPanel').hidden=true;setMasterGroupMessage('')}
+function showMasterGroupPicker(){runtime.role='master';runtime.groupId='';showLoginGate();$('loginForm').hidden=true;$('masterGroupPanel').hidden=false;$('masterGroupInput').value=normalizeGroupId(sessionStorage.getItem('rf-sprint2-master-selected-group'))||'CLI-4071';setMasterGroupMessage('Conta Master autenticada. Escolha o grupo que deseja visualizar.');setLoginMessage('')}
+function resetAuthGate(){showLoginGate();$('loginForm').hidden=false;$('masterGroupPanel').hidden=true;setMasterGroupMessage('')}
 async function openMasterGroup(){const groupId=normalizeGroupId($('masterGroupInput').value);if(!/^CLI-\d+$/.test(groupId))return setMasterGroupMessage('Informe um grupo no formato CLI-4071 ou apenas 4071.',true);$('masterGroupInput').value=groupId;$('masterGroupLoad').disabled=true;setMasterGroupMessage(`Abrindo ${groupId}…`);try{sessionStorage.setItem('rf-sprint2-master-selected-group',groupId);await loadRealGroup('master',groupId);setMasterGroupMessage('');await emitLog('sprint2.realdata_master_grupo_aberto',{grupoIdSelecionado:groupId})}catch(e){setMasterGroupMessage(friendlyError(e),true)}finally{$('masterGroupLoad').disabled=false}}
-async function logoutCurrent(){await emitLog('sprint2.realdata_logout',{papel:runtime.role});await signOut(auth).catch(()=>{});runtime.groupId='';runtime.role='';sessionStorage.removeItem('rf-sprint2-master-selected-group');document.body.classList.remove('rf-auth-ready');resetAuthGate();setLoginMessage('Sessão encerrada.')}
+async function logoutCurrent(){await emitLog('sprint2.realdata_logout',{papel:runtime.role});await signOut(auth).catch(()=>{});runtime.groupId='';runtime.role='';runtime.lastLoadedAt=0;sessionStorage.removeItem('rf-sprint2-master-selected-group');document.body.classList.remove('rf-auth-ready');resetAuthGate();setLoginMessage('Sessão encerrada.')}
 function isoDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function todayShort(){return SHORT_ORDER[new Date().getDay()]}
 function todayFull(){return Object.keys(FULL_TO_SHORT).find(k=>FULL_TO_SHORT[k]===todayShort())||'Domingo'}
@@ -68,7 +79,7 @@ function mapRealDataToState(){
   appState.participants=participants;appState.tasks=tasks;appState.executions=executions;appState.taskParticipant=participants[0]?.id||'__ALL__';appState.taskSearch='';appState.taskFilter='all';appState.editingTask=null;appState.openTask=null;appState.nextTaskId=nextId+1;window.RF_APP.normalizeState();
 }
 
-window.rotinaSprint2BaseSnapshot=()=>({role:runtime.role,groupId:runtime.groupId,profiles:runtime.profiles.map(x=>({...x})),taskDocs:runtime.taskDocs.map(x=>({...x})),history:runtime.history.map(x=>({...x})),lastLoadedAt:Number(runtime.lastLoadedAt)||0});
+window.rotinaSprint2BaseSnapshot=()=>({role:runtime.role,groupId:runtime.groupId,profiles:runtime.profiles.map(x=>({...x})),taskDocs:runtime.taskDocs.map(x=>({...x})),history:runtime.history.map(x=>({...x})),redemptions:runtime.redemptions.map(x=>({...x})),lastLoadedAt:Number(runtime.lastLoadedAt)||0});
 window.rotinaSprint2SessionSnapshot=()=>({role:runtime.role,groupId:runtime.groupId});
 
 function renderTasksSafe(){window.rotinaSprint2TasksRender?.()}
@@ -102,18 +113,56 @@ function populateAnalysisParticipants(){const s=$('analysisParticipant'),keep=ru
 function setHomePane(pane){const p=pane==='analysis'?'analysis':'today';document.querySelectorAll('.home-tab').forEach(b=>b.classList.toggle('active',b.dataset.pane===p));document.querySelectorAll('.home-pane').forEach(el=>el.classList.toggle('active',el.id===`pane-${p}`));sessionStorage.setItem('rf-sprint2-integration-realdata-pane',p);if(p==='analysis')renderAnalysis();else renderToday()}
 function navigate(route){const target=route==='tarefas'?'tarefas':'inicio';document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===`view-${target}`));document.querySelectorAll('#mainNav [data-route]').forEach(b=>b.classList.toggle('active',b.dataset.route===target));history.replaceState(null,'',`#${target}`);if(target==='tarefas')renderTasksSafe();else renderToday();$('mainScroll').scrollTop=0;emitLog('sprint2.realdata_navegacao',{rota:target})}
 
+function cacheMarkerKey(groupId){return `rf-adm-last-server-sync:${groupId}`}
+function cacheMarker(groupId){try{return Number(localStorage.getItem(cacheMarkerKey(groupId)))||0}catch(_){return 0}}
+function rememberServer(groupId){const at=Date.now();runtime.lastLoadedAt=at;try{localStorage.setItem(cacheMarkerKey(groupId),String(at))}catch(_){ }return at}
+function snapshotsToRuntime(snaps){const [profilesSnap,tasksSnap,historySnap,redemptionsSnap]=snaps;runtime.profiles=profilesSnap.docs.map(d=>({id:d.id,perfilId:d.data().perfilId||d.id,...d.data()}));runtime.taskDocs=tasksSnap.docs.map(d=>({id:d.id,...d.data()}));runtime.history=historySnap.docs.map(d=>({id:d.id,...d.data()}));runtime.redemptions=redemptionsSnap.docs.map(d=>({id:d.id,...d.data()}))}
+function renderLoadedGroup(role,groupId,source){mapRealDataToState();runtime.analysisRef=isoDate(new Date());$('refDate').value=runtime.analysisRef;populateAnalysisParticipants();$('topRole').textContent=roleLabel(role);$('topGroup').textContent=`Grupo ${groupId}`;$('syncStatus').textContent=source==='cache'?'Dados locais carregados':'Sincronizado agora';document.body.classList.add('rf-auth-ready');hideBoot();renderTasksSafe();renderToday();renderAnalysis();setHomePane(sessionStorage.getItem('rf-sprint2-integration-realdata-pane')||'today');navigate(location.hash.slice(1)==='tarefas'?'tarefas':'inicio')}
+async function readGroup(groupId,server){const getter=server?getDocsFromServer:getDocsFromCache;return Promise.all([getter(query(collection(db,'perfis'),where('grupoId','==',groupId))),getter(query(collection(db,'tarefas'),where('grupoId','==',groupId))),getter(query(collection(db,'historico'),where('grupoId','==',groupId))),getter(query(collection(db,'resgates'),where('grupoId','==',groupId)))])}
+function cacheUsable(groupId,snaps){return cacheMarker(groupId)>0||snaps.some(s=>s.docs.length>0)}
+
 async function workerSession(idToken){const c=new AbortController(),timeout=setTimeout(()=>c.abort(),9000);try{const r=await fetch(`${API_ROOT}/family-session/admin`,{method:'POST',cache:'no-store',signal:c.signal,headers:{authorization:`Bearer ${idToken}`,'content-type':'application/json'},body:'{}'});const data=await r.json().catch(()=>({}));if(!r.ok||!data.token){const e=new Error(data.error||`Falha HTTP ${r.status}`);e.status=r.status;throw e}return data}finally{clearTimeout(timeout)}}
 async function tempAuth(){const app=initializeApp(firebaseConfig,`rotina-s2-temp-${Date.now()}-${Math.random().toString(36).slice(2)}`),a=getAuth(app);await setPersistence(a,inMemoryPersistence);return{app,auth:a}}
 async function performLogin(email,password){const temp=await tempAuth();try{const cred=await signInWithEmailAndPassword(temp.auth,email,password),session=await workerSession(await cred.user.getIdToken(true));await signInWithCustomToken(auth,session.token);return{role:clean(session.papel),groupId:clean(session.grupoId).toUpperCase()}}finally{try{await signOut(temp.auth)}catch(_){ }try{await deleteApp(temp.app)}catch(_){ }}}
 async function restoreSession(user){const tr=await user.getIdTokenResult();let role=clean(tr.claims?.papel),groupId=clean(tr.claims?.grupoId).toUpperCase();if(!['adm_familia','adm_convidado','master'].includes(role)||(!groupId&&role!=='master')){const s=await workerSession(await user.getIdToken(true));await signInWithCustomToken(auth,s.token);role=clean(s.papel);groupId=clean(s.grupoId).toUpperCase()}return{role,groupId}}
-async function loadRealGroup(role,groupId){if(runtime.loading)return;runtime.loading=true;try{if(!groupId||groupId==='SISTEMA')throw new Error('Este checkpoint precisa de uma conta vinculada a um grupo familiar. Use um administrador do grupo para validar Início e Tarefas.');runtime.role=role;runtime.groupId=groupId;$('syncStatus').textContent='Lendo participantes, tarefas e histórico…';const started=performance.now();const [profilesSnap,tasksSnap,historySnap,redemptionsSnap]=await Promise.all([getDocsFromServer(query(collection(db,'perfis'),where('grupoId','==',groupId))),getDocsFromServer(query(collection(db,'tarefas'),where('grupoId','==',groupId))),getDocsFromServer(query(collection(db,'historico'),where('grupoId','==',groupId))),getDocsFromServer(query(collection(db,'resgates'),where('grupoId','==',groupId)))]);runtime.profiles=profilesSnap.docs.map(d=>({id:d.id,perfilId:d.data().perfilId||d.id,...d.data()}));runtime.taskDocs=tasksSnap.docs.map(d=>({id:d.id,...d.data()}));runtime.history=historySnap.docs.map(d=>({id:d.id,...d.data()}));runtime.redemptions=redemptionsSnap.docs.map(d=>({id:d.id,...d.data()}));runtime.lastLoadedAt=Date.now();mapRealDataToState();runtime.analysisRef=isoDate(new Date());$('refDate').value=runtime.analysisRef;populateAnalysisParticipants();$('topRole').textContent=roleLabel(role);$('topGroup').textContent=`Grupo ${groupId}`;$('syncStatus').textContent='Sincronizado agora';document.body.classList.add('rf-auth-ready');renderTasksSafe();renderToday();renderAnalysis();setHomePane(sessionStorage.getItem('rf-sprint2-integration-realdata-pane')||'today');navigate(location.hash.slice(1)==='tarefas'?'tarefas':'inicio');await emitLog('sprint2.realdata_sync_sucesso',{participantes:runtime.profiles.length,tarefasDocs:runtime.taskDocs.length,historico:runtime.history.length,tempoMs:Math.round(performance.now()-started),papel:role});}catch(error){console.error('Integração realdata:',error);document.body.classList.remove('rf-auth-ready');if(role==='master')setMasterGroupMessage(error.message||'Não foi possível carregar os dados reais.',true);else setLoginMessage(error.message||'Não foi possível carregar os dados reais.',true);await emitLog('sprint2.realdata_sync_erro',{mensagem:String(error?.message||error).slice(0,80)},'error');throw error}finally{runtime.loading=false}}
+async function loadRealGroup(role,groupId){
+  if(runtime.loading)return;runtime.loading=true;
+  try{
+    if(!groupId||groupId==='SISTEMA')throw new Error('A conta precisa estar vinculada a um grupo familiar.');
+    runtime.role=role;runtime.groupId=groupId;$('syncStatus').textContent='Carregando dados…';
+    const started=performance.now();
+    let cached=null;
+    try{cached=await readGroup(groupId,false)}catch(_){cached=null}
+    if(cached&&cacheUsable(groupId,cached)){
+      snapshotsToRuntime(cached);runtime.lastLoadedAt=cacheMarker(groupId);renderLoadedGroup(role,groupId,'cache');
+      await emitLog('sprint2.realdata_cache_sucesso',{participantes:runtime.profiles.length,tarefasDocs:runtime.taskDocs.length,historico:runtime.history.length,tempoMs:Math.round(performance.now()-started),papel:role});
+      return;
+    }
+    if(!navigator.onLine)throw new Error('Sem conexão e ainda não há dados locais deste grupo neste aparelho.');
+    const serverStarted=performance.now(),snaps=await readGroup(groupId,true);snapshotsToRuntime(snaps);rememberServer(groupId);renderLoadedGroup(role,groupId,'server');
+    await emitLog('sprint2.realdata_sync_sucesso',{participantes:runtime.profiles.length,tarefasDocs:runtime.taskDocs.length,historico:runtime.history.length,tempoMs:Math.round(performance.now()-serverStarted),papel:role});
+  }catch(error){console.error('Integração realdata:',error);document.body.classList.remove('rf-auth-ready');showLoginGate();if(role==='master')setMasterGroupMessage(error.message||'Não foi possível carregar os dados.',true);else setLoginMessage(error.message||'Não foi possível carregar os dados.',true);await emitLog('sprint2.realdata_sync_erro',{mensagem:String(error?.message||error).slice(0,80)},'error');throw error}
+  finally{runtime.loading=false}
+}
 function friendlyError(e){if(e?.code==='auth/invalid-credential'||e?.code==='auth/wrong-password'||e?.code==='auth/user-not-found')return'E-mail ou senha inválidos.';if(e?.code==='auth/network-request-failed')return'Falha de rede ao acessar o Firebase.';if(Number(e?.status)===401||Number(e?.status)===403)return'A conta autenticou no Firebase, mas não está autorizada no ADM.';return e?.message||'Não foi possível entrar.'}
 
-$('loginForm').addEventListener('submit',async ev=>{ev.preventDefault();if(runtime.loading)return;const email=clean($('loginEmail').value).toLowerCase(),password=clean($('loginSenha').value);if(!email||!password)return setLoginMessage('Informe e-mail e senha.',true);runtime.manualLogin=true;setLoginBusy(true);setLoginMessage('Validando Firebase, Worker e grupo…');try{const session=await performLogin(email,password);$('loginSenha').value='';if(session.role==='master'&&!session.groupId){showMasterGroupPicker();await emitLog('sprint2.realdata_master_autenticado',{papel:session.role})}else{await loadRealGroup(session.role,session.groupId);setLoginMessage('');await emitLog('sprint2.realdata_login_sucesso',{papel:session.role})}}catch(e){console.warn('Login Sprint2 realdata:',e);await emitLog('sprint2.realdata_login_erro',{mensagem:String(e?.message||e).slice(0,80),codigo:String(e?.code||''),status:Number(e?.status)||0},'error');await signOut(auth).catch(()=>{});setLoginMessage(friendlyError(e),true)}finally{runtime.manualLogin=false;setLoginBusy(false)}});
+$('loginForm').addEventListener('submit',async ev=>{ev.preventDefault();if(runtime.loading)return;const email=clean($('loginEmail').value).toLowerCase(),password=clean($('loginSenha').value);if(!email||!password)return setLoginMessage('Informe e-mail e senha.',true);runtime.manualLogin=true;setLoginBusy(true);setLoginMessage('Validando acesso…');try{const session=await performLogin(email,password);$('loginSenha').value='';if(session.role==='master'&&!session.groupId){showMasterGroupPicker();await emitLog('sprint2.realdata_master_autenticado',{papel:session.role})}else{await loadRealGroup(session.role,session.groupId);setLoginMessage('');await emitLog('sprint2.realdata_login_sucesso',{papel:session.role})}}catch(e){console.warn('Login Sprint2 realdata:',e);await emitLog('sprint2.realdata_login_erro',{mensagem:String(e?.message||e).slice(0,80),codigo:String(e?.code||''),status:Number(e?.status)||0},'error');await signOut(auth).catch(()=>{});showLoginGate();setLoginMessage(friendlyError(e),true)}finally{runtime.manualLogin=false;setLoginBusy(false)}});
 $('togglePassword').onclick=()=>{const i=$('loginSenha'),show=i.type==='password';i.type=show?'text':'password';$('togglePassword').textContent=show?'Ocultar':'Mostrar'};
 $('logoutButton').onclick=logoutCurrent;$('logoutTopButton').onclick=logoutCurrent;$('masterLogoutButton').onclick=logoutCurrent;$('masterGroupLoad').onclick=openMasterGroup;$('masterGroupInput').addEventListener('keydown',e=>{if(e.key==='Enter')openMasterGroup()});
 document.querySelectorAll('#mainNav [data-route]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.route)));
 document.querySelectorAll('.home-tab').forEach(b=>b.onclick=()=>setHomePane(b.dataset.pane));$('periodTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{runtime.analysisPeriod=b.dataset.period;$('periodTabs').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));renderAnalysis()});$('refDate').onchange=e=>{runtime.analysisRef=e.target.value||isoDate(new Date());renderAnalysis()};$('analysisParticipant').onchange=e=>{runtime.analysisParticipant=e.target.value;renderAnalysis()};window.addEventListener('hashchange',()=>navigate(location.hash.slice(1)==='tarefas'?'tarefas':'inicio'));
 
-onAuthStateChanged(auth,async user=>{if(!user){if(!runtime.manualLogin)document.body.classList.remove('rf-auth-ready');return}if(runtime.manualLogin||runtime.loading)return;try{setLoginBusy(true);setLoginMessage('Restaurando sessão e carregando o grupo…');const s=await restoreSession(user);if(s.role==='master'&&!s.groupId){const selected=normalizeGroupId(sessionStorage.getItem('rf-sprint2-master-selected-group'));if(selected){await loadRealGroup('master',selected);setLoginMessage('');await emitLog('sprint2.realdata_sessao_restaurada',{papel:s.role,grupoMaster:selected})}else{showMasterGroupPicker();await emitLog('sprint2.realdata_master_restaurado',{papel:s.role})}}else{await loadRealGroup(s.role,s.groupId);setLoginMessage('');await emitLog('sprint2.realdata_sessao_restaurada',{papel:s.role})}}catch(e){console.warn('Restauração Sprint2 realdata:',e);await emitLog('sprint2.realdata_restauracao_erro',{mensagem:String(e?.message||e).slice(0,80),codigo:String(e?.code||''),status:Number(e?.status)||0},'error');await signOut(auth).catch(()=>{});setLoginMessage(friendlyError(e),true)}finally{setLoginBusy(false)}});
+window.addEventListener('rotina-sprint2-cache-updated',()=>{if(runtime.loading||!document.body.classList.contains('rf-auth-ready'))return;const s=window.rotinaSprint2DataSnapshot?.();if(!s||clean(s.readyGroup).toUpperCase()!==runtime.groupId)return;runtime.profiles=(s.profiles||[]).map(x=>({...x}));runtime.taskDocs=(s.taskDocs||[]).map(x=>({...x}));runtime.history=(s.history||[]).map(x=>({...x}));runtime.redemptions=(s.redemptions||[]).map(x=>({...x}));runtime.lastLoadedAt=Math.max(runtime.lastLoadedAt,Number(s.lastServerSync)||0);mapRealDataToState();populateAnalysisParticipants();renderToday();renderAnalysis()});
+
+onAuthStateChanged(auth,async user=>{
+  if(!user){if(!runtime.manualLogin){document.body.classList.remove('rf-auth-ready');showLoginGate()}return}
+  if(runtime.manualLogin||runtime.loading)return;
+  try{
+    setLoginBusy(true);showBoot('Carregando sua sessão…');
+    const s=await restoreSession(user);
+    if(s.role==='master'&&!s.groupId){const selected=normalizeGroupId(sessionStorage.getItem('rf-sprint2-master-selected-group'));if(selected){await loadRealGroup('master',selected);setLoginMessage('');await emitLog('sprint2.realdata_sessao_restaurada',{papel:s.role,grupoMaster:selected})}else{showMasterGroupPicker();await emitLog('sprint2.realdata_master_restaurado',{papel:s.role})}}
+    else{await loadRealGroup(s.role,s.groupId);setLoginMessage('');await emitLog('sprint2.realdata_sessao_restaurada',{papel:s.role})}
+  }catch(e){console.warn('Restauração Sprint2 realdata:',e);await emitLog('sprint2.realdata_restauracao_erro',{mensagem:String(e?.message||e).slice(0,80),codigo:String(e?.code||''),status:Number(e?.status)||0},'error');if(!e?.message?.includes('Sem conexão'))await signOut(auth).catch(()=>{});showLoginGate();setLoginMessage(friendlyError(e),true)}
+  finally{setLoginBusy(false)}
+});
 })();
