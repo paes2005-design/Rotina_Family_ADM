@@ -1,4 +1,4 @@
-name: One-off production fix 20260905.4
+name: One-off ADM task delete build 20260905.9
 
 on:
   push:
@@ -16,54 +16,143 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Enable group-admin challenge visibility and bump build
+      - name: Add owned task delete action and bump production build
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
 
-          def replace(path, old, new):
+          def replace_once(path, old, new, label):
               p=Path(path)
               text=p.read_text(encoding='utf-8')
               if old not in text:
-                  raise SystemExit(f'Expected text not found in {path}: {old[:140]}')
-              p.write_text(text.replace(old,new),encoding='utf-8')
+                  raise SystemExit(f'Expected snippet not found ({label}) in {path}')
+              p.write_text(text.replace(old,new,1),encoding='utf-8')
 
-          replace('sprint2-data-store-v1.js',
-                  "const VERSION='sprint2-data-store-v1.1-live-rewards';",
-                  "const VERSION='sprint2-data-store-v1.2-live-group-content';")
-          replace('sprint2-data-store-v1.js',
-                  "function conquestAccess(){return clean(window.rotinaSprint2SessionSnapshot?.().role)==='master'}",
-                  "function conquestAccess(){return ['adm_familia','adm_convidado','master'].includes(clean(window.rotinaSprint2SessionSnapshot?.().role))}")
-          replace('sprint2-data-store-v1.js',
-                  "if(liveGroup===g&&liveUnsubs.length===3)return true;",
-                  "if(liveGroup===g&&liveUnsubs.length===5)return true;")
-          replace('sprint2-data-store-v1.js',
-                  "['resgates','redemptions','live-resgates']\n  ];",
-                  "['resgates','redemptions','live-resgates'],\n    ['conquistas','conquests','live-conquistas'],\n    ['conquistaHistorico','conquestEvents','live-conquista-historico']\n  ];")
-          replace('sprint2-data-store-v1.js',
-                  "const liveAlready=liveGroup===g&&liveUnsubs.length===3;",
-                  "const liveAlready=liveGroup===g&&liveUnsubs.length===5;")
+          task='sprint2-tarefas-realdata-v2.js'
+          replace_once(task,
+            "const VERSION='tarefas-realdata-v4.2-selected-days';",
+            "const VERSION='tarefas-realdata-v4.3-delete';",
+            'task version')
 
-          replace('sprint2-recompensas-realdata-v1.js',"const APP_BUILD='20260905.3';","const APP_BUILD='20260905.4';")
-          replace('index-ADMIN-v9.html','sprint2-data-store-v1.js?v=20260905-realtime-rewards-v11','sprint2-data-store-v1.js?v=20260905-group-content-v12')
-          replace('sw.js','sprint2-data-store-v1.js?v=20260905-realtime-rewards-v11','sprint2-data-store-v1.js?v=20260905-group-content-v12')
+          anchor="""function cancelEdit(){
+            if(!editor||busy)return;
+            log('edit_cancel',{modo:editor.mode});
+            editor=null;
+            const shouldRefresh=pendingDataRefresh;pendingDataRefresh=false;
+            render();
+            if(shouldRefresh)render();
+          }
+          """
+          delete_fn=anchor+"""async function deleteSeries(key){
+            if(busy||editor||!canWrite())return;
+            const r=series.find(x=>x.key===key);
+            if(!r)return;
+            const dias=r.docs.length;
+            const pergunta=`Excluir “${r.name}” em ${dias} dia${dias===1?'':'s'}?\\n\\nO histórico e as execuções já realizadas serão preservados.`;
+            if(!window.confirm(pergunta))return;
+            if(!await firebaseReady()){toast('Firebase indisponível para excluir.');return}
 
-          for path in ['index-ADMIN-v9.html','index.html','manifest.json','sw.js']:
-              p=Path(path); t=p.read_text(encoding='utf-8'); p.write_text(t.replace('20260905.3','20260905.4'),encoding='utf-8')
-          replace('sw.js',"const CACHE_NAME='rotina-family-adm-v92-production-20260905.4';","const CACHE_NAME='rotina-family-adm-v93-production-20260905.4';")
-          replace('sw.js',"const ROTINA_SW_VERSION='92';","const ROTINA_SW_VERSION='93';")
+            setBusyUI(true);
+            log('delete_start',{key:r.key,nome:r.name,participante:r.participant,docs:dias,dias:r.days});
+            try{
+              const g=groupId(),now=new Date().toISOString(),b=fs.writeBatch(db);
+              for(const d of r.docs){
+                b.delete(fs.doc(db,'tarefas',d.id));
+                const a=alarmFor(d);
+                if(a){
+                  b.set(
+                    fs.doc(db,'despertadores',alarmId(g,r.pid,d.id)),
+                    {
+                      grupoId:g,perfilId:r.pid,tarefaId:d.id,tarefaGrupoId:clean(d.tarefaGrupoId),
+                      nomeTarefa:clean(d.nome)||r.name,diaSemana:clean(d.diaSemana),
+                      ativo:false,bloqueado:false,origem:'ADM',
+                      encerradoEm:now,encerradoPor:'ADM',
+                      schedulerPendente:true,schedulerVersao:1,schedulerSolicitadoEm:now,atualizadoEm:now
+                    },
+                    {merge:true}
+                  );
+                }
+              }
+              await b.commit();
+              log('delete_success',{key:r.key,nome:r.name,participante:r.participant,docs:dias,dias:r.days});
+              toast('Tarefa excluída.');
+              await window.rotinaSprint2SyncLocal?.('tarefas-v43-delete');
+              render();
+            }catch(e){
+              console.error(e);
+              log('delete_error',{key:r.key,codigo:clean(e?.code)||'erro',mensagem:clean(e?.message)||String(e)},'error');
+              toast('Não foi possível excluir a tarefa.');
+            }finally{
+              setBusyUI(false);
+            }
+          }
+          """
+          replace_once(task,anchor,delete_fn,'delete owner')
+
+          replace_once(task,
+            ".tv4-btn,.tv4-refresh{border:1px solid #ded8f5;background:#fff;color:#6b35df;padding:9px 10px;border-radius:9px;font-weight:850;cursor:pointer}",
+            ".tv4-btn,.tv4-refresh{border:1px solid #ded8f5;background:#fff;color:#6b35df;padding:9px 10px;border-radius:9px;font-weight:850;cursor:pointer}.tv4-delete{border-color:#fecaca;color:#b42318;background:#fff7f7}",
+            'delete style')
+
+          replace_once(task,
+            "<td><button class=\"tv4-btn\" data-action=\"edit\" data-key=\"${esc(r.key)}\" ${disabled}>✎ Editar</button></td>",
+            "<td><div class=\"tv4-inline-actions\"><button class=\"tv4-btn\" data-action=\"edit\" data-key=\"${esc(r.key)}\" ${disabled}>✎ Editar</button><button class=\"tv4-btn tv4-delete\" data-action=\"delete\" data-key=\"${esc(r.key)}\" ${disabled}>🗑 Excluir</button></div></td>",
+            'desktop delete')
+
+          replace_once(task,
+            "<div class=\"tv4-inline-actions\" style=\"margin-top:9px\"><button class=\"tv4-btn\" data-action=\"edit\" data-key=\"${esc(r.key)}\" ${disabled}>✎ Editar</button></div>",
+            "<div class=\"tv4-inline-actions\" style=\"margin-top:9px\"><button class=\"tv4-btn\" data-action=\"edit\" data-key=\"${esc(r.key)}\" ${disabled}>✎ Editar</button><button class=\"tv4-btn tv4-delete\" data-action=\"delete\" data-key=\"${esc(r.key)}\" ${disabled}>🗑 Excluir</button></div>",
+            'mobile delete')
+
+          replace_once(task,
+            "else if(action==='edit')startEdit(b.dataset.key);\n    else if(action==='cancel')cancelEdit();",
+            "else if(action==='edit')startEdit(b.dataset.key);\n    else if(action==='delete')await deleteSeries(b.dataset.key);\n    else if(action==='cancel')cancelEdit();",
+            'delete handler')
+
+          # Normalize production V9 and cache bust this task owner.
+          p=Path('index-ADMIN-v9.html'); h=p.read_text(encoding='utf-8')
+          h=h.replace('manifest.json?v=20260905.5','manifest.json?v=20260905.9')
+          h=h.replace('sprint2-tarefas-realdata-v2.js?v=20260905-inline-owner-v40','sprint2-tarefas-realdata-v2.js?v=20260905-delete-v43')
+          h=h.replace("version:'20260905.5'","version:'20260905.9'")
+          h=h.replace('sw.js?v=20260905.5','sw.js?v=20260905.9')
+          p.write_text(h,encoding='utf-8')
+
+          for path in ['index.html','manifest.json']:
+              p=Path(path); p.write_text(p.read_text(encoding='utf-8').replace('20260905.8','20260905.9'),encoding='utf-8')
+
+          p=Path('sw.js'); w=p.read_text(encoding='utf-8')
+          w=w.replace("rotina-family-adm-v97-production-20260905.8","rotina-family-adm-v98-production-20260905.9")
+          w=w.replace("const ROTINA_SW_VERSION='97'","const ROTINA_SW_VERSION='98'")
+          w=w.replace("const ROTINA_BUILD_ID='20260905.8'","const ROTINA_BUILD_ID='20260905.9'")
+          w=w.replace('20260905.8','20260905.9')
+          w=w.replace('sprint2-tarefas-realdata-v2.js?v=20260905-selected-days-v42','sprint2-tarefas-realdata-v2.js?v=20260905-delete-v43')
+          p.write_text(w,encoding='utf-8')
           PY
 
-          node --check sprint2-data-store-v1.js
-          node --check sprint2-conquistas-realdata-v1.js
-          node --check sprint2-recompensas-realdata-v1.js
+          node --check sprint2-tarefas-realdata-v2.js
           node --check sw.js
+
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('sprint2-tarefas-realdata-v2.js').read_text(encoding='utf-8')
+          checks={
+            'version':"tarefas-realdata-v4.3-delete" in s,
+            'delete button':'data-action="delete"' in s,
+            'delete handler':"action==='delete'" in s,
+            'batch delete':"b.delete(fs.doc(db,'tarefas',d.id))" in s,
+            'history preserved':'histórico e as execuções já realizadas serão preservados' in s,
+            'local sync':"rotinaSprint2SyncLocal?.('tarefas-v43-delete')" in s,
+          }
+          failed=[k for k,v in checks.items() if not v]
+          if failed: raise SystemExit('Failed checks: '+', '.join(failed))
+          print('Task delete contract OK')
+          PY
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add sprint2-data-store-v1.js sprint2-recompensas-realdata-v1.js index-ADMIN-v9.html index.html manifest.json sw.js
+          git add sprint2-tarefas-realdata-v2.js index-ADMIN-v9.html index.html manifest.json sw.js
           git diff --cached --check
-          git commit -m 'Show group challenges to group administrators build 20260905.4'
+          git commit -m 'Add ADM task delete action build 20260905.9'
           git push origin HEAD:main
