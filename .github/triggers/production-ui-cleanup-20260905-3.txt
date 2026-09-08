@@ -1,1 +1,1 @@
-trigger 20260905.4b
+trigger 20260905.9 task-delete
