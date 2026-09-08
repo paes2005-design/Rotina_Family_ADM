@@ -1,0 +1,169 @@
+name: Sprint 2 - add task delete action
+
+on:
+  push:
+    paths:
+      - '.github/workflows/sprint2-add-task-delete-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add delete to task owner and bump ADM build
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f'Expected snippet not found: {label}')
+              return text.replace(old, new, 1)
+
+          task = Path('sprint2-tarefas-realdata-v2.js')
+          s = task.read_text(encoding='utf-8')
+          s = replace_once(s,
+              "const VERSION='tarefas-realdata-v4.2-selected-days';",
+              "const VERSION='tarefas-realdata-v4.3-delete';",
+              'task version')
+
+          insert_after = """function cancelEdit(){
+  if(!editor||busy)return;
+  log('edit_cancel',{modo:editor.mode});
+  editor=null;
+  const shouldRefresh=pendingDataRefresh;pendingDataRefresh=false;
+  render();
+  if(shouldRefresh)render();
+}
+"""
+          delete_fn = insert_after + """
+async function deleteSeries(key){
+  if(busy||editor||!canWrite())return;
+  const r=series.find(x=>x.key===key);
+  if(!r)return;
+  const dias=r.docs.length;
+  const pergunta=`Excluir “${r.name}” em ${dias} dia${dias===1?'':'s'}?\\n\\nO histórico e as execuções já realizadas serão preservados.`;
+  if(!window.confirm(pergunta))return;
+  if(!await firebaseReady()){toast('Firebase indisponível para excluir.');return}
+
+  setBusyUI(true);
+  log('delete_start',{key:r.key,nome:r.name,participante:r.participant,docs:dias,dias:r.days});
+  try{
+    const g=groupId(),now=new Date().toISOString(),b=fs.writeBatch(db);
+    for(const d of r.docs){
+      b.delete(fs.doc(db,'tarefas',d.id));
+      const a=alarmFor(d);
+      if(a){
+        b.set(
+          fs.doc(db,'despertadores',alarmId(g,r.pid,d.id)),
+          {
+            grupoId:g,perfilId:r.pid,tarefaId:d.id,tarefaGrupoId:clean(d.tarefaGrupoId),
+            nomeTarefa:clean(d.nome)||r.name,diaSemana:clean(d.diaSemana),
+            ativo:false,bloqueado:false,origem:'ADM',
+            encerradoEm:now,encerradoPor:'ADM',
+            schedulerPendente:true,schedulerVersao:1,schedulerSolicitadoEm:now,atualizadoEm:now
+          },
+          {merge:true}
+        );
+      }
+    }
+    await b.commit();
+    log('delete_success',{key:r.key,nome:r.name,participante:r.participant,docs:dias,dias:r.days});
+    toast('Tarefa excluída.');
+    await window.rotinaSprint2SyncLocal?.('tarefas-v43-delete');
+    render();
+  }catch(e){
+    console.error(e);
+    log('delete_error',{key:r.key,codigo:clean(e?.code)||'erro',mensagem:clean(e?.message)||String(e)},'error');
+    toast('Não foi possível excluir a tarefa.');
+  }finally{
+    setBusyUI(false);
+  }
+}
+"""
+          s = replace_once(s, insert_after, delete_fn, 'delete function insertion')
+
+          s = replace_once(s,
+              ".tv4-btn,.tv4-refresh{border:1px solid #ded8f5;background:#fff;color:#6b35df;padding:9px 10px;border-radius:9px;font-weight:850;cursor:pointer}",
+              ".tv4-btn,.tv4-refresh{border:1px solid #ded8f5;background:#fff;color:#6b35df;padding:9px 10px;border-radius:9px;font-weight:850;cursor:pointer}.tv4-delete{border-color:#fecaca;color:#b42318;background:#fff7f7}",
+              'delete css')
+
+          s = replace_once(s,
+              "<td><button class=\"tv4-btn\" data-action=\"edit\" data-key=\"${esc(r.key)}\" ${disabled}>✎ Editar</button></td>",
+              "<td><div class=\"tv4-inline-actions\"><button class=\"tv4-btn\" data-action=\"edit\" data-key=\"${esc(r.key)}\" ${disabled}>✎ Editar</button><button class=\"tv4-btn tv4-delete\" data-action=\"delete\" data-key=\"${esc(r.key)}\" ${disabled}>🗑 Excluir</button></div></td>",
+              'desktop delete button')
+
+          s = replace_once(s,
+              "<div class=\"tv4-inline-actions\" style=\"margin-top:9px\"><button class=\"tv4-btn\" data-action=\"edit\" data-key=\"${esc(r.key)}\" ${disabled}>✎ Editar</button></div>",
+              "<div class=\"tv4-inline-actions\" style=\"margin-top:9px\"><button class=\"tv4-btn\" data-action=\"edit\" data-key=\"${esc(r.key)}\" ${disabled}>✎ Editar</button><button class=\"tv4-btn tv4-delete\" data-action=\"delete\" data-key=\"${esc(r.key)}\" ${disabled}>🗑 Excluir</button></div>",
+              'mobile delete button')
+
+          s = replace_once(s,
+              "else if(action==='edit')startEdit(b.dataset.key);\n    else if(action==='cancel')cancelEdit();",
+              "else if(action==='edit')startEdit(b.dataset.key);\n    else if(action==='delete')await deleteSeries(b.dataset.key);\n    else if(action==='cancel')cancelEdit();",
+              'delete handler')
+          task.write_text(s, encoding='utf-8')
+
+          # Normalize the production HTML to the same build while changing the task asset URL.
+          html = Path('index-ADMIN-v9.html')
+          h = html.read_text(encoding='utf-8')
+          h = h.replace('manifest.json?v=20260905.5','manifest.json?v=20260905.9')
+          h = h.replace('sprint2-tarefas-realdata-v2.js?v=20260905-inline-owner-v40','sprint2-tarefas-realdata-v2.js?v=20260905-delete-v43')
+          h = h.replace("version:'20260905.5'","version:'20260905.9'")
+          h = h.replace("sw.js?v=20260905.5","sw.js?v=20260905.9")
+          html.write_text(h, encoding='utf-8')
+
+          root = Path('index.html')
+          x = root.read_text(encoding='utf-8').replace('20260905.8','20260905.9')
+          root.write_text(x, encoding='utf-8')
+
+          manifest = Path('manifest.json')
+          m = manifest.read_text(encoding='utf-8').replace('20260905.8','20260905.9')
+          manifest.write_text(m, encoding='utf-8')
+
+          sw = Path('sw.js')
+          w = sw.read_text(encoding='utf-8')
+          w = w.replace("rotina-family-adm-v97-production-20260905.8","rotina-family-adm-v98-production-20260905.9")
+          w = w.replace("const ROTINA_SW_VERSION='97'","const ROTINA_SW_VERSION='98'")
+          w = w.replace("const ROTINA_BUILD_ID='20260905.8'","const ROTINA_BUILD_ID='20260905.9'")
+          w = w.replace('20260905.8','20260905.9')
+          w = w.replace('sprint2-tarefas-realdata-v2.js?v=20260905-selected-days-v42','sprint2-tarefas-realdata-v2.js?v=20260905-delete-v43')
+          sw.write_text(w, encoding='utf-8')
+
+      - name: Verify task delete contract
+        shell: python
+        run: |
+          from pathlib import Path
+          s=Path('sprint2-tarefas-realdata-v2.js').read_text(encoding='utf-8')
+          checks={
+            'version': "tarefas-realdata-v4.3-delete" in s,
+            'desktop delete': 'data-action="delete"' in s,
+            'delete handler': "action==='delete'" in s,
+            'batch delete': "b.delete(fs.doc(db,'tarefas',d.id))" in s,
+            'history preserved text': 'histórico e as execuções já realizadas serão preservados' in s,
+            'local sync': "rotinaSprint2SyncLocal?.('tarefas-v43-delete')" in s,
+          }
+          failed=[k for k,v in checks.items() if not v]
+          if failed: raise SystemExit('Failed checks: '+', '.join(failed))
+          print('Task delete contract OK')
+
+      - name: Commit production update
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No changes to commit'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add sprint2-tarefas-realdata-v2.js index-ADMIN-v9.html index.html manifest.json sw.js
+          git commit -m 'Add ADM task delete action build 20260905.9'
+          git push
