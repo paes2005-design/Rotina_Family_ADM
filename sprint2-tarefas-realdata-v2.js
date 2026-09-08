@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='tarefas-realdata-v4.2-selected-days';
+const VERSION='tarefas-realdata-v4.3-delete';
 const DAYS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const WEEKDAYS=['Segunda','Terça','Quarta','Quinta','Sexta'];
 const ICONS=['🛏️','📚','🧹','🎻','🍴','🗑️','🧼','🪥','🐶','✅'];
@@ -384,6 +384,49 @@ function cancelEdit(){
   render();
   if(shouldRefresh)render();
 }
+async function deleteSeries(key){
+  if(busy||editor||!canWrite())return;
+  const r=series.find(x=>x.key===key);
+  if(!r)return;
+  const dias=r.docs.length;
+  const pergunta=`Excluir “${r.name}” em ${dias} dia${dias===1?'':'s'}?\n\nO histórico e as execuções já realizadas serão preservados.`;
+  if(!window.confirm(pergunta))return;
+  if(!await firebaseReady()){toast('Firebase indisponível para excluir.');return}
+
+  setBusyUI(true);
+  log('delete_start',{key:r.key,nome:r.name,participante:r.participant,docs:dias,dias:r.days});
+  try{
+    const g=groupId(),now=new Date().toISOString(),b=fs.writeBatch(db);
+    for(const d of r.docs){
+      b.delete(fs.doc(db,'tarefas',d.id));
+      const a=alarmFor(d);
+      if(a){
+        b.set(
+          fs.doc(db,'despertadores',alarmId(g,r.pid,d.id)),
+          {
+            grupoId:g,perfilId:r.pid,tarefaId:d.id,tarefaGrupoId:clean(d.tarefaGrupoId),
+            nomeTarefa:clean(d.nome)||r.name,diaSemana:clean(d.diaSemana),
+            ativo:false,bloqueado:false,origem:'ADM',
+            encerradoEm:now,encerradoPor:'ADM',
+            schedulerPendente:true,schedulerVersao:1,schedulerSolicitadoEm:now,atualizadoEm:now
+          },
+          {merge:true}
+        );
+      }
+    }
+    await b.commit();
+    log('delete_success',{key:r.key,nome:r.name,participante:r.participant,docs:dias,dias:r.days});
+    toast('Tarefa excluída.');
+    await window.rotinaSprint2SyncLocal?.('tarefas-v43-delete');
+    render();
+  }catch(e){
+    console.error(e);
+    log('delete_error',{key:r.key,codigo:clean(e?.code)||'erro',mensagem:clean(e?.message)||String(e)},'error');
+    toast('Não foi possível excluir a tarefa.');
+  }finally{
+    setBusyUI(false);
+  }
+}
 function toggleDraftDay(day){
   if(!editor||!DAYS.includes(day))return;
   const r=currentSeries();
@@ -417,7 +460,7 @@ function style(){
 .tv4-head{padding:18px 20px;border-bottom:1px solid #e6e8f0;display:flex;justify-content:space-between;gap:12px;align-items:end}
 .tv4-head h2{margin:4px 0;font-size:23px}.tv4-muted{color:#72788f;font-size:10px;display:block;margin-top:2px}
 .tv4-primary{border:0;background:#6b35df;color:#fff;padding:10px 14px;border-radius:10px;font-weight:900;cursor:pointer}
-.tv4-btn,.tv4-refresh{border:1px solid #ded8f5;background:#fff;color:#6b35df;padding:9px 10px;border-radius:9px;font-weight:850;cursor:pointer}
+.tv4-btn,.tv4-refresh{border:1px solid #ded8f5;background:#fff;color:#6b35df;padding:9px 10px;border-radius:9px;font-weight:850;cursor:pointer}.tv4-delete{border-color:#fecaca;color:#b42318;background:#fff7f7}
 .tv4-primary:disabled,.tv4-btn:disabled,.tv4-refresh:disabled{opacity:.45;cursor:not-allowed}
 .tv4-filters{display:grid;grid-template-columns:1fr 1fr .7fr 1fr auto;gap:8px;padding:12px 16px;background:#fbf9ff;border-bottom:1px solid #e6e8f0}
 .tv4-field label,.tv4-edit label{display:block;font-size:8px;text-transform:uppercase;font-weight:900;color:#625c7a;margin-bottom:5px}
@@ -492,7 +535,7 @@ function normalRow(r){
     <td>${displayValue(r,'start')} → ${displayValue(r,'end')}</td>
     <td>${displayValue(r,'points')}</td><td>${displayValue(r,'tolerance',' min')}</td>
     <td>${statusBadge(r)}</td>
-    <td><button class="tv4-btn" data-action="edit" data-key="${esc(r.key)}" ${disabled}>✎ Editar</button></td>
+    <td><div class="tv4-inline-actions"><button class="tv4-btn" data-action="edit" data-key="${esc(r.key)}" ${disabled}>✎ Editar</button><button class="tv4-btn tv4-delete" data-action="delete" data-key="${esc(r.key)}" ${disabled}>🗑 Excluir</button></div></td>
   </tr>`;
 }
 function iconField(v){
@@ -546,7 +589,7 @@ function mobileNormal(r){
   return`<article class="tv4-mcard">
     <div class="tv4-mhead"><div class="tv4-name"><span>${esc(r.icon)}</span><div><b>${esc(r.name)}</b><small class="tv4-muted">${esc(r.participant)} · ${esc(daySummary(r.days))}</small>${r.canBulk?'':'<small class="tv4-muted tv4-var">Há variação entre dias</small>'}</div></div>${statusBadge(r)}</div>
     <div class="tv4-mgrid"><div class="tv4-mcell"><small>Horário</small><b>${displayValue(r,'start')} → ${displayValue(r,'end')}</b></div><div class="tv4-mcell"><small>Pontos / tolerância</small><b>${displayValue(r,'points')} pts · ${displayValue(r,'tolerance')} min</b></div></div>
-    <div class="tv4-inline-actions" style="margin-top:9px"><button class="tv4-btn" data-action="edit" data-key="${esc(r.key)}" ${disabled}>✎ Editar</button></div>
+    <div class="tv4-inline-actions" style="margin-top:9px"><button class="tv4-btn" data-action="edit" data-key="${esc(r.key)}" ${disabled}>✎ Editar</button><button class="tv4-btn tv4-delete" data-action="delete" data-key="${esc(r.key)}" ${disabled}>🗑 Excluir</button></div>
   </article>`;
 }
 function mobileEdit(r){
@@ -613,6 +656,7 @@ function bindOnce(v){
     const action=b.dataset.action;
     if(action==='create')startCreate();
     else if(action==='edit')startEdit(b.dataset.key);
+    else if(action==='delete')await deleteSeries(b.dataset.key);
     else if(action==='cancel')cancelEdit();
     else if(action==='save')await saveEditor();
     else if(action==='toggle-day')toggleDraftDay(b.dataset.day);
