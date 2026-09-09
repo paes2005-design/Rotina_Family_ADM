@@ -20,7 +20,8 @@ jobs:
           mkdir -p diagnostics /tmp/rfdiag
           health_code=$(curl -sS --max-time 20 -o /tmp/rfdiag/health.json -w '%{http_code}' "$ROOT/monitoramento" || true)
           tech_code=$(curl -sS --max-time 20 -o /tmp/rfdiag/tecnico.json -w '%{http_code}' "$ROOT/diagnostico-tecnico" || true)
-          HEALTH_CODE="$health_code" TECH_CODE="$tech_code" python - <<'PY'
+          worker_code=$(curl -sS --max-time 20 -o /tmp/rfdiag/worker.json -w '%{http_code}' "$ROOT/diagnostico-worker" || true)
+          HEALTH_CODE="$health_code" TECH_CODE="$tech_code" WORKER_CODE="$worker_code" python - <<'PY'
           import json, pathlib, datetime, os
           def load(path):
               p=pathlib.Path(path)
@@ -28,10 +29,12 @@ jobs:
               except Exception: return {}
           health=load('/tmp/rfdiag/health.json')
           body=load('/tmp/rfdiag/tecnico.json')
+          worker=load('/tmp/rfdiag/worker.json')
           out={
             'capturadoEm':datetime.datetime.now(datetime.timezone.utc).isoformat(),
             'monitoramentoHttp':os.environ.get('HEALTH_CODE',''),
             'diagnosticoHttp':os.environ.get('TECH_CODE',''),
+            'workerDiagnosticoHttp':os.environ.get('WORKER_CODE',''),
             'monitoramento':health,
             'diagnostico':{
               'status':body.get('status'),
@@ -40,7 +43,8 @@ jobs:
               'lastRun':body.get('lastRun'),
               'summary':body.get('summary'),
               'recentCycles':body.get('recentCycles')
-            }
+            },
+            'workerDiagnostico':worker
           }
           pathlib.Path('diagnostics/worker-health-now.json').write_text(json.dumps(out,ensure_ascii=False,indent=2))
           PY
