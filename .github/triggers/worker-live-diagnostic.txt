@@ -1,2 +1,2 @@
-run=post-modal-freeze-20260831-b
-reason=capture-latest-justification-close-failure-after-close-fix-v1
+run=worker-health-20260908-2255
+reason=identify-exact-degraded-state-after-alarm-fix
