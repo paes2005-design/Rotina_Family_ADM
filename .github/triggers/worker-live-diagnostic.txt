@@ -1,2 +1,2 @@
-run=worker-health-20260908-2255
-reason=identify-exact-degraded-state-after-alarm-fix
+run=worker-health-20260908-2302
+reason=confirm-no-persistent-scheduler-errors-after-degraded-window
