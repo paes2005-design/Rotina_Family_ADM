@@ -1,2 +1,2 @@
-run=worker-health-20260908-2302
-reason=confirm-no-persistent-scheduler-errors-after-degraded-window
+run=post-modal-freeze-20260831-b
+reason=capture-latest-justification-close-failure-after-close-fix-v1
