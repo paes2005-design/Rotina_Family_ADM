@@ -1,0 +1,1659 @@
+{
+  "capturadoEm": "2026-09-09T02:00:19.811997+00:00",
+  "monitoramentoHttp": "200",
+  "diagnosticoHttp": "200",
+  "monitoramento": {
+    "service": "rotina-family-onesignal-scheduler",
+    "status": "SAUDAVEL",
+    "lastRunAt": "2026-09-09T01:59:25.000Z",
+    "lastRun": {
+      "em": "2026-09-09T01:59:25.000Z",
+      "status": "SAUDAVEL",
+      "fullScan": false,
+      "processed": 3,
+      "alarms": 0,
+      "alarmWritesSkipped": 0,
+      "rewards": 0,
+      "audits": 3,
+      "alarmAudits": 3,
+      "rewardAudits": 0,
+      "logsDeleted": 0,
+      "logsMigrated": 0,
+      "states": {
+        "AGUARDANDO_ENVIO": 3
+      },
+      "versions": {
+        "scheduler": 1,
+        "rewardPush": 1,
+        "deliveryAudit": 1,
+        "appLogs": 3,
+        "masterAdmin": 2,
+        "technicalStore": 1
+      },
+      "storedAt": "2026-09-09T01:59:27.180Z"
+    },
+    "recentCycles": [
+      {
+        "em": "2026-09-09T01:01:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 0,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {},
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:01:07.219Z"
+      },
+      {
+        "em": "2026-09-09T01:02:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 0,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {},
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:02:07.223Z"
+      },
+      {
+        "em": "2026-09-09T01:03:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 0,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {},
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:03:07.143Z"
+      },
+      {
+        "em": "2026-09-09T01:04:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 0,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {},
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:04:07.184Z"
+      },
+      {
+        "em": "2026-09-09T01:05:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": true,
+        "processed": 13,
+        "alarms": 13,
+        "alarmWritesSkipped": 13,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGENDADO": 10,
+          "SEM_OCORRENCIA_FUTURA": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:05:08.471Z"
+      },
+      {
+        "em": "2026-09-09T01:06:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 0,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {},
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:06:07.197Z"
+      },
+      {
+        "em": "2026-09-09T01:07:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 0,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {},
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:07:07.145Z"
+      },
+      {
+        "em": "2026-09-09T01:08:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 0,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {},
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:08:07.253Z"
+      },
+      {
+        "em": "2026-09-09T01:09:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 0,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {},
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:09:07.180Z"
+      },
+      {
+        "em": "2026-09-09T01:10:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": true,
+        "processed": 13,
+        "alarms": 13,
+        "alarmWritesSkipped": 13,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGENDADO": 10,
+          "SEM_OCORRENCIA_FUTURA": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:10:07.447Z"
+      },
+      {
+        "em": "2026-09-09T01:11:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 0,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {},
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:11:07.210Z"
+      },
+      {
+        "em": "2026-09-09T01:12:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 0,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {},
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:12:07.203Z"
+      },
+      {
+        "em": "2026-09-09T01:13:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 0,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {},
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:13:07.114Z"
+      },
+      {
+        "em": "2026-09-09T01:14:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 0,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {},
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:14:07.130Z"
+      },
+      {
+        "em": "2026-09-09T01:15:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": true,
+        "processed": 13,
+        "alarms": 13,
+        "alarmWritesSkipped": 13,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGENDADO": 10,
+          "SEM_OCORRENCIA_FUTURA": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:15:07.424Z"
+      },
+      {
+        "em": "2026-09-09T01:16:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 0,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {},
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:16:07.173Z"
+      },
+      {
+        "em": "2026-09-09T01:17:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 5,
+        "alarms": 5,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 0,
+        "alarmAudits": 0,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGENDADO": 4,
+          "SEM_OCORRENCIA_FUTURA": 1
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:17:11.920Z"
+      },
+      {
+        "em": "2026-09-09T01:18:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 5,
+        "alarms": 1,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 4,
+        "alarmAudits": 4,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "CANCELADO": 1,
+          "AGUARDANDO_ENVIO": 4
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:18:10.385Z"
+      },
+      {
+        "em": "2026-09-09T01:19:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 4,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 4,
+        "alarmAudits": 4,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "ENTREGUE_AO_SERVICO_PUSH": 1,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:19:08.920Z"
+      },
+      {
+        "em": "2026-09-09T01:20:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": true,
+        "processed": 22,
+        "alarms": 19,
+        "alarmWritesSkipped": 18,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "CANCELADO": 1,
+          "AGENDADO": 14,
+          "SEM_OCORRENCIA_FUTURA": 4,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:20:07.875Z"
+      },
+      {
+        "em": "2026-09-09T01:21:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:21:08.139Z"
+      },
+      {
+        "em": "2026-09-09T01:22:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:22:08.008Z"
+      },
+      {
+        "em": "2026-09-09T01:23:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:23:08.026Z"
+      },
+      {
+        "em": "2026-09-09T01:24:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:24:07.548Z"
+      },
+      {
+        "em": "2026-09-09T01:25:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": true,
+        "processed": 21,
+        "alarms": 18,
+        "alarmWritesSkipped": 18,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGENDADO": 14,
+          "SEM_OCORRENCIA_FUTURA": 4,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:25:08.028Z"
+      },
+      {
+        "em": "2026-09-09T01:26:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:26:11.147Z"
+      },
+      {
+        "em": "2026-09-09T01:27:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:27:07.780Z"
+      },
+      {
+        "em": "2026-09-09T01:28:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:28:07.730Z"
+      },
+      {
+        "em": "2026-09-09T01:29:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:29:09.864Z"
+      },
+      {
+        "em": "2026-09-09T01:30:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": true,
+        "processed": 21,
+        "alarms": 18,
+        "alarmWritesSkipped": 18,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGENDADO": 14,
+          "SEM_OCORRENCIA_FUTURA": 4,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:30:09.922Z"
+      },
+      {
+        "em": "2026-09-09T01:31:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:31:10.340Z"
+      },
+      {
+        "em": "2026-09-09T01:32:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:32:08.923Z"
+      },
+      {
+        "em": "2026-09-09T01:33:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:33:07.936Z"
+      },
+      {
+        "em": "2026-09-09T01:34:05.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:34:08.471Z"
+      },
+      {
+        "em": "2026-09-09T01:34:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:34:27.755Z"
+      },
+      {
+        "em": "2026-09-09T01:35:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": true,
+        "processed": 21,
+        "alarms": 18,
+        "alarmWritesSkipped": 18,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGENDADO": 14,
+          "SEM_OCORRENCIA_FUTURA": 4,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:35:27.791Z"
+      },
+      {
+        "em": "2026-09-09T01:36:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:36:27.230Z"
+      },
+      {
+        "em": "2026-09-09T01:37:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:37:27.276Z"
+      },
+      {
+        "em": "2026-09-09T01:38:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:38:26.899Z"
+      },
+      {
+        "em": "2026-09-09T01:39:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:39:27.406Z"
+      },
+      {
+        "em": "2026-09-09T01:40:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": true,
+        "processed": 21,
+        "alarms": 18,
+        "alarmWritesSkipped": 18,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGENDADO": 14,
+          "SEM_OCORRENCIA_FUTURA": 4,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:40:27.272Z"
+      },
+      {
+        "em": "2026-09-09T01:41:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 4,
+        "alarms": 1,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "CANCELADO": 1,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:41:27.717Z"
+      },
+      {
+        "em": "2026-09-09T01:42:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 5,
+        "alarms": 2,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGENDADO": 1,
+          "SEM_OCORRENCIA_FUTURA": 1,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:42:27.876Z"
+      },
+      {
+        "em": "2026-09-09T01:43:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 4,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 4,
+        "alarmAudits": 4,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 4
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:43:27.509Z"
+      },
+      {
+        "em": "2026-09-09T01:44:25.000Z",
+        "status": "DEGRADADO",
+        "fullScan": false,
+        "processed": 5,
+        "alarms": 1,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 4,
+        "alarmAudits": 4,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "ERRO": 1,
+          "ENTREGUE_AO_SERVICO_PUSH": 1,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:44:28.012Z"
+      },
+      {
+        "em": "2026-09-09T01:45:25.000Z",
+        "status": "DEGRADADO",
+        "fullScan": true,
+        "processed": 24,
+        "alarms": 21,
+        "alarmWritesSkipped": 20,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "ERRO": 1,
+          "AGENDADO": 15,
+          "SEM_OCORRENCIA_FUTURA": 5,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:45:28.126Z"
+      },
+      {
+        "em": "2026-09-09T01:46:25.000Z",
+        "status": "DEGRADADO",
+        "fullScan": false,
+        "processed": 4,
+        "alarms": 1,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "ERRO": 1,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:46:27.605Z"
+      },
+      {
+        "em": "2026-09-09T01:47:25.000Z",
+        "status": "DEGRADADO",
+        "fullScan": false,
+        "processed": 4,
+        "alarms": 1,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "ERRO": 1,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:47:27.798Z"
+      },
+      {
+        "em": "2026-09-09T01:48:25.000Z",
+        "status": "DEGRADADO",
+        "fullScan": false,
+        "processed": 4,
+        "alarms": 1,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "ERRO": 1,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:48:27.526Z"
+      },
+      {
+        "em": "2026-09-09T01:49:25.000Z",
+        "status": "DEGRADADO",
+        "fullScan": false,
+        "processed": 4,
+        "alarms": 1,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "ERRO": 1,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:49:27.783Z"
+      },
+      {
+        "em": "2026-09-09T01:50:25.000Z",
+        "status": "DEGRADADO",
+        "fullScan": true,
+        "processed": 24,
+        "alarms": 21,
+        "alarmWritesSkipped": 20,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "ERRO": 1,
+          "AGENDADO": 15,
+          "SEM_OCORRENCIA_FUTURA": 5,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:50:27.853Z"
+      },
+      {
+        "em": "2026-09-09T01:51:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 4,
+        "alarms": 1,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "SEM_OCORRENCIA_FUTURA": 1,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:51:27.713Z"
+      },
+      {
+        "em": "2026-09-09T01:52:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:52:27.172Z"
+      },
+      {
+        "em": "2026-09-09T01:53:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:53:27.435Z"
+      },
+      {
+        "em": "2026-09-09T01:54:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:54:27.364Z"
+      },
+      {
+        "em": "2026-09-09T01:55:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": true,
+        "processed": 24,
+        "alarms": 21,
+        "alarmWritesSkipped": 21,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGENDADO": 15,
+          "SEM_OCORRENCIA_FUTURA": 6,
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:55:27.220Z"
+      },
+      {
+        "em": "2026-09-09T01:56:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:56:27.214Z"
+      },
+      {
+        "em": "2026-09-09T01:57:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:57:27.328Z"
+      },
+      {
+        "em": "2026-09-09T01:58:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:58:27.361Z"
+      },
+      {
+        "em": "2026-09-09T01:59:25.000Z",
+        "status": "SAUDAVEL",
+        "fullScan": false,
+        "processed": 3,
+        "alarms": 0,
+        "alarmWritesSkipped": 0,
+        "rewards": 0,
+        "audits": 3,
+        "alarmAudits": 3,
+        "rewardAudits": 0,
+        "logsDeleted": 0,
+        "logsMigrated": 0,
+        "states": {
+          "AGUARDANDO_ENVIO": 3
+        },
+        "versions": {
+          "scheduler": 1,
+          "rewardPush": 1,
+          "deliveryAudit": 1,
+          "appLogs": 3,
+          "masterAdmin": 2,
+          "technicalStore": 1
+        },
+        "storedAt": "2026-09-09T01:59:27.180Z"
+      }
+    ],
+    "healthReasons": {
+      "hard": [],
+      "attention": []
+    },
+    "baseStatus": "SAUDAVEL",
+    "diagnosticsVersion": 2,
+    "storage": "cloudflare-do",
+    "technicalStoreVersion": 1
+  },
+  "diagnostico": {
+    "status": "SAUDAVEL",
+    "healthReasons": {
+      "hard": [],
+      "attention": []
+    },
+    "lastRunAt": "2026-09-09T01:59:25.000Z",
+    "lastRun": {
+      "em": "2026-09-09T01:59:25.000Z",
+      "status": "SAUDAVEL",
+      "fullScan": false,
+      "processed": 3,
+      "alarms": 0,
+      "alarmWritesSkipped": 0,
+      "rewards": 0,
+      "audits": 3,
+      "alarmAudits": 3,
+      "rewardAudits": 0,
+      "logsDeleted": 0,
+      "logsMigrated": 0,
+      "states": {
+        "AGUARDANDO_ENVIO": 3
+      },
+      "versions": {
+        "scheduler": 1,
+        "rewardPush": 1,
+        "deliveryAudit": 1,
+        "appLogs": 3,
+        "masterAdmin": 2,
+        "technicalStore": 1
+      },
+      "storedAt": "2026-09-09T01:59:27.180Z"
+    },
+    "summary": {
+      "technicalLogs": 33,
+      "errors": 0,
+      "warnings": 5,
+      "slowOperations": 0,
+      "http400": 0,
+      "http429": 0,
+      "ignoredClicks": 0
+    },
+    "recentCycles": null
+  }
+}
