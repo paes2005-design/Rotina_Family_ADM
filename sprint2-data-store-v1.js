@@ -1,14 +1,14 @@
 (function(){
 'use strict';
 
-const VERSION='sprint2-data-store-v1.3-cache-first-budget';
+const VERSION='sprint2-data-store-v1.4-idempotent-ensure-budget';
 const SYNC_MS=5*60*1000;
 const HOT_NAMES=['perfis','tarefas','execucoes','despertadores','recompensas','resgates','conquistas','conquistaHistorico'];
 const FULL_NAMES=['perfis','tarefas','historico','execucoes','despertadores','recompensas','resgates','conquistas','conquistaHistorico'];
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').trim();
 
-let db=null,fs=null,app=null,timer=null,syncing=null,installed=false;
+let db=null,fs=null,app=null,timer=null,syncing=null,installed=false,cacheHydratedGroup='';
 let data={groupId:'',readyGroup:'',profiles:[],taskDocs:[],history:[],executions:[],alarms:[],rewards:[],redemptions:[],conquests:[],conquestEvents:[],lastServerSync:0,lastLocalSync:0,origin:'empty',version:VERSION};
 
 function groupId(){return clean($('topGroup')?.textContent).replace(/^Grupo\s+/i,'').toUpperCase()}
@@ -17,7 +17,7 @@ function conquestAccess(){return ['adm_familia','adm_convidado','master'].includ
 function storageKey(g){return `rf-adm-last-server-sync:${clean(g).toUpperCase()}`}
 function storedServerSync(g){try{return Number(localStorage.getItem(storageKey(g)))||0}catch(_){return 0}}
 function rememberServerSync(g,at=Date.now()){data.lastServerSync=at;try{localStorage.setItem(storageKey(g),String(at))}catch(_){ }scheduleNext();return at}
-function reset(g=''){data={groupId:g,readyGroup:'',profiles:[],taskDocs:[],history:[],executions:[],alarms:[],rewards:[],redemptions:[],conquests:[],conquestEvents:[],lastServerSync:storedServerSync(g),lastLocalSync:0,origin:'reset',version:VERSION}}
+function reset(g=''){cacheHydratedGroup='';data={groupId:g,readyGroup:'',profiles:[],taskDocs:[],history:[],executions:[],alarms:[],rewards:[],redemptions:[],conquests:[],conquestEvents:[],lastServerSync:storedServerSync(g),lastLocalSync:0,origin:'reset',version:VERSION}}
 function snapshot(){return{...data,profiles:copy(data.profiles),taskDocs:copy(data.taskDocs),history:copy(data.history),executions:copy(data.executions),alarms:copy(data.alarms),rewards:copy(data.rewards),redemptions:copy(data.redemptions),conquests:copy(data.conquests),conquestEvents:copy(data.conquestEvents)}}
 function publish(origin,{server=false,failures=0}={}){data.origin=origin;if(server&&failures===0)rememberServerSync(data.groupId);else data.lastLocalSync=Date.now();window.dispatchEvent(new CustomEvent('rotina-sprint2-cache-updated',{detail:{groupId:data.groupId,readyGroup:data.readyGroup,origin,server,failures,lastServerSync:data.lastServerSync,version:VERSION}}))}
 
@@ -92,7 +92,9 @@ async function hydrateCache(origin='store-cache-inicial'){
   const g=groupId();if(!g||g==='SISTEMA')return false;
   if(!await firebaseReady())return false;
   seedFromLogin();
-  return syncNames(FULL_NAMES,origin,false);
+  const ok=await syncNames(FULL_NAMES,origin,false);
+  if(ok)cacheHydratedGroup=g;
+  return ok;
 }
 async function fullSync(origin='store-manual',includeHistory=true){
   if(syncing)return syncing;
@@ -126,7 +128,7 @@ async function ensure(){
   const g=groupId();if(!g||g==='SISTEMA')return false;
   if(data.groupId!==g)reset(g);
   seedFromLogin();
-  await hydrateCache('store-cache-inicial');
+  if(cacheHydratedGroup!==g)await hydrateCache('store-cache-inicial');
   const last=Math.max(data.lastServerSync,storedServerSync(g));
   if(!last||Date.now()-last>=SYNC_MS)hotSync('store-servidor-inicial-stale').catch(()=>{});else scheduleNext();
   return data.readyGroup===g;

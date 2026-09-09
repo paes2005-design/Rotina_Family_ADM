@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='monitor-realdata-v3.3-targeted-history-review';
+const VERSION='monitor-realdata-v3.4-low-latency-review';
 const PAGE='sprint2-integracao-monitor-v2.html';
 const API_ROOT='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
 const TIME_ZONE='America/Bahia';
@@ -20,6 +20,7 @@ let statusFilter='all';
 let db=null,fs=null,app=null;
 let taskDocs=[],historyDocs=[],executionDocs=[],alarmDocs=[];
 let lastGroup='',lastLoadAt=0,bound=false;
+const reviewLocks=new Set();
 
 function zonedParts(date=new Date()){
   const parts=new Intl.DateTimeFormat('en-CA',{
@@ -165,22 +166,22 @@ async function resolveHistoryForReview(x){
   const cached=cachedHistoryForReview(x);
   if(cached)return applyResolvedHistory(x,cached);
   const expected=expectedHistoryId(x);
-  if(!expected){await log('sprint2.monitor_v3_historico_indisponivel',{motivo:'identidade-incompleta',leituraFirebase:0},'warning');return false;}
-  if(!await firebaseReady()){await log('sprint2.monitor_v3_historico_indisponivel',{motivo:'firebase-indisponivel',leituraFirebase:0},'warning');return false;}
+  if(!expected){log('sprint2.monitor_v3_historico_indisponivel',{motivo:'identidade-incompleta',leituraFirebase:0},'warning');return false;}
+  if(!await firebaseReady()){log('sprint2.monitor_v3_historico_indisponivel',{motivo:'firebase-indisponivel',leituraFirebase:0},'warning');return false;}
   try{
     const ref=fs.doc(db,'historico',expected);let snap=null,origem='cache',leituraFirebase=0;
     if(typeof fs.getDocFromCache==='function'){try{snap=await fs.getDocFromCache(ref)}catch(_){}}
     if(!snap?.exists()&&navigator.onLine&&typeof fs.getDocFromServer==='function'){snap=await fs.getDocFromServer(ref);origem='servidor';leituraFirebase=1;}
     else if(!snap?.exists()){snap=await fs.getDoc(ref);origem='getDoc';leituraFirebase=navigator.onLine?1:0;}
-    if(!snap?.exists()){await log('sprint2.monitor_v3_historico_indisponivel',{motivo:'documento-ainda-ausente',leituraFirebase},'warning');return false;}
+    if(!snap?.exists()){log('sprint2.monitor_v3_historico_indisponivel',{motivo:'documento-ainda-ausente',leituraFirebase},'warning');return false;}
     const h={id:snap.id,...snap.data()},date=clean(x.__date).slice(0,10),g=groupId();
     const valid=clean(h.tarefaId)===clean(x.__sourceId)&&sameProfile(h,x.__pid)&&recordDate(h)===date&&(!clean(h.grupoId)||clean(h.grupoId).toUpperCase()===g);
-    if(!valid){await log('sprint2.monitor_v3_historico_indisponivel',{motivo:'documento-incompativel',leituraFirebase},'error');return false;}
+    if(!valid){log('sprint2.monitor_v3_historico_indisponivel',{motivo:'documento-incompativel',leituraFirebase},'error');return false;}
     historyDocs=[...historyDocs.filter(v=>clean(v.id)!==clean(h.id)),h];
     applyResolvedHistory(x,h);
-    await log('sprint2.monitor_v3_historico_resolvido',{origem,leituraFirebase,temHistorico:true});
+    log('sprint2.monitor_v3_historico_resolvido',{origem,leituraFirebase,temHistorico:true});
     return true;
-  }catch(e){await log('sprint2.monitor_v3_historico_indisponivel',{motivo:String(e?.message||e).slice(0,70),leituraFirebase:navigator.onLine?1:0},'warning');return false;}
+  }catch(e){log('sprint2.monitor_v3_historico_indisponivel',{motivo:String(e?.message||e).slice(0,70),leituraFirebase:navigator.onLine?1:0},'warning');return false;}
 }
 function occurrenceFor(task,pid,date){
   const source=sourceTaskFor(task,pid,date);
@@ -339,7 +340,7 @@ async function loadData(force=false){
         executionDocs=(shared.executions||[]).map(x=>({...x}));
         alarmDocs=(shared.alarms||[]).map(x=>({...x}));
         lastGroup=g;lastLoadAt=Math.max(Number(shared.lastServerSync)||0,Number(shared.lastLiveSync)||0)||Date.now();
-        await log('sprint2.monitor_v3_dados',{tarefas:taskDocs.length,historico:historyDocs.length,execucoes:executionDocs.length,alarmes:alarmDocs.length,storeCentral:true});
+        log('sprint2.monitor_v3_dados',{tarefas:taskDocs.length,historico:historyDocs.length,execucoes:executionDocs.length,alarmes:alarmDocs.length,storeCentral:true});
         return true;
       }
     }
@@ -359,11 +360,11 @@ async function loadData(force=false){
     executionDocs=(es.docs||[]).map(d=>({id:d.id,...d.data()}));
     alarmDocs=(as.docs||[]).map(d=>({id:d.id,...d.data()}));
     lastGroup=g;lastLoadAt=Date.now();
-    await log('sprint2.monitor_v3_dados',{tarefas:taskDocs.length,historico:historyDocs.length,execucoes:executionDocs.length,alarmes:alarmDocs.length,storeCentral:false});
+    log('sprint2.monitor_v3_dados',{tarefas:taskDocs.length,historico:historyDocs.length,execucoes:executionDocs.length,alarmes:alarmDocs.length,storeCentral:false});
     return true;
   }catch(e){
     console.error('Monitor V3 dados:',e);
-    await log('sprint2.monitor_v3_dados_erro',{mensagem:String(e?.message||e).slice(0,80)},'error');
+    log('sprint2.monitor_v3_dados_erro',{mensagem:String(e?.message||e).slice(0,80)},'error');
     return false;
   }
 }
@@ -433,7 +434,7 @@ async function render(force=false){
   $('monitorTimeline').innerHTML=rows.length?header+rows.map(rowHtml).join(''):'<div class="notice">Nenhuma ocorrência corresponde aos filtros.</div>';
   $('monitorMobile').innerHTML=rows.length?rows.map(cardHtml).join(''):'<div class="notice">Nenhuma ocorrência corresponde aos filtros.</div>';
   bindRowActions($('monitorTimeline'),rows);bindRowActions($('monitorMobile'),rows);
-  await log('sprint2.monitor_v3_render',{linhas:rows.length,concluidas:done,andamento:running,atrasos:late,pendentes:pending,conflitosPersistidos:conflicts});
+  log('sprint2.monitor_v3_render',{linhas:rows.length,concluidas:done,andamento:running,atrasos:late,pendentes:pending,conflitosPersistidos:conflicts});
 }
 
 function closeModal(){document.querySelector('.mv2-modal')?.remove()}
@@ -451,7 +452,7 @@ async function openAlarm(x){
   const existing=alarmFor(x);
   const m=modalBase(`⏰ ${esc(x.__task.name)}`,`<p><strong>${esc(participantName(x.__pid))}</strong> · ${esc(x.__date.split('-').reverse().join('/'))} · ${esc(x.__task.start)} às ${esc(x.__task.end)}</p><label><b>Quando tocar</b></label><select class="mv2-select" id="mv2AlarmMoment" ${existing?.ativo?'disabled':''}><option value="inicio">No início da tarefa</option><option value="fim">No fim da tarefa</option><option value="ambos">No início e no fim</option></select><div class="mv2-box">${existing?.ativo?'🔒 Alarme ativo e bloqueado pelo ADM.':'⚪ Alarme desligado nesta ocorrência.'}</div><div class="mv2-actions"><button class="mv2-primary" id="mv2AlarmOn" ${existing?.ativo?'disabled':''}>Ativar</button><button class="mv2-danger" id="mv2AlarmOff" ${existing?.ativo?'':'disabled'}>Retirar</button></div><div class="mv2-msg" id="mv2AlarmMsg"></div>`);
   if(existing?.momentos?.includes('fim'))m.querySelector('#mv2AlarmMoment').value=existing.momentos.includes('inicio')?'ambos':'fim';
-  await log('sprint2.monitor_v3_alarme_abrir',{ativo:!!existing?.ativo});
+  log('sprint2.monitor_v3_alarme_abrir',{ativo:!!existing?.ativo});
   const command=async ativo=>{
     const msg=m.querySelector('#mv2AlarmMsg');msg.textContent='Salvando…';
     try{
@@ -460,9 +461,9 @@ async function openAlarm(x){
       const payload={grupoId:groupId(),perfilId:x.__pid,perfilNome:participantName(x.__pid),tarefaId:x.__sourceId,tarefaGrupoId:clean(x.tarefaGrupoId),nomeTarefa:x.__task.name,diaSemana:dayFullFor(x.__date),dataAgendada:x.__date,horaSugeridaInicio:x.__task.start,horaSugeridaFim:x.__task.end,...alarmSchedule(x),momentos,versaoAgenda:3,ativo,origem:'ADM',bloqueado:ativo,schedulerPendente:true,schedulerVersao:1,schedulerSolicitadoEm:now,atualizadoEm:now,...(ativo?{acionadoEm:now,acionadoPor:'ADM'}:{encerradoEm:now,encerradoPor:'ADM'})};
       await fs.setDoc(fs.doc(db,'despertadores',alarmKey(groupId(),x.__pid,x.__sourceId)),payload,{merge:true});
       await fs.addDoc(fs.collection(db,'despertadorHistorico'),{...payload,evento:ativo?'ativado-na-data':'retirado-da-data',criadoEm:fs.serverTimestamp()});
-      await log(ativo?'sprint2.monitor_v3_alarme_ativado':'sprint2.monitor_v3_alarme_retirado',{tarefaIdentificada:!!x.__sourceId});
+      log(ativo?'sprint2.monitor_v3_alarme_ativado':'sprint2.monitor_v3_alarme_retirado',{tarefaIdentificada:!!x.__sourceId});
       msg.textContent=ativo?'Alarme ativado.':'Alarme retirado.';if(window.rotinaSprint2SyncLocal)await window.rotinaSprint2SyncLocal('monitor-alarme-cache-local').catch(()=>{});setTimeout(()=>{closeModal();render(false)},350);
-    }catch(e){msg.textContent='Não foi possível salvar o alarme.';await log('sprint2.monitor_v3_alarme_erro',{mensagem:String(e?.message||e).slice(0,70)},'error')}
+    }catch(e){msg.textContent='Não foi possível salvar o alarme.';log('sprint2.monitor_v3_alarme_erro',{mensagem:String(e?.message||e).slice(0,70)},'error')}
   };
   m.querySelector('#mv2AlarmOn').onclick=()=>command(true);m.querySelector('#mv2AlarmOff').onclick=()=>command(false);
 }
@@ -470,16 +471,20 @@ function originalOutcome(x){
   const max=maxPoints(x),points=Number.isFinite(Number(x.pontosOriginais))?Number(x.pontosOriginais):wonPoints(x),pct=operationalPercentage(x)??0;return{max,points,pct};
 }
 async function applyReview(x,type,targetPct=null,msg){
+  const lockKey=clean(x?.__historyId)||expectedHistoryId(x);if(lockKey&&reviewLocks.has(lockKey))return;if(lockKey)reviewLocks.add(lockKey);
   try{
     if(!x.__historyId&&!await resolveHistoryForReview(x))throw new Error('Histórico ainda não disponível para revisão');if(!await firebaseReady())throw new Error('Firebase indisponível');
-    const o=originalOutcome(x),batch=fs.writeBatch(db),histRef=fs.doc(db,'historico',x.__historyId),execRef=x.__sourceId?fs.doc(db,'execucoes',`${x.__date}__${x.__sourceId}`):null,execSnap=execRef?await fs.getDoc(execRef).catch(()=>null):null;
+    const o=originalOutcome(x),batch=fs.writeBatch(db),histRef=fs.doc(db,'historico',x.__historyId),execRef=x.__executionId?fs.doc(db,'execucoes',x.__executionId):null;
     let patch;
     if(type==='reverter')patch={pontosGanhos:o.points,pontosOriginais:o.points,percentualOriginal:o.pct,revisaoStatus:'aguardando',percentualRevisado:fs.deleteField(),pontosDevolvidos:fs.deleteField(),revisaoDecisao:fs.deleteField(),revisadoEm:fs.deleteField()};
     else{const pct=type==='manter'?o.pct:Math.max(o.pct,Number(targetPct)||o.pct),points=type==='manter'?o.points:Math.max(o.points,Math.round(o.max*pct/100));patch={pontosGanhos:points,pontosOriginais:o.points,percentualOriginal:o.pct,percentualRevisado:pct,pontosDevolvidos:Math.max(0,points-o.points),revisaoStatus:'revisado',revisaoDecisao:type==='manter'?'manter':`devolver-${pct}`,revisadoEm:new Date().toISOString()}}
-    batch.update(histRef,patch);if(execSnap?.exists())batch.update(execRef,patch);await batch.commit();
-    await log(type==='reverter'?'sprint2.monitor_v3_justificativa_reverter':'sprint2.monitor_v3_justificativa_decisao',{alvoPct:targetPct===null?-1:Number(targetPct),reversao:type==='reverter'});
-    msg.textContent='Decisão registrada na ocorrência.';if(window.rotinaSprint2SyncLocal)await window.rotinaSprint2SyncLocal('monitor-revisao-cache-local').catch(()=>{});setTimeout(()=>{closeModal();render(false)},350);
-  }catch(e){msg.textContent=e.message||'Não foi possível registrar a decisão.';await log('sprint2.monitor_v3_justificativa_erro',{mensagem:String(e?.message||e).slice(0,70)},'error')}
+    batch.update(histRef,patch);if(execRef)batch.update(execRef,patch);await batch.commit();
+    log(type==='reverter'?'sprint2.monitor_v3_justificativa_reverter':'sprint2.monitor_v3_justificativa_decisao',{alvoPct:targetPct===null?-1:Number(targetPct),reversao:type==='reverter'});
+    msg.textContent='Decisão registrada na ocorrência.';
+    if(window.rotinaSprint2SyncLocal)window.rotinaSprint2SyncLocal('monitor-revisao-cache-local').catch(()=>{});else setTimeout(()=>render(false),0);
+    setTimeout(()=>closeModal(),120);
+  }catch(e){msg.textContent=e.message||'Não foi possível registrar a decisão.';log('sprint2.monitor_v3_justificativa_erro',{mensagem:String(e?.message||e).slice(0,70)},'error')}
+  finally{if(lockKey)reviewLocks.delete(lockKey)}
 }
 async function openJustification(x){
   const initial=justificationState(x);if(!initial)return;
@@ -489,7 +494,7 @@ async function openJustification(x){
     :(reviewed?'<button class="mv2-danger" data-review="reverter">↩️ Reverter decisão</button>':'<button class="mv2-neutral" data-review="manter">Manter resultado automático</button><button class="mv2-neutral" data-review="devolver" data-pct="50">Devolver até 50%</button><button class="mv2-neutral" data-review="devolver" data-pct="75">Devolver até 75%</button><button class="mv2-primary" data-review="devolver" data-pct="100">Devolver até 100%</button>');
   const initialMsg=!hasHistory?'Histórico ainda não disponível para revisão. Atualize em alguns segundos.':(reviewed?'Esta ocorrência já possui decisão. Reverta para escolher novamente.':'');
   const m=modalBase('🚩 Revisar justificativa',`<p><strong>${esc(x.__task.name)}</strong> · ${esc(participantName(x.__pid))}<br>${esc(x.__task.start)}–${esc(x.__task.end)} · ${esc(x.__date.split('-').reverse().join('/'))}</p><div class="mv2-box mv2-just">${esc(j.text)}</div><div class="mv2-box">Resultado registrado pelo Participante: <strong>${o.pct}%</strong> · <strong>${o.points}/${o.max} pts</strong>${reviewed?`<br>Resultado revisado: <strong>${reviewedPercentage(x)}%</strong> · <strong>${wonPoints(x)}/${o.max} pts</strong>`:''}</div><div class="mv2-actions">${buttons}</div><div class="mv2-msg" id="mv2JustMsg">${esc(initialMsg)}</div>`);
-  await log('sprint2.monitor_v3_justificativa_abrir',{temHistorico:hasHistory,revisada:reviewed,resolucaoDireta:hasHistory&&!!x.__historyId});
+  log('sprint2.monitor_v3_justificativa_abrir',{temHistorico:hasHistory,revisada:reviewed,resolucaoDireta:hasHistory&&!!x.__historyId});
   if(!hasHistory)return;
   m.querySelectorAll('[data-review]').forEach(b=>b.onclick=()=>{const msg=m.querySelector('#mv2JustMsg');msg.textContent='Registrando…';m.querySelectorAll('[data-review]').forEach(btn=>btn.disabled=true);applyReview(x,b.dataset.review,b.dataset.pct?Number(b.dataset.pct):null,msg)});
 }
