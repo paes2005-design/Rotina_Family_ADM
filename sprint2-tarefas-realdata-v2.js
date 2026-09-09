@@ -49,12 +49,13 @@ function cfg(d){
     points:Number(d?.pontosMaximos)||0,
     tolerance:Number(d?.tempoLimite)||0,
     active:isActive(d),
+    justificationRequired:d?.justificativaObrigatoria !== false,
     note:noteOf(d)
   };
 }
 function sig(d){
   const c=cfg(d);
-  return JSON.stringify([c.name,c.icon,c.start,c.end,c.points,c.tolerance,c.active,c.note]);
+  return JSON.stringify([c.name,c.icon,c.start,c.end,c.points,c.tolerance,c.active,c.justificationRequired,c.note]);
 }
 function tgFor(docs){
   return most((docs||[]).map(d=>clean(d.tarefaGrupoId)).filter(Boolean))
@@ -128,7 +129,7 @@ function build(){
 
 function draftFrom(r){
   if(!r){
-    return{icon:'✅',name:'Nova tarefa',start:'12:00',end:'12:15',points:5,tolerance:0,active:true,alarm:'off',note:'',days:[...WEEKDAYS]};
+    return{icon:'✅',name:'Nova tarefa',start:'12:00',end:'12:15',points:5,tolerance:0,active:true,justificationRequired:true,alarm:'off',note:'',days:[...WEEKDAYS]};
   }
   return{
     icon:r.icon,
@@ -138,6 +139,7 @@ function draftFrom(r){
     points:Number(r.points)||0,
     tolerance:Number(r.tolerance)||0,
     active:!!r.active,
+    justificationRequired:r.justificationRequired !== false,
     alarm:r.alarm,
     note:r.note||'',
     days:[...r.days]
@@ -200,7 +202,7 @@ function createPayload({g,pid,participant,tg,day,v}){
   return{
     grupoId:g,nome:v.name,icone:v.icon,perfilNome:participant,perfilId:pid,tarefaGrupoId:tg,
     horaSugeridaInicio:v.start,horaSugeridaFim:v.end,diaSemana:day,
-    tempoLimite:v.tolerance,pontosMaximos:v.points,justificativaObrigatoria:false,
+    tempoLimite:v.tolerance,pontosMaximos:v.points,justificativaObrigatoria:v.justificationRequired !== false,
     observacao:v.note,ativa:v.active,status:'Pendente',pontosGanhos:0,horarioInicio:'',horarioTermino:''
   };
 }
@@ -258,6 +260,7 @@ function selectedPatch(tg,v,now){
   if(touched('tolerance'))patch.tempoLimite=v.tolerance;
   if(touched('note'))patch.observacao=v.note;
   if(touched('active'))patch.ativa=v.active;
+  if(touched('justificationRequired'))patch.justificativaObrigatoria=v.justificationRequired !== false;
   return patch;
 }
 
@@ -444,6 +447,7 @@ function updateDraft(field,value){
   }
   if(field==='points'||field==='tolerance')editor.draft[field]=value;
   else if(field==='active')editor.draft.active=value==='active';
+  else if(field==='justificationRequired')editor.draft.justificationRequired=value==='required';
   else editor.draft[field]=value;
 
   if(editor.mode==='edit')editor.touched.add(field);
@@ -561,6 +565,7 @@ function detailRow(r,d){
   return`<tr class="tv4-detail-row"><td colspan="8"><div class="tv4-details">
     ${applicationBox(r,d)}
     ${r?'':`<div class="tv4-box"><label>Dias da semana</label><div class="tv4-days">${dayButtons(d.days)}</div></div>`}
+    <div class="tv4-box"><label>Justificativa em caso de atraso</label><select data-field="justificationRequired"><option value="required" ${d.justificationRequired!==false?'selected':''}>Obrigatória</option><option value="optional" ${d.justificationRequired===false?'selected':''}>Opcional</option></select><small class="tv4-muted">Obrigatória bloqueia a conclusão do atraso até o participante justificar.</small></div>
     <div class="tv4-box"><label>Alarme</label><select data-field="alarm">
       <option value="off" ${d.alarm==='off'?'selected':''}>Desligado</option>
       <option value="start" ${d.alarm==='start'?'selected':''}>No início</option>
@@ -604,6 +609,7 @@ function mobileEdit(r){
       <div><label>Status</label>${statusField(r,d)}</div>
       ${applicationBox(r,d)}
       ${r?'':`<div class="tv4-box"><label>Dias da semana</label><div class="tv4-days">${dayButtons(d.days)}</div></div>`}
+      <div><label>Justificativa em caso de atraso</label><select data-field="justificationRequired"><option value="required" ${d.justificationRequired!==false?'selected':''}>Obrigatória</option><option value="optional" ${d.justificationRequired===false?'selected':''}>Opcional</option></select><small class="tv4-muted">Obrigatória exige justificativa antes de concluir.</small></div>
       <div><label>Alarme</label><select data-field="alarm"><option value="off" ${d.alarm==='off'?'selected':''}>Desligado</option><option value="start" ${d.alarm==='start'?'selected':''}>No início</option><option value="end" ${d.alarm==='end'?'selected':''}>No fim</option><option value="both" ${d.alarm==='both'?'selected':''}>No início e no fim</option></select></div>
       <div><label>Observação</label><textarea data-field="note">${esc(d.note)}</textarea></div>
       ${r&&!r.canBulk?'<div class="tv4-warning">Há variações entre os dias. Somente os campos alterados serão aplicados aos dias selecionados.</div>':''}
