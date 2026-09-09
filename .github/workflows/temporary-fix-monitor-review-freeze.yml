@@ -1,0 +1,187 @@
+name: Temporary fix ADM monitor review freeze
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/temporary-fix-monitor-review-freeze.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Make review updates zero-read and repaint from memory
+        shell: python
+        run: |
+          from pathlib import Path
+
+          store=Path('sprint2-data-store-v1.js')
+          s=store.read_text(encoding='utf-8')
+          s=s.replace("const VERSION='sprint2-data-store-v1.4-idempotent-ensure-budget';","const VERSION='sprint2-data-store-v1.5-inmemory-patch-budget';")
+
+          old_seed="""function seedFromLogin(){
+            const base=window.rotinaSprint2BaseSnapshot?.();
+            const g=groupId();
+            if(!base||!g||clean(base.groupId).toUpperCase()!==g)return false;
+            if(data.groupId!==g)reset(g);
+            data.profiles=copy(base.profiles);
+            data.taskDocs=copy(base.taskDocs);
+            data.history=copy(base.history);
+            data.redemptions=copy(base.redemptions||[]);
+            data.readyGroup=g;
+            data.lastServerSync=Math.max(data.lastServerSync,Number(base.lastLoadedAt)||0,storedServerSync(g));
+            data.origin='login-seed';
+            return true;
+          }"""
+          new_seed="""function seedFromLogin(){
+            const base=window.rotinaSprint2BaseSnapshot?.();
+            const g=groupId();
+            if(!base||!g||clean(base.groupId).toUpperCase()!==g)return false;
+            if(data.groupId!==g)reset(g);
+            if(data.readyGroup===g&&cacheHydratedGroup===g)return true;
+            data.profiles=copy(base.profiles);
+            data.taskDocs=copy(base.taskDocs);
+            data.history=copy(base.history);
+            data.redemptions=copy(base.redemptions||[]);
+            data.readyGroup=g;
+            data.lastServerSync=Math.max(data.lastServerSync,Number(base.lastLoadedAt)||0,storedServerSync(g));
+            data.origin='login-seed';
+            return true;
+          }"""
+          if old_seed in s:s=s.replace(old_seed,new_seed)
+          elif "if(data.readyGroup===g&&cacheHydratedGroup===g)return true;" not in s:raise SystemExit('store seed marker not found')
+
+          marker="""async function localSync(origin='acao-local-cache',markActivity=true){
+            const ok=await syncNames(FULL_NAMES,origin,false);
+            if(markActivity)markServerActivity(origin);
+            return ok;
+          }
+          """
+          replacement="""async function localSync(origin='acao-local-cache',markActivity=true){
+            const ok=await syncNames(FULL_NAMES,origin,false);
+            if(markActivity)markServerActivity(origin);
+            return ok;
+          }
+          function patchLocalRecord(kind,id,patch={},remove=[],origin='acao-local-patch'){
+            const field=kind==='history'||kind==='historico'?'history':kind==='executions'||kind==='execucoes'?'executions':'';
+            if(!field||!clean(id))return false;
+            const list=data[field]||[],idx=list.findIndex(x=>clean(x.id)===clean(id));if(idx<0)return false;
+            const next={...list[idx],...(patch||{})};for(const key of remove||[])delete next[key];list[idx]=next;
+            data.lastLocalSync=Date.now();data.origin=origin;return true;
+          }
+          """
+          if marker in s:s=s.replace(marker,replacement)
+          elif 'function patchLocalRecord(' not in s:raise SystemExit('store local patch insertion marker not found')
+
+          s=s.replace("  window.rotinaSprint2SyncLocal=(origin='acao-local-cache')=>localSync(origin,true);\n  window.rotinaSprint2MarkServerActivity=markServerActivity;","  window.rotinaSprint2SyncLocal=(origin='acao-local-cache')=>localSync(origin,true);\n  window.rotinaSprint2PatchLocalRecord=patchLocalRecord;\n  window.rotinaSprint2MarkServerActivity=markServerActivity;")
+          if 'window.rotinaSprint2PatchLocalRecord=patchLocalRecord;' not in s:raise SystemExit('store export marker not found')
+          store.write_text(s,encoding='utf-8')
+
+          monitor=Path('sprint2-monitor-realdata-v2.js')
+          m=monitor.read_text(encoding='utf-8')
+          m=m.replace("const VERSION='monitor-realdata-v3.4-low-latency-review';","const VERSION='monitor-realdata-v3.5-freeze-free-review';")
+          m=m.replace("async function render(force=false){\n  if(!state()||!$('monitorTimeline'))return;\n  fillParticipants();ensureControls();\n  if(!(await loadData(force))){$('monitorInfo').textContent='Não foi possível carregar os detalhes do Monitor.';return}","async function render(force=false,localOnly=false){\n  if(!state()||!$('monitorTimeline'))return;\n  fillParticipants();ensureControls();\n  if(!localOnly&&!(await loadData(force))){$('monitorInfo').textContent='Não foi possível carregar os detalhes do Monitor.';return}")
+          if 'async function render(force=false,localOnly=false)' not in m:raise SystemExit('monitor render marker not found')
+
+          start=m.find('function originalOutcome(x){')
+          end=m.find('\nasync function openJustification(x){',start)
+          if start<0 or end<0:raise SystemExit('monitor review block boundaries not found')
+          new_review="""function originalOutcome(x){
+            const max=maxPoints(x),points=Number.isFinite(Number(x.pontosOriginais))?Number(x.pontosOriginais):wonPoints(x),pct=operationalPercentage(x)??0;return{max,points,pct};
+          }
+          function applyPlainPatch(doc,set,remove){if(!doc)return;Object.assign(doc,set||{});for(const key of remove||[])delete doc[key]}
+          function patchReviewMemory(x,set,remove){
+            applyPlainPatch(x,set,remove);
+            const h=historyDocs.find(d=>clean(d.id)===clean(x.__historyId));applyPlainPatch(h,set,remove);
+            const e=executionDocs.find(d=>clean(d.id)===clean(x.__executionId));applyPlainPatch(e,set,remove);
+            if(window.rotinaSprint2PatchLocalRecord){
+              if(x.__historyId)window.rotinaSprint2PatchLocalRecord('history',x.__historyId,set,remove,'monitor-revisao-local');
+              if(x.__executionId)window.rotinaSprint2PatchLocalRecord('executions',x.__executionId,set,remove,'monitor-revisao-local');
+            }
+            window.rotinaSprint2MarkServerActivity?.('monitor-revisao-gravada');
+          }
+          async function applyReview(x,type,targetPct=null,msg){
+            const lockKey=clean(x?.__historyId)||expectedHistoryId(x);if(lockKey&&reviewLocks.has(lockKey))return;if(lockKey)reviewLocks.add(lockKey);
+            try{
+              if(!x.__historyId&&!await resolveHistoryForReview(x))throw new Error('Histórico ainda não disponível para revisão');if(!await firebaseReady())throw new Error('Firebase indisponível');
+              const o=originalOutcome(x),batch=fs.writeBatch(db),histRef=fs.doc(db,'historico',x.__historyId),execRef=x.__executionId?fs.doc(db,'execucoes',x.__executionId):null;
+              let patch,set,remove=[];
+              if(type==='reverter'){
+                set={pontosGanhos:o.points,pontosOriginais:o.points,percentualOriginal:o.pct,revisaoStatus:'aguardando'};
+                remove=['percentualRevisado','pontosDevolvidos','revisaoDecisao','revisadoEm'];
+                patch={...set,percentualRevisado:fs.deleteField(),pontosDevolvidos:fs.deleteField(),revisaoDecisao:fs.deleteField(),revisadoEm:fs.deleteField()};
+              }else{
+                const pct=type==='manter'?o.pct:Math.max(o.pct,Number(targetPct)||o.pct),points=type==='manter'?o.points:Math.max(o.points,Math.round(o.max*pct/100));
+                set={pontosGanhos:points,pontosOriginais:o.points,percentualOriginal:o.pct,percentualRevisado:pct,pontosDevolvidos:Math.max(0,points-o.points),revisaoStatus:'revisado',revisaoDecisao:type==='manter'?'manter':`devolver-${pct}`,revisadoEm:new Date().toISOString()};patch={...set};
+              }
+              batch.update(histRef,patch);if(execRef)batch.update(execRef,patch);await batch.commit();
+              patchReviewMemory(x,set,remove);
+              log(type==='reverter'?'sprint2.monitor_v3_justificativa_reverter':'sprint2.monitor_v3_justificativa_decisao',{alvoPct:targetPct===null?-1:Number(targetPct),reversao:type==='reverter'});
+              msg.textContent='Decisão registrada na ocorrência.';
+              closeModal();requestAnimationFrame(()=>render(false,true));
+            }catch(e){msg.textContent=e.message||'Não foi possível registrar a decisão.';log('sprint2.monitor_v3_justificativa_erro',{mensagem:String(e?.message||e).slice(0,70)},'error')}
+            finally{if(lockKey)reviewLocks.delete(lockKey)}
+          }"""
+          m=m[:start]+new_review+m[end:]
+          if "rotinaSprint2SyncLocal('monitor-revisao-cache-local')" in m:raise SystemExit('old heavy review local sync still present')
+          monitor.write_text(m,encoding='utf-8')
+
+          rewards=Path('sprint2-recompensas-realdata-v1.js')
+          r=rewards.read_text(encoding='utf-8')
+          r=r.replace("const VERSION='recompensas-realdata-v1.3.6-production-ui';","const VERSION='recompensas-realdata-v1.3.7-production-ui';")
+          r=r.replace("const APP_BUILD='20260905.11';","const APP_BUILD='20260905.12';")
+          rewards.write_text(r,encoding='utf-8')
+
+          sw=Path('sw.js');w=sw.read_text(encoding='utf-8')
+          w=w.replace("rotina-family-adm-v100-production-20260905.11","rotina-family-adm-v101-production-20260905.12")
+          w=w.replace("const ROTINA_SW_VERSION='100';","const ROTINA_SW_VERSION='101';")
+          w=w.replace("const ROTINA_BUILD_ID='20260905.11';","const ROTINA_BUILD_ID='20260905.12';")
+          w=w.replace('20260905.11','20260905.12')
+          w=w.replace('sprint2-data-store-v1.js?v=20260909-cache-budget-v14','sprint2-data-store-v1.js?v=20260909-cache-budget-v15')
+          w=w.replace('sprint2-recompensas-realdata-v1.js?v=20260909-production-ui-v136','sprint2-recompensas-realdata-v1.js?v=20260909-production-ui-v137')
+          w=w.replace('sprint2-monitor-realdata-v2.js?v=20260909-review-latency-v34','sprint2-monitor-realdata-v2.js?v=20260909-review-freeze-v35')
+          sw.write_text(w,encoding='utf-8')
+
+          for name in ['index.html','index-ADMIN-v9.html','manifest.json']:
+            p=Path(name);v=p.read_text(encoding='utf-8')
+            v=v.replace('20260905.11','20260905.12')
+            v=v.replace('sprint2-data-store-v1.js?v=20260909-cache-budget-v14','sprint2-data-store-v1.js?v=20260909-cache-budget-v15')
+            v=v.replace('sprint2-recompensas-realdata-v1.js?v=20260909-production-ui-v136','sprint2-recompensas-realdata-v1.js?v=20260909-production-ui-v137')
+            v=v.replace('sprint2-monitor-realdata-v2.js?v=20260909-review-latency-v34','sprint2-monitor-realdata-v2.js?v=20260909-review-freeze-v35')
+            p.write_text(v,encoding='utf-8')
+
+          sf=store.read_text(encoding='utf-8');mf=monitor.read_text(encoding='utf-8');wf=sw.read_text(encoding='utf-8')
+          assert "sprint2-data-store-v1.5-inmemory-patch-budget" in sf
+          assert 'window.rotinaSprint2PatchLocalRecord=patchLocalRecord;' in sf
+          assert "if(data.readyGroup===g&&cacheHydratedGroup===g)return true;" in sf
+          assert "monitor-realdata-v3.5-freeze-free-review" in mf
+          assert 'async function render(force=false,localOnly=false)' in mf
+          assert "closeModal();requestAnimationFrame(()=>render(false,true));" in mf
+          assert "rotinaSprint2SyncLocal('monitor-revisao-cache-local')" not in mf
+          assert "const ROTINA_SW_VERSION='101';" in wf
+          assert "const ROTINA_BUILD_ID='20260905.12';" in wf
+          print('Review freeze repair prepared: zero rereads, in-memory patch, immediate repaint')
+      - name: Syntax checks
+        run: |
+          node --check sprint2-data-store-v1.js
+          node --check sprint2-monitor-realdata-v2.js
+          node --check sprint2-recompensas-realdata-v1.js
+          node --check sw.js
+      - name: Commit production review freeze fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sprint2-data-store-v1.js sprint2-monitor-realdata-v2.js sprint2-recompensas-realdata-v1.js sw.js index.html index-ADMIN-v9.html manifest.json
+          if git diff --cached --quiet; then
+            echo 'Review freeze fix already applied.'
+          else
+            git commit -m "Remove ADM review UI freeze build 20260905.12"
+            git push
+          fi
