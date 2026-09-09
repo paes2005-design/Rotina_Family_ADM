@@ -1,0 +1,150 @@
+name: Temporary fix ADM monitor review latency
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/temporary-fix-monitor-review-latency.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Remove monitor feedback loop and shorten review path
+        shell: python
+        run: |
+          from pathlib import Path
+
+          # 1) Central store: ensure() must be idempotent. The old implementation
+          # re-read every cached collection and emitted cache-updated on every call,
+          # which fed the Monitor cache-updated listener back into render().
+          store=Path('sprint2-data-store-v1.js')
+          s=store.read_text(encoding='utf-8')
+          s=s.replace("const VERSION='sprint2-data-store-v1.3-cache-first-budget';","const VERSION='sprint2-data-store-v1.4-idempotent-ensure-budget';")
+          s=s.replace("let db=null,fs=null,app=null,timer=null,syncing=null,installed=false;","let db=null,fs=null,app=null,timer=null,syncing=null,installed=false,cacheHydratedGroup='';")
+          s=s.replace("function reset(g=''){data={groupId:g,readyGroup:'',profiles:[],taskDocs:[],history:[],executions:[],alarms:[],rewards:[],redemptions:[],conquests:[],conquestEvents:[],lastServerSync:storedServerSync(g),lastLocalSync:0,origin:'reset',version:VERSION}}","function reset(g=''){cacheHydratedGroup='';data={groupId:g,readyGroup:'',profiles:[],taskDocs:[],history:[],executions:[],alarms:[],rewards:[],redemptions:[],conquests:[],conquestEvents:[],lastServerSync:storedServerSync(g),lastLocalSync:0,origin:'reset',version:VERSION}}")
+          old_hydrate="""async function hydrateCache(origin='store-cache-inicial'){
+            const g=groupId();if(!g||g==='SISTEMA')return false;
+            if(!await firebaseReady())return false;
+            seedFromLogin();
+            return syncNames(FULL_NAMES,origin,false);
+          }"""
+          new_hydrate="""async function hydrateCache(origin='store-cache-inicial'){
+            const g=groupId();if(!g||g==='SISTEMA')return false;
+            if(!await firebaseReady())return false;
+            seedFromLogin();
+            const ok=await syncNames(FULL_NAMES,origin,false);
+            if(ok)cacheHydratedGroup=g;
+            return ok;
+          }"""
+          if old_hydrate in s:s=s.replace(old_hydrate,new_hydrate)
+          elif "if(ok)cacheHydratedGroup=g;" not in s:raise SystemExit('store hydrate marker not found')
+          old_ensure="""  seedFromLogin();
+            await hydrateCache('store-cache-inicial');
+            const last=Math.max(data.lastServerSync,storedServerSync(g));"""
+          new_ensure="""  seedFromLogin();
+            if(cacheHydratedGroup!==g)await hydrateCache('store-cache-inicial');
+            const last=Math.max(data.lastServerSync,storedServerSync(g));"""
+          if old_ensure in s:s=s.replace(old_ensure,new_ensure)
+          elif "if(cacheHydratedGroup!==g)await hydrateCache('store-cache-inicial');" not in s:raise SystemExit('store ensure marker not found')
+          store.write_text(s,encoding='utf-8')
+
+          # 2) Monitor: telemetry must never block UI; avoid one Firestore read before
+          # every review; use the execution document already resolved in the row; do
+          # local-cache reconciliation in background; lock duplicate review submits.
+          monitor=Path('sprint2-monitor-realdata-v2.js')
+          m=monitor.read_text(encoding='utf-8')
+          m=m.replace("const VERSION='monitor-realdata-v3.3-targeted-history-review';","const VERSION='monitor-realdata-v3.4-low-latency-review';")
+          m=m.replace("let lastGroup='',lastLoadAt=0,bound=false;","let lastGroup='',lastLoadAt=0,bound=false;\nconst reviewLocks=new Set();")
+          m=m.replace('await log(', 'log(')
+          old_ref="const o=originalOutcome(x),batch=fs.writeBatch(db),histRef=fs.doc(db,'historico',x.__historyId),execRef=x.__sourceId?fs.doc(db,'execucoes',`${x.__date}__${x.__sourceId}`):null,execSnap=execRef?await fs.getDoc(execRef).catch(()=>null):null;"
+          new_ref="const o=originalOutcome(x),batch=fs.writeBatch(db),histRef=fs.doc(db,'historico',x.__historyId),execRef=x.__executionId?fs.doc(db,'execucoes',x.__executionId):null;"
+          if old_ref in m:m=m.replace(old_ref,new_ref)
+          elif new_ref not in m:raise SystemExit('monitor exec read marker not found')
+          m=m.replace("batch.update(histRef,patch);if(execSnap?.exists())batch.update(execRef,patch);await batch.commit();","batch.update(histRef,patch);if(execRef)batch.update(execRef,patch);await batch.commit();")
+          old_apply_start="""async function applyReview(x,type,targetPct=null,msg){
+            try{
+              if(!x.__historyId&&!await resolveHistoryForReview(x))throw new Error('Histórico ainda não disponível para revisão');if(!await firebaseReady())throw new Error('Firebase indisponível');"""
+          new_apply_start="""async function applyReview(x,type,targetPct=null,msg){
+            const lockKey=clean(x?.__historyId)||expectedHistoryId(x);if(lockKey&&reviewLocks.has(lockKey))return;if(lockKey)reviewLocks.add(lockKey);
+            try{
+              if(!x.__historyId&&!await resolveHistoryForReview(x))throw new Error('Histórico ainda não disponível para revisão');if(!await firebaseReady())throw new Error('Firebase indisponível');"""
+          if old_apply_start in m:m=m.replace(old_apply_start,new_apply_start)
+          elif 'reviewLocks.has(lockKey)' not in m:raise SystemExit('monitor review lock start marker not found')
+          old_tail="""    log(type==='reverter'?'sprint2.monitor_v3_justificativa_reverter':'sprint2.monitor_v3_justificativa_decisao',{alvoPct:targetPct===null?-1:Number(targetPct),reversao:type==='reverter'});
+            msg.textContent='Decisão registrada na ocorrência.';if(window.rotinaSprint2SyncLocal)await window.rotinaSprint2SyncLocal('monitor-revisao-cache-local').catch(()=>{});setTimeout(()=>{closeModal();render(false)},350);
+          }catch(e){msg.textContent=e.message||'Não foi possível registrar a decisão.';log('sprint2.monitor_v3_justificativa_erro',{mensagem:String(e?.message||e).slice(0,70)},'error')}
+          }"""
+          new_tail="""    log(type==='reverter'?'sprint2.monitor_v3_justificativa_reverter':'sprint2.monitor_v3_justificativa_decisao',{alvoPct:targetPct===null?-1:Number(targetPct),reversao:type==='reverter'});
+            msg.textContent='Decisão registrada na ocorrência.';
+            if(window.rotinaSprint2SyncLocal)window.rotinaSprint2SyncLocal('monitor-revisao-cache-local').catch(()=>{});else setTimeout(()=>render(false),0);
+            setTimeout(()=>closeModal(),120);
+          }catch(e){msg.textContent=e.message||'Não foi possível registrar a decisão.';log('sprint2.monitor_v3_justificativa_erro',{mensagem:String(e?.message||e).slice(0,70)},'error')}
+            finally{if(lockKey)reviewLocks.delete(lockKey)}
+          }"""
+          if old_tail in m:m=m.replace(old_tail,new_tail)
+          elif 'setTimeout(()=>closeModal(),120);' not in m:raise SystemExit('monitor review tail marker not found')
+          monitor.write_text(m,encoding='utf-8')
+
+          # 3) Production build/cache bust.
+          rewards=Path('sprint2-recompensas-realdata-v1.js')
+          r=rewards.read_text(encoding='utf-8')
+          r=r.replace("const VERSION='recompensas-realdata-v1.3.5-production-ui';","const VERSION='recompensas-realdata-v1.3.6-production-ui';")
+          r=r.replace("const APP_BUILD='20260905.10';","const APP_BUILD='20260905.11';")
+          rewards.write_text(r,encoding='utf-8')
+
+          sw=Path('sw.js');w=sw.read_text(encoding='utf-8')
+          w=w.replace("rotina-family-adm-v99-production-20260905.10","rotina-family-adm-v100-production-20260905.11")
+          w=w.replace("const ROTINA_SW_VERSION='99';","const ROTINA_SW_VERSION='100';")
+          w=w.replace("const ROTINA_BUILD_ID='20260905.10';","const ROTINA_BUILD_ID='20260905.11';")
+          w=w.replace('20260905.10','20260905.11')
+          w=w.replace('sprint2-data-store-v1.js?v=20260905-cache-budget-v13','sprint2-data-store-v1.js?v=20260909-cache-budget-v14')
+          w=w.replace('sprint2-recompensas-realdata-v1.js?v=20260909-production-ui-v135','sprint2-recompensas-realdata-v1.js?v=20260909-production-ui-v136')
+          w=w.replace('sprint2-monitor-realdata-v2.js?v=20260909-history-review-v33','sprint2-monitor-realdata-v2.js?v=20260909-review-latency-v34')
+          sw.write_text(w,encoding='utf-8')
+
+          for name in ['index.html','index-ADMIN-v9.html','manifest.json']:
+            p=Path(name);v=p.read_text(encoding='utf-8')
+            v=v.replace('20260905.10','20260905.11')
+            v=v.replace('sprint2-data-store-v1.js?v=20260905-cache-budget-v13','sprint2-data-store-v1.js?v=20260909-cache-budget-v14')
+            v=v.replace('sprint2-recompensas-realdata-v1.js?v=20260909-production-ui-v135','sprint2-recompensas-realdata-v1.js?v=20260909-production-ui-v136')
+            v=v.replace('sprint2-monitor-realdata-v2.js?v=20260909-history-review-v33','sprint2-monitor-realdata-v2.js?v=20260909-review-latency-v34')
+            p.write_text(v,encoding='utf-8')
+
+          # Static invariants.
+          sf=store.read_text(encoding='utf-8');mf=monitor.read_text(encoding='utf-8');wf=sw.read_text(encoding='utf-8')
+          assert "sprint2-data-store-v1.4-idempotent-ensure-budget" in sf
+          assert "if(cacheHydratedGroup!==g)await hydrateCache('store-cache-inicial');" in sf
+          assert "monitor-realdata-v3.4-low-latency-review" in mf
+          assert 'reviewLocks.has(lockKey)' in mf
+          assert "execRef=x.__executionId?fs.doc(db,'execucoes',x.__executionId):null" in mf
+          assert 'execSnap=' not in mf
+          assert 'await log(' not in mf
+          assert "window.rotinaSprint2SyncLocal('monitor-revisao-cache-local').catch(()=>{})" in mf
+          assert "const ROTINA_SW_VERSION='100';" in wf
+          assert "const ROTINA_BUILD_ID='20260905.11';" in wf
+          print('Latency repair prepared: idempotent Store ensure + nonblocking Monitor review path')
+      - name: Syntax checks
+        run: |
+          node --check sprint2-data-store-v1.js
+          node --check sprint2-monitor-realdata-v2.js
+          node --check sprint2-recompensas-realdata-v1.js
+          node --check sw.js
+      - name: Commit production latency fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sprint2-data-store-v1.js sprint2-monitor-realdata-v2.js sprint2-recompensas-realdata-v1.js sw.js index.html index-ADMIN-v9.html manifest.json
+          if git diff --cached --quiet; then
+            echo 'Latency fix already applied.'
+          else
+            git commit -m "Reduce ADM monitor review latency build 20260905.11"
+            git push
+          fi
