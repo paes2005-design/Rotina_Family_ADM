@@ -1,10 +1,10 @@
 (function(){
 'use strict';
 
-const VERSION='recompensas-realdata-v1.3.6-production-ui';
+const VERSION='recompensas-realdata-v1.3.7-production-ui';
 const PAGE='sprint2-integracao-recompensas-v1.html';
 const APP_VERSION='2.0.0';
-const APP_BUILD='20260905.11';
+const APP_BUILD='20260905.12';
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').trim();
 const esc=(v='')=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

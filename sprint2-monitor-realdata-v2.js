@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='monitor-realdata-v3.4-low-latency-review';
+const VERSION='monitor-realdata-v3.5-freeze-free-review';
 const PAGE='sprint2-integracao-monitor-v2.html';
 const API_ROOT='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
 const TIME_ZONE='America/Bahia';
@@ -417,10 +417,10 @@ function bindRowActions(container,rows){
   container.querySelectorAll('.mv2-just-open').forEach(b=>b.onclick=()=>{const x=rows.find(r=>r.__historyId===b.dataset.history&&r.__sourceId===b.dataset.source&&r.__pid===b.dataset.pid&&r.__date===b.dataset.date);if(x)openJustification(x)});
 }
 
-async function render(force=false){
+async function render(force=false,localOnly=false){
   if(!state()||!$('monitorTimeline'))return;
   fillParticipants();ensureControls();
-  if(!(await loadData(force))){$('monitorInfo').textContent='Não foi possível carregar os detalhes do Monitor.';return}
+  if(!localOnly&&!(await loadData(force))){$('monitorInfo').textContent='Não foi possível carregar os detalhes do Monitor.';return}
   const rows=appRows();
   const done=rows.filter(x=>x.__state==='final').length;
   const running=rows.filter(x=>x.__state==='running').length;
@@ -470,19 +470,36 @@ async function openAlarm(x){
 function originalOutcome(x){
   const max=maxPoints(x),points=Number.isFinite(Number(x.pontosOriginais))?Number(x.pontosOriginais):wonPoints(x),pct=operationalPercentage(x)??0;return{max,points,pct};
 }
+function applyPlainPatch(doc,set,remove){if(!doc)return;Object.assign(doc,set||{});for(const key of remove||[])delete doc[key]}
+function patchReviewMemory(x,set,remove){
+  applyPlainPatch(x,set,remove);
+  const h=historyDocs.find(d=>clean(d.id)===clean(x.__historyId));applyPlainPatch(h,set,remove);
+  const e=executionDocs.find(d=>clean(d.id)===clean(x.__executionId));applyPlainPatch(e,set,remove);
+  if(window.rotinaSprint2PatchLocalRecord){
+    if(x.__historyId)window.rotinaSprint2PatchLocalRecord('history',x.__historyId,set,remove,'monitor-revisao-local');
+    if(x.__executionId)window.rotinaSprint2PatchLocalRecord('executions',x.__executionId,set,remove,'monitor-revisao-local');
+  }
+  window.rotinaSprint2MarkServerActivity?.('monitor-revisao-gravada');
+}
 async function applyReview(x,type,targetPct=null,msg){
   const lockKey=clean(x?.__historyId)||expectedHistoryId(x);if(lockKey&&reviewLocks.has(lockKey))return;if(lockKey)reviewLocks.add(lockKey);
   try{
     if(!x.__historyId&&!await resolveHistoryForReview(x))throw new Error('Histórico ainda não disponível para revisão');if(!await firebaseReady())throw new Error('Firebase indisponível');
     const o=originalOutcome(x),batch=fs.writeBatch(db),histRef=fs.doc(db,'historico',x.__historyId),execRef=x.__executionId?fs.doc(db,'execucoes',x.__executionId):null;
-    let patch;
-    if(type==='reverter')patch={pontosGanhos:o.points,pontosOriginais:o.points,percentualOriginal:o.pct,revisaoStatus:'aguardando',percentualRevisado:fs.deleteField(),pontosDevolvidos:fs.deleteField(),revisaoDecisao:fs.deleteField(),revisadoEm:fs.deleteField()};
-    else{const pct=type==='manter'?o.pct:Math.max(o.pct,Number(targetPct)||o.pct),points=type==='manter'?o.points:Math.max(o.points,Math.round(o.max*pct/100));patch={pontosGanhos:points,pontosOriginais:o.points,percentualOriginal:o.pct,percentualRevisado:pct,pontosDevolvidos:Math.max(0,points-o.points),revisaoStatus:'revisado',revisaoDecisao:type==='manter'?'manter':`devolver-${pct}`,revisadoEm:new Date().toISOString()}}
+    let patch,set,remove=[];
+    if(type==='reverter'){
+      set={pontosGanhos:o.points,pontosOriginais:o.points,percentualOriginal:o.pct,revisaoStatus:'aguardando'};
+      remove=['percentualRevisado','pontosDevolvidos','revisaoDecisao','revisadoEm'];
+      patch={...set,percentualRevisado:fs.deleteField(),pontosDevolvidos:fs.deleteField(),revisaoDecisao:fs.deleteField(),revisadoEm:fs.deleteField()};
+    }else{
+      const pct=type==='manter'?o.pct:Math.max(o.pct,Number(targetPct)||o.pct),points=type==='manter'?o.points:Math.max(o.points,Math.round(o.max*pct/100));
+      set={pontosGanhos:points,pontosOriginais:o.points,percentualOriginal:o.pct,percentualRevisado:pct,pontosDevolvidos:Math.max(0,points-o.points),revisaoStatus:'revisado',revisaoDecisao:type==='manter'?'manter':`devolver-${pct}`,revisadoEm:new Date().toISOString()};patch={...set};
+    }
     batch.update(histRef,patch);if(execRef)batch.update(execRef,patch);await batch.commit();
+    patchReviewMemory(x,set,remove);
     log(type==='reverter'?'sprint2.monitor_v3_justificativa_reverter':'sprint2.monitor_v3_justificativa_decisao',{alvoPct:targetPct===null?-1:Number(targetPct),reversao:type==='reverter'});
     msg.textContent='Decisão registrada na ocorrência.';
-    if(window.rotinaSprint2SyncLocal)window.rotinaSprint2SyncLocal('monitor-revisao-cache-local').catch(()=>{});else setTimeout(()=>render(false),0);
-    setTimeout(()=>closeModal(),120);
+    closeModal();requestAnimationFrame(()=>render(false,true));
   }catch(e){msg.textContent=e.message||'Não foi possível registrar a decisão.';log('sprint2.monitor_v3_justificativa_erro',{mensagem:String(e?.message||e).slice(0,70)},'error')}
   finally{if(lockKey)reviewLocks.delete(lockKey)}
 }

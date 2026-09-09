@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='sprint2-data-store-v1.4-idempotent-ensure-budget';
+const VERSION='sprint2-data-store-v1.5-inmemory-patch-budget';
 const SYNC_MS=5*60*1000;
 const HOT_NAMES=['perfis','tarefas','execucoes','despertadores','recompensas','resgates','conquistas','conquistaHistorico'];
 const FULL_NAMES=['perfis','tarefas','historico','execucoes','despertadores','recompensas','resgates','conquistas','conquistaHistorico'];
@@ -45,6 +45,7 @@ function seedFromLogin(){
   const g=groupId();
   if(!base||!g||clean(base.groupId).toUpperCase()!==g)return false;
   if(data.groupId!==g)reset(g);
+  if(data.readyGroup===g&&cacheHydratedGroup===g)return true;
   data.profiles=copy(base.profiles);
   data.taskDocs=copy(base.taskDocs);
   data.history=copy(base.history);
@@ -124,6 +125,13 @@ async function localSync(origin='acao-local-cache',markActivity=true){
   if(markActivity)markServerActivity(origin);
   return ok;
 }
+function patchLocalRecord(kind,id,patch={},remove=[],origin='acao-local-patch'){
+  const field=kind==='history'||kind==='historico'?'history':kind==='executions'||kind==='execucoes'?'executions':'';
+  if(!field||!clean(id))return false;
+  const list=data[field]||[],idx=list.findIndex(x=>clean(x.id)===clean(id));if(idx<0)return false;
+  const next={...list[idx],...(patch||{})};for(const key of remove||[])delete next[key];list[idx]=next;
+  data.lastLocalSync=Date.now();data.origin=origin;return true;
+}
 async function ensure(){
   const g=groupId();if(!g||g==='SISTEMA')return false;
   if(data.groupId!==g)reset(g);
@@ -142,6 +150,7 @@ function install(){
   window.rotinaSprint2SyncNow=(origin='manual')=>origin==='tarefas-v4-save'?localSync(origin,true):fullSync(origin,true);
   window.rotinaSprint2SyncHot=(origin='manual-hot')=>hotSync(origin);
   window.rotinaSprint2SyncLocal=(origin='acao-local-cache')=>localSync(origin,true);
+  window.rotinaSprint2PatchLocalRecord=patchLocalRecord;
   window.rotinaSprint2MarkServerActivity=markServerActivity;
   const start=()=>{if(document.body.classList.contains('rf-auth-ready'))setTimeout(()=>ensure().catch(()=>{}),0);else{clearTimeout(timer);timer=null}};
   new MutationObserver(start).observe(document.body,{attributes:true,attributeFilter:['class']});
