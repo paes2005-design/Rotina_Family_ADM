@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='monitor-realdata-v3.2-production-clean';
+const VERSION='monitor-realdata-v3.3-targeted-history-review';
 const PAGE='sprint2-integracao-monitor-v2.html';
 const API_ROOT='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
 const TIME_ZONE='America/Bahia';
@@ -144,6 +144,43 @@ function inProgressRecord(x){
 function findByOccurrence(list,source,pid,date){
   if(!source?.id)return null;
   return list.find(x=>clean(x.tarefaId)===clean(source.id)&&sameProfile(x,pid)&&recordDate(x)===date)||null;
+}
+function expectedHistoryId(x){
+  const pid=clean(x?.__pid),taskId=clean(x?.__sourceId),date=clean(x?.__date).slice(0,10);
+  return pid&&taskId&&date?`${pid}_${taskId}_${date}`:'';
+}
+function cachedHistoryForReview(x){
+  const expected=expectedHistoryId(x);
+  if(x?.__historyId){const byId=historyDocs.find(h=>clean(h.id)===clean(x.__historyId));if(byId)return byId;}
+  if(expected){const byExpected=historyDocs.find(h=>clean(h.id)===expected);if(byExpected)return byExpected;}
+  return historyDocs.find(h=>clean(h.tarefaId)===clean(x?.__sourceId)&&sameProfile(h,x?.__pid)&&recordDate(h)===clean(x?.__date).slice(0,10))||null;
+}
+function applyResolvedHistory(x,h){
+  if(!x||!h)return false;
+  const internal={__sourceId:x.__sourceId||'',__executionId:x.__executionId||'',__pid:x.__pid||'',__task:x.__task,__date:x.__date||''};
+  Object.assign(x,h,internal,{__historyId:h.id||x.__historyId||'',__resultSource:'historico'});
+  return !!x.__historyId;
+}
+async function resolveHistoryForReview(x){
+  const cached=cachedHistoryForReview(x);
+  if(cached)return applyResolvedHistory(x,cached);
+  const expected=expectedHistoryId(x);
+  if(!expected){await log('sprint2.monitor_v3_historico_indisponivel',{motivo:'identidade-incompleta',leituraFirebase:0},'warning');return false;}
+  if(!await firebaseReady()){await log('sprint2.monitor_v3_historico_indisponivel',{motivo:'firebase-indisponivel',leituraFirebase:0},'warning');return false;}
+  try{
+    const ref=fs.doc(db,'historico',expected);let snap=null,origem='cache',leituraFirebase=0;
+    if(typeof fs.getDocFromCache==='function'){try{snap=await fs.getDocFromCache(ref)}catch(_){}}
+    if(!snap?.exists()&&navigator.onLine&&typeof fs.getDocFromServer==='function'){snap=await fs.getDocFromServer(ref);origem='servidor';leituraFirebase=1;}
+    else if(!snap?.exists()){snap=await fs.getDoc(ref);origem='getDoc';leituraFirebase=navigator.onLine?1:0;}
+    if(!snap?.exists()){await log('sprint2.monitor_v3_historico_indisponivel',{motivo:'documento-ainda-ausente',leituraFirebase},'warning');return false;}
+    const h={id:snap.id,...snap.data()},date=clean(x.__date).slice(0,10),g=groupId();
+    const valid=clean(h.tarefaId)===clean(x.__sourceId)&&sameProfile(h,x.__pid)&&recordDate(h)===date&&(!clean(h.grupoId)||clean(h.grupoId).toUpperCase()===g);
+    if(!valid){await log('sprint2.monitor_v3_historico_indisponivel',{motivo:'documento-incompativel',leituraFirebase},'error');return false;}
+    historyDocs=[...historyDocs.filter(v=>clean(v.id)!==clean(h.id)),h];
+    applyResolvedHistory(x,h);
+    await log('sprint2.monitor_v3_historico_resolvido',{origem,leituraFirebase,temHistorico:true});
+    return true;
+  }catch(e){await log('sprint2.monitor_v3_historico_indisponivel',{motivo:String(e?.message||e).slice(0,70),leituraFirebase:navigator.onLine?1:0},'warning');return false;}
 }
 function occurrenceFor(task,pid,date){
   const source=sourceTaskFor(task,pid,date);
@@ -434,7 +471,7 @@ function originalOutcome(x){
 }
 async function applyReview(x,type,targetPct=null,msg){
   try{
-    if(!x.__historyId)throw new Error('Histórico não identificado');if(!await firebaseReady())throw new Error('Firebase indisponível');
+    if(!x.__historyId&&!await resolveHistoryForReview(x))throw new Error('Histórico ainda não disponível para revisão');if(!await firebaseReady())throw new Error('Firebase indisponível');
     const o=originalOutcome(x),batch=fs.writeBatch(db),histRef=fs.doc(db,'historico',x.__historyId),execRef=x.__sourceId?fs.doc(db,'execucoes',`${x.__date}__${x.__sourceId}`):null,execSnap=execRef?await fs.getDoc(execRef).catch(()=>null):null;
     let patch;
     if(type==='reverter')patch={pontosGanhos:o.points,pontosOriginais:o.points,percentualOriginal:o.pct,revisaoStatus:'aguardando',percentualRevisado:fs.deleteField(),pontosDevolvidos:fs.deleteField(),revisaoDecisao:fs.deleteField(),revisadoEm:fs.deleteField()};
@@ -445,10 +482,15 @@ async function applyReview(x,type,targetPct=null,msg){
   }catch(e){msg.textContent=e.message||'Não foi possível registrar a decisão.';await log('sprint2.monitor_v3_justificativa_erro',{mensagem:String(e?.message||e).slice(0,70)},'error')}
 }
 async function openJustification(x){
-  const j=justificationState(x);if(!j)return;const o=originalOutcome(x),reviewed=x.revisaoStatus==='revisado'&&!!x.revisaoDecisao;
-  const buttons=reviewed?'<button class="mv2-danger" data-review="reverter">↩️ Reverter decisão</button>':'<button class="mv2-neutral" data-review="manter">Manter resultado automático</button><button class="mv2-neutral" data-review="devolver" data-pct="50">Devolver até 50%</button><button class="mv2-neutral" data-review="devolver" data-pct="75">Devolver até 75%</button><button class="mv2-primary" data-review="devolver" data-pct="100">Devolver até 100%</button>';
-  const m=modalBase('🚩 Revisar justificativa',`<p><strong>${esc(x.__task.name)}</strong> · ${esc(participantName(x.__pid))}<br>${esc(x.__task.start)}–${esc(x.__task.end)} · ${esc(x.__date.split('-').reverse().join('/'))}</p><div class="mv2-box mv2-just">${esc(j.text)}</div><div class="mv2-box">Resultado registrado pelo Participante: <strong>${o.pct}%</strong> · <strong>${o.points}/${o.max} pts</strong>${reviewed?`<br>Resultado revisado: <strong>${reviewedPercentage(x)}%</strong> · <strong>${wonPoints(x)}/${o.max} pts</strong>`:''}</div><div class="mv2-actions">${buttons}</div><div class="mv2-msg" id="mv2JustMsg">${reviewed?'Esta ocorrência já possui decisão. Reverta para escolher novamente.':''}</div>`);
-  await log('sprint2.monitor_v3_justificativa_abrir',{temHistorico:!!x.__historyId,revisada:reviewed});
+  const initial=justificationState(x);if(!initial)return;
+  const hasHistory=await resolveHistoryForReview(x),j=justificationState(x)||initial,o=originalOutcome(x),reviewed=x.revisaoStatus==='revisado'&&!!x.revisaoDecisao;
+  const buttons=!hasHistory
+    ?'<button class="mv2-neutral" disabled>Manter resultado automático</button><button class="mv2-neutral" disabled>Devolver até 50%</button><button class="mv2-neutral" disabled>Devolver até 75%</button><button class="mv2-primary" disabled>Devolver até 100%</button>'
+    :(reviewed?'<button class="mv2-danger" data-review="reverter">↩️ Reverter decisão</button>':'<button class="mv2-neutral" data-review="manter">Manter resultado automático</button><button class="mv2-neutral" data-review="devolver" data-pct="50">Devolver até 50%</button><button class="mv2-neutral" data-review="devolver" data-pct="75">Devolver até 75%</button><button class="mv2-primary" data-review="devolver" data-pct="100">Devolver até 100%</button>');
+  const initialMsg=!hasHistory?'Histórico ainda não disponível para revisão. Atualize em alguns segundos.':(reviewed?'Esta ocorrência já possui decisão. Reverta para escolher novamente.':'');
+  const m=modalBase('🚩 Revisar justificativa',`<p><strong>${esc(x.__task.name)}</strong> · ${esc(participantName(x.__pid))}<br>${esc(x.__task.start)}–${esc(x.__task.end)} · ${esc(x.__date.split('-').reverse().join('/'))}</p><div class="mv2-box mv2-just">${esc(j.text)}</div><div class="mv2-box">Resultado registrado pelo Participante: <strong>${o.pct}%</strong> · <strong>${o.points}/${o.max} pts</strong>${reviewed?`<br>Resultado revisado: <strong>${reviewedPercentage(x)}%</strong> · <strong>${wonPoints(x)}/${o.max} pts</strong>`:''}</div><div class="mv2-actions">${buttons}</div><div class="mv2-msg" id="mv2JustMsg">${esc(initialMsg)}</div>`);
+  await log('sprint2.monitor_v3_justificativa_abrir',{temHistorico:hasHistory,revisada:reviewed,resolucaoDireta:hasHistory&&!!x.__historyId});
+  if(!hasHistory)return;
   m.querySelectorAll('[data-review]').forEach(b=>b.onclick=()=>{const msg=m.querySelector('#mv2JustMsg');msg.textContent='Registrando…';m.querySelectorAll('[data-review]').forEach(btn=>btn.disabled=true);applyReview(x,b.dataset.review,b.dataset.pct?Number(b.dataset.pct):null,msg)});
 }
 
