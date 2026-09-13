@@ -1,6 +1,6 @@
-const CACHE_NAME='rotina-family-adm-v102-production-20260913.1';
-const ROTINA_SW_VERSION='102';
-const ROTINA_BUILD_ID='20260913.1';
+const CACHE_NAME='rotina-family-adm-v103-production-20260913.2';
+const ROTINA_SW_VERSION='103';
+const ROTINA_BUILD_ID='20260913.2';
 const APP_MAIN_URL=new URL('./index-ADMIN-v9.html',self.location.href).href;
 const ENTRY_URL=new URL('./index.html',self.location.href).href;
 const LEGACY_MAIN_PATH=new URL('./index-ADMIN-v8.html',self.location.href).pathname;
@@ -15,7 +15,7 @@ const APP_SHELL=[
   './sprint2-participantes-realdata-v1.js',
   './sprint2-recompensas-realdata-v1.js?v=20260909-production-ui-v137',
   './sprint2-conquistas-realdata-v1.js?v=20260903-deadline-v1',
-  './sprint2-monitor-realdata-v2.js?v=20260913-central-store-v36',
+  './sprint2-monitor-realdata-v2.js?v=20260913-history-trace-v37',
   './sprint2-master-realdata-v1.js?v=20260905-master-realdata-v13-role-visibility'
 ];
 const MODULE_ROOTS=['https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js','https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js'];

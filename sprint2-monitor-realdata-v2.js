@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='monitor-realdata-v3.6-central-store-only';
+const VERSION='monitor-realdata-v3.7-history-trace';
 const PAGE='sprint2-integracao-monitor-v2.html';
 const API_ROOT='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
 const TIME_ZONE='America/Bahia';
@@ -169,7 +169,16 @@ async function resolveHistoryForReview(x){
     log('sprint2.monitor_v3_historico_resolvido',{origem:'store-central',leituraFirebase:0,temHistorico:true});
     return true;
   }
-  log('sprint2.monitor_v3_historico_indisponivel',{motivo:'ausente-no-store-central',leituraFirebase:0},'warning');
+  log('sprint2.monitor_v3_historico_indisponivel',{
+    motivo:'ausente-no-store-central',
+    leituraFirebase:0,
+    tarefaId:clean(x?.__sourceId),
+    execucaoId:clean(x?.__executionId),
+    perfilId:clean(x?.__pid),
+    data:clean(x?.__date).slice(0,10),
+    historicoEsperadoId:expectedHistoryId(x),
+    origemOcorrencia:clean(x?.__resultSource)
+  },'warning');
   return false;
 }
 function occurrenceFor(task,pid,date){
