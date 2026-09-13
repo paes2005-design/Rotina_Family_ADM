@@ -194,3 +194,5 @@ jobs:
           git diff --cached --quiet && exit 0
           git commit -m "Sprint 2.1: allow adding days while editing tasks"
           git push origin HEAD:main
+
+# retrigger 2026-09-13T23:14Z
