@@ -3,171 +3,162 @@ import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-login_path = ROOT / 'sprint2-integracao-login-realdata-v1.js'
-html_path = ROOT / 'sprint2-integracao-monitor-v2.html'
-monitor_path = ROOT / 'sprint2-monitor-realdata-v2.js'
-store_path = ROOT / 'sprint2-data-store-v1.js'
+MONITOR = ROOT / 'sprint2-monitor-realdata-v2.js'
+INDEX = ROOT / 'index-ADMIN-v9.html'
+SW = ROOT / 'sw.js'
+
+ACTIVE_UI = [
+    'sprint2-tarefas-realdata-v2.js',
+    'sprint2-participantes-realdata-v1.js',
+    'sprint2-recompensas-realdata-v1.js',
+    'sprint2-conquistas-realdata-v1.js',
+    'sprint2-monitor-realdata-v2.js',
+]
+READ_TOKENS = (
+    'getDocFromServer(', 'getDocsFromServer(',
+    'getDocFromCache(', 'getDocsFromCache(',
+    'onSnapshot(',
+)
 
 
-def replace_once(text, old, new, label):
-    if old not in text:
-        raise RuntimeError(f'{label}: trecho esperado nao encontrado')
-    return text.replace(old, new, 1)
-
-
-def patch_login():
-    s = login_path.read_text(encoding='utf-8')
-    if 'window.rotinaSprint2BaseSnapshot' in s:
-        return
-    s = replace_once(
-        s,
-        "runtime.redemptions=redemptionsSnap.docs.map(d=>({id:d.id,...d.data()}));mapRealDataToState();",
-        "runtime.redemptions=redemptionsSnap.docs.map(d=>({id:d.id,...d.data()}));runtime.lastLoadedAt=Date.now();mapRealDataToState();",
-        'login lastLoadedAt'
-    )
-    s = replace_once(
-        s,
-        'function readOnlyToast(){',
-        "window.rotinaSprint2BaseSnapshot=()=>({groupId:runtime.groupId,taskDocs:runtime.taskDocs.map(x=>({...x})),history:runtime.history.map(x=>({...x})),lastLoadedAt:Number(runtime.lastLoadedAt)||0});\n\nfunction readOnlyToast(){",
-        'login snapshot base'
-    )
-    login_path.write_text(s, encoding='utf-8')
-
-
-def patch_html():
-    s = html_path.read_text(encoding='utf-8')
-    if 'sprint2-data-store-v1.js' in s:
-        return
-    s = replace_once(
-        s,
-        '<script src="sprint2-integracao-login-realdata-v1.js"></script><script src="sprint2-monitor-realdata-v2.js"></script>',
-        '<script src="sprint2-integracao-login-realdata-v1.js"></script><script src="sprint2-data-store-v1.js"></script><script src="sprint2-monitor-realdata-v2.js"></script>',
-        'ordem de scripts'
-    )
-    html_path.write_text(s, encoding='utf-8')
+def replace_block(text, start_marker, end_marker, replacement, label):
+    start = text.find(start_marker)
+    if start < 0:
+        raise RuntimeError(f'{label}: inicio nao encontrado')
+    end = text.find(end_marker, start)
+    if end < 0:
+        raise RuntimeError(f'{label}: fim nao encontrado')
+    return text[:start] + replacement + text[end:]
 
 
 def patch_monitor():
-    s = monitor_path.read_text(encoding='utf-8')
-    if 'storeCentral:true' in s and 'rotinaSprint2SyncLocal' in s:
-        return
-    s = replace_once(s, 'const CACHE_TTL_MS=120000;', 'const CACHE_TTL_MS=5*60*1000;', 'TTL Monitor')
+    s = MONITOR.read_text(encoding='utf-8')
+    s = re.sub(
+        r"const VERSION='monitor-realdata-v3\.[^']+';",
+        "const VERSION='monitor-realdata-v3.6-central-store-only';",
+        s,
+        count=1,
+    )
 
-    pattern = r"async function loadData\(force=false\)\{[\s\S]*?\n\}\n\nfunction fillParticipants\(\)\{"
-    match = re.search(pattern, s)
-    if not match:
-        raise RuntimeError('loadData do Monitor nao encontrado')
-    replacement = """async function loadData(force=false){
+    resolver = """async function resolveHistoryForReview(x){
+  const cached=cachedHistoryForReview(x);
+  if(cached){
+    applyResolvedHistory(x,cached);
+    log('sprint2.monitor_v3_historico_resolvido',{origem:'store-central',leituraFirebase:0,temHistorico:true});
+    return true;
+  }
+  log('sprint2.monitor_v3_historico_indisponivel',{motivo:'ausente-no-store-central',leituraFirebase:0},'warning');
+  return false;
+}
+"""
+    s = replace_block(
+        s,
+        'async function resolveHistoryForReview(x){',
+        'function occurrenceFor(task,pid,date){',
+        resolver,
+        'resolveHistoryForReview',
+    )
+
+    loader = """async function loadData(force=false){
   const g=groupId();
   if(!g||g==='SISTEMA'||!document.body.classList.contains('rf-auth-ready'))return false;
+  if(!window.rotinaSprint2EnsureData||!window.rotinaSprint2DataSnapshot){
+    log('sprint2.monitor_v3_dados_erro',{mensagem:'store-central-indisponivel',leituraFirebase:0},'error');
+    return false;
+  }
   try{
-    if(window.rotinaSprint2EnsureData&&window.rotinaSprint2DataSnapshot){
-      if(force&&window.rotinaSprint2SyncNow)await window.rotinaSprint2SyncNow('monitor-manual');
-      else await window.rotinaSprint2EnsureData();
-      const shared=window.rotinaSprint2DataSnapshot();
-      if(shared&&clean(shared.groupId).toUpperCase()===g){
-        taskDocs=(shared.taskDocs||[]).map(x=>({...x}));
-        historyDocs=(shared.history||[]).map(x=>({...x}));
-        executionDocs=(shared.executions||[]).map(x=>({...x}));
-        alarmDocs=(shared.alarms||[]).map(x=>({...x}));
-        lastGroup=g;lastLoadAt=Number(shared.lastServerSync)||Date.now();
-        await log('sprint2.monitor_v3_dados',{tarefas:taskDocs.length,historico:historyDocs.length,execucoes:executionDocs.length,alarmes:alarmDocs.length,storeCentral:true});
-        return true;
-      }
+    if(force&&window.rotinaSprint2SyncNow)await window.rotinaSprint2SyncNow('monitor-manual');
+    else await window.rotinaSprint2EnsureData();
+    const shared=window.rotinaSprint2DataSnapshot();
+    if(!shared||clean(shared.groupId).toUpperCase()!==g){
+      log('sprint2.monitor_v3_dados_erro',{mensagem:'snapshot-central-incompativel',leituraFirebase:0},'warning');
+      return false;
     }
-  }catch(e){console.warn('Monitor V3 store central:',e)}
-  if(!force&&g===lastGroup&&Date.now()-lastLoadAt<CACHE_TTL_MS&&taskDocs.length)return true;
-  if(!await firebaseReady())return false;
-  try{
-    const q=c=>fs.query(fs.collection(db,c),fs.where('grupoId','==',g));
-    const [ts,hs,es,as]=await Promise.all([
-      fs.getDocsFromServer(q('tarefas')),
-      fs.getDocsFromServer(q('historico')),
-      fs.getDocsFromServer(q('execucoes')).catch(()=>({docs:[]})),
-      fs.getDocsFromServer(q('despertadores')).catch(()=>({docs:[]}))
-    ]);
-    taskDocs=ts.docs.map(d=>({id:d.id,...d.data()}));
-    historyDocs=hs.docs.map(d=>({id:d.id,...d.data()}));
-    executionDocs=(es.docs||[]).map(d=>({id:d.id,...d.data()}));
-    alarmDocs=(as.docs||[]).map(d=>({id:d.id,...d.data()}));
-    lastGroup=g;lastLoadAt=Date.now();
-    await log('sprint2.monitor_v3_dados',{tarefas:taskDocs.length,historico:historyDocs.length,execucoes:executionDocs.length,alarmes:alarmDocs.length,storeCentral:false});
+    taskDocs=(shared.taskDocs||[]).map(x=>({...x}));
+    historyDocs=(shared.history||[]).map(x=>({...x}));
+    executionDocs=(shared.executions||[]).map(x=>({...x}));
+    alarmDocs=(shared.alarms||[]).map(x=>({...x}));
+    lastGroup=g;
+    lastLoadAt=Math.max(Number(shared.lastServerSync)||0,Number(shared.lastLocalSync)||0)||Date.now();
+    log('sprint2.monitor_v3_dados',{tarefas:taskDocs.length,historico:historyDocs.length,execucoes:executionDocs.length,alarmes:alarmDocs.length,storeCentral:true,leituraFirebase:0});
     return true;
   }catch(e){
-    console.error('Monitor V3 dados:',e);
-    await log('sprint2.monitor_v3_dados_erro',{mensagem:String(e?.message||e).slice(0,80)},'error');
+    console.warn('Monitor V3 store central:',e);
+    log('sprint2.monitor_v3_dados_erro',{mensagem:String(e?.message||e).slice(0,80),leituraFirebase:0},'error');
     return false;
   }
 }
 
-function fillParticipants(){"""
-    s = s[:match.start()] + replacement + s[match.end():]
+"""
+    s = replace_block(
+        s,
+        'async function loadData(force=false){',
+        'function fillParticipants(){',
+        loader,
+        'loadData',
+    )
 
-    s = replace_once(
-        s,
-        "msg.textContent=ativo?'Alarme ativado.':'Alarme retirado.';lastLoadAt=0;setTimeout(()=>{closeModal();render(true)},350);",
-        "msg.textContent=ativo?'Alarme ativado.':'Alarme retirado.';if(window.rotinaSprint2SyncLocal)await window.rotinaSprint2SyncLocal('monitor-alarme-cache-local').catch(()=>{});setTimeout(()=>{closeModal();render(false)},350);",
-        'pos-write alarme'
-    )
-    s = replace_once(
-        s,
-        "msg.textContent='Decisão registrada na ocorrência.';lastLoadAt=0;setTimeout(()=>{closeModal();render(true)},350);",
-        "msg.textContent='Decisão registrada na ocorrência.';if(window.rotinaSprint2SyncLocal)await window.rotinaSprint2SyncLocal('monitor-revisao-cache-local').catch(()=>{});setTimeout(()=>{closeModal();render(false)},350);",
-        'pos-write revisao'
-    )
-    s = replace_once(
-        s,
-        'Cache de tela: 2 minutos, com atualização manual.',
-        'Store central: sincronização remota a cada 5 minutos; ações locais reaproveitam o cache persistente sem nova leitura remota.',
-        'texto arquitetura cache'
-    )
-    s = replace_once(
-        s,
-        "document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('view-monitor')?.classList.contains('active')&&Date.now()-lastLoadAt>CACHE_TTL_MS)render(true)});window.addEventListener('online',()=>{if($('view-monitor')?.classList.contains('active')){lastLoadAt=0;render(true)}});return true;",
-        "document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('view-monitor')?.classList.contains('active')&&Date.now()-lastLoadAt>CACHE_TTL_MS)render(true)});window.addEventListener('online',()=>{if($('view-monitor')?.classList.contains('active')&&Date.now()-lastLoadAt>CACHE_TTL_MS)render(true)});window.addEventListener('rotina-sprint2-cache-updated',()=>{if($('view-monitor')?.classList.contains('active'))render(false)});return true;",
-        'eventos store central'
-    )
-    monitor_path.write_text(s, encoding='utf-8')
+    forbidden = [t for t in READ_TOKENS if t in s]
+    if forbidden:
+        raise RuntimeError('Monitor ainda possui leitura direta: ' + ', '.join(forbidden))
+    if 'storeCentral:false' in s:
+        raise RuntimeError('Monitor ainda possui fallback fora do Store central')
+    if "rotinaSprint2SyncNow('monitor-manual')" not in s:
+        raise RuntimeError('Atualizacao manual nao delega ao Store central')
+    if "const CACHE_TTL_MS=5*60*1000" not in s:
+        raise RuntimeError('Janela de cinco minutos foi alterada')
+
+    MONITOR.write_text(s, encoding='utf-8')
 
 
-def assert_architecture():
-    login = login_path.read_text(encoding='utf-8')
-    html = html_path.read_text(encoding='utf-8')
-    monitor = monitor_path.read_text(encoding='utf-8')
-    store = store_path.read_text(encoding='utf-8')
-    checks = [
-        ('window.rotinaSprint2BaseSnapshot' in login, 'login expoe carga inicial'),
-        ('runtime.lastLoadedAt=Date.now()' in login, 'login marca carga do servidor'),
-        ('const SYNC_MS=5*60*1000' in store, 'store sincroniza em 5 minutos'),
-        ('window.rotinaSprint2SyncLocal' in store and 'getDocsFromCache' in store, 'writes usam cache local'),
-        ('window.rotinaSprint2SyncNow' in store and 'getDocsFromServer' in store, 'refresh manual tem caminho remoto'),
-        ("['tarefas','historico','execucoes','despertadores']" in store, 'store centraliza colecoes operacionais'),
-        (html.index('sprint2-integracao-login-realdata-v1.js') < html.index('sprint2-data-store-v1.js') < html.index('sprint2-monitor-realdata-v2.js'), 'ordem Login -> Store -> Monitor'),
-        ('window.rotinaSprint2DataSnapshot' in monitor and 'storeCentral:true' in monitor, 'Monitor prioriza store'),
-        ('storeCentral:false' in monitor, 'Monitor tem fallback resiliente'),
-        ('const CACHE_TTL_MS=5*60*1000' in monitor, 'Monitor segue janela de cinco minutos'),
-        ("rotinaSprint2SyncLocal('monitor-alarme-cache-local')" in monitor, 'alarme reaproveita cache'),
-        ("rotinaSprint2SyncLocal('monitor-revisao-cache-local')" in monitor, 'revisao reaproveita cache'),
-        ('rotina-sprint2-cache-updated' in monitor, 'Monitor reage ao store'),
-        ("if(x.__state!=='final')return null" in monitor, 'pendente nao ganha faixa'),
-        ('batch.update(taskRef,patch)' not in monitor, 'revisao nao duplica resultado em tarefas'),
-        ('won*100/max' not in monitor and 'won * 100 / max' not in monitor, 'Monitor nao recalcula percentual'),
-    ]
-    for ok, label in checks:
-        if not ok:
-            raise RuntimeError(f'AUDIT FAIL: {label}')
-        print(f'OK - {label}')
-    print(f'SPRINT2_CENTRAL_STORE_RESULT={len(checks)}/{len(checks)}')
+def bump_release():
+    p = INDEX
+    s = p.read_text(encoding='utf-8')
+    s = re.sub(
+        r'sprint2-monitor-realdata-v2\.js\?v=[^"\']+',
+        'sprint2-monitor-realdata-v2.js?v=20260913-central-store-v36',
+        s,
+    )
+    p.write_text(s, encoding='utf-8')
+
+    p = SW
+    s = p.read_text(encoding='utf-8')
+    s = re.sub(r"const CACHE_NAME='[^']+';", "const CACHE_NAME='rotina-family-adm-v102-production-20260913.1';", s, count=1)
+    s = re.sub(r"const ROTINA_SW_VERSION='[^']+';", "const ROTINA_SW_VERSION='102';", s, count=1)
+    s = re.sub(r"const ROTINA_BUILD_ID='[^']+';", "const ROTINA_BUILD_ID='20260913.1';", s, count=1)
+    s = re.sub(
+        r'sprint2-monitor-realdata-v2\.js\?v=[^"\']+',
+        'sprint2-monitor-realdata-v2.js?v=20260913-central-store-v36',
+        s,
+    )
+    p.write_text(s, encoding='utf-8')
+
+
+def audit_active_ui():
+    print('ACTIVE_UI_DIRECT_READ_AUDIT_BEGIN')
+    offenders = []
+    for name in ACTIVE_UI:
+        text = (ROOT / name).read_text(encoding='utf-8')
+        hits = [token for token in READ_TOKENS if token in text]
+        if hits:
+            offenders.append((name, hits))
+            print(f'CANDIDATE {name}: {", ".join(hits)}')
+        else:
+            print(f'OK {name}: sem leitura Firestore direta de tela')
+    print('ACTIVE_UI_DIRECT_READ_AUDIT_END')
+    if any(name == 'sprint2-monitor-realdata-v2.js' for name, _ in offenders):
+        raise RuntimeError('Monitor reprovado na auditoria de leitura direta')
+    return offenders
 
 
 def syntax_check():
-    for path in (login_path, store_path, monitor_path):
+    for path in (MONITOR, SW):
         subprocess.run(['node', '--check', str(path)], check=True)
 
 
 if __name__ == '__main__':
-    patch_login()
-    patch_html()
     patch_monitor()
+    bump_release()
     syntax_check()
-    assert_architecture()
+    audit_active_ui()
+    print('MONITOR_CENTRAL_STORE_ONLY=OK')
