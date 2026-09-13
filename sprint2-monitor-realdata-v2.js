@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='monitor-realdata-v3.5-freeze-free-review';
+const VERSION='monitor-realdata-v3.6-central-store-only';
 const PAGE='sprint2-integracao-monitor-v2.html';
 const API_ROOT='https://rotina-family-onesignal-scheduler.rotina-family-onesignal-scheduler.workers.dev';
 const TIME_ZONE='America/Bahia';
@@ -164,24 +164,13 @@ function applyResolvedHistory(x,h){
 }
 async function resolveHistoryForReview(x){
   const cached=cachedHistoryForReview(x);
-  if(cached)return applyResolvedHistory(x,cached);
-  const expected=expectedHistoryId(x);
-  if(!expected){log('sprint2.monitor_v3_historico_indisponivel',{motivo:'identidade-incompleta',leituraFirebase:0},'warning');return false;}
-  if(!await firebaseReady()){log('sprint2.monitor_v3_historico_indisponivel',{motivo:'firebase-indisponivel',leituraFirebase:0},'warning');return false;}
-  try{
-    const ref=fs.doc(db,'historico',expected);let snap=null,origem='cache',leituraFirebase=0;
-    if(typeof fs.getDocFromCache==='function'){try{snap=await fs.getDocFromCache(ref)}catch(_){}}
-    if(!snap?.exists()&&navigator.onLine&&typeof fs.getDocFromServer==='function'){snap=await fs.getDocFromServer(ref);origem='servidor';leituraFirebase=1;}
-    else if(!snap?.exists()){snap=await fs.getDoc(ref);origem='getDoc';leituraFirebase=navigator.onLine?1:0;}
-    if(!snap?.exists()){log('sprint2.monitor_v3_historico_indisponivel',{motivo:'documento-ainda-ausente',leituraFirebase},'warning');return false;}
-    const h={id:snap.id,...snap.data()},date=clean(x.__date).slice(0,10),g=groupId();
-    const valid=clean(h.tarefaId)===clean(x.__sourceId)&&sameProfile(h,x.__pid)&&recordDate(h)===date&&(!clean(h.grupoId)||clean(h.grupoId).toUpperCase()===g);
-    if(!valid){log('sprint2.monitor_v3_historico_indisponivel',{motivo:'documento-incompativel',leituraFirebase},'error');return false;}
-    historyDocs=[...historyDocs.filter(v=>clean(v.id)!==clean(h.id)),h];
-    applyResolvedHistory(x,h);
-    log('sprint2.monitor_v3_historico_resolvido',{origem,leituraFirebase,temHistorico:true});
+  if(cached){
+    applyResolvedHistory(x,cached);
+    log('sprint2.monitor_v3_historico_resolvido',{origem:'store-central',leituraFirebase:0,temHistorico:true});
     return true;
-  }catch(e){log('sprint2.monitor_v3_historico_indisponivel',{motivo:String(e?.message||e).slice(0,70),leituraFirebase:navigator.onLine?1:0},'warning');return false;}
+  }
+  log('sprint2.monitor_v3_historico_indisponivel',{motivo:'ausente-no-store-central',leituraFirebase:0},'warning');
+  return false;
 }
 function occurrenceFor(task,pid,date){
   const source=sourceTaskFor(task,pid,date);
@@ -329,42 +318,29 @@ function appRows(){
 async function loadData(force=false){
   const g=groupId();
   if(!g||g==='SISTEMA'||!document.body.classList.contains('rf-auth-ready'))return false;
+  if(!window.rotinaSprint2EnsureData||!window.rotinaSprint2DataSnapshot){
+    log('sprint2.monitor_v3_dados_erro',{mensagem:'store-central-indisponivel',leituraFirebase:0},'error');
+    return false;
+  }
   try{
-    if(window.rotinaSprint2EnsureData&&window.rotinaSprint2DataSnapshot){
-      if(force&&window.rotinaSprint2SyncNow)await window.rotinaSprint2SyncNow('monitor-manual');
-      else await window.rotinaSprint2EnsureData();
-      const shared=window.rotinaSprint2DataSnapshot();
-      if(shared&&clean(shared.groupId).toUpperCase()===g){
-        taskDocs=(shared.taskDocs||[]).map(x=>({...x}));
-        historyDocs=(shared.history||[]).map(x=>({...x}));
-        executionDocs=(shared.executions||[]).map(x=>({...x}));
-        alarmDocs=(shared.alarms||[]).map(x=>({...x}));
-        lastGroup=g;lastLoadAt=Math.max(Number(shared.lastServerSync)||0,Number(shared.lastLiveSync)||0)||Date.now();
-        log('sprint2.monitor_v3_dados',{tarefas:taskDocs.length,historico:historyDocs.length,execucoes:executionDocs.length,alarmes:alarmDocs.length,storeCentral:true});
-        return true;
-      }
+    if(force&&window.rotinaSprint2SyncNow)await window.rotinaSprint2SyncNow('monitor-manual');
+    else await window.rotinaSprint2EnsureData();
+    const shared=window.rotinaSprint2DataSnapshot();
+    if(!shared||clean(shared.groupId).toUpperCase()!==g){
+      log('sprint2.monitor_v3_dados_erro',{mensagem:'snapshot-central-incompativel',leituraFirebase:0},'warning');
+      return false;
     }
-  }catch(e){console.warn('Monitor V3 store central:',e)}
-  if(!force&&g===lastGroup&&Date.now()-lastLoadAt<CACHE_TTL_MS&&taskDocs.length)return true;
-  if(!await firebaseReady())return false;
-  try{
-    const q=c=>fs.query(fs.collection(db,c),fs.where('grupoId','==',g));
-    const [ts,hs,es,as]=await Promise.all([
-      fs.getDocsFromServer(q('tarefas')),
-      fs.getDocsFromServer(q('historico')),
-      fs.getDocsFromServer(q('execucoes')).catch(()=>({docs:[]})),
-      fs.getDocsFromServer(q('despertadores')).catch(()=>({docs:[]}))
-    ]);
-    taskDocs=ts.docs.map(d=>({id:d.id,...d.data()}));
-    historyDocs=hs.docs.map(d=>({id:d.id,...d.data()}));
-    executionDocs=(es.docs||[]).map(d=>({id:d.id,...d.data()}));
-    alarmDocs=(as.docs||[]).map(d=>({id:d.id,...d.data()}));
-    lastGroup=g;lastLoadAt=Date.now();
-    log('sprint2.monitor_v3_dados',{tarefas:taskDocs.length,historico:historyDocs.length,execucoes:executionDocs.length,alarmes:alarmDocs.length,storeCentral:false});
+    taskDocs=(shared.taskDocs||[]).map(x=>({...x}));
+    historyDocs=(shared.history||[]).map(x=>({...x}));
+    executionDocs=(shared.executions||[]).map(x=>({...x}));
+    alarmDocs=(shared.alarms||[]).map(x=>({...x}));
+    lastGroup=g;
+    lastLoadAt=Math.max(Number(shared.lastServerSync)||0,Number(shared.lastLocalSync)||0)||Date.now();
+    log('sprint2.monitor_v3_dados',{tarefas:taskDocs.length,historico:historyDocs.length,execucoes:executionDocs.length,alarmes:alarmDocs.length,storeCentral:true,leituraFirebase:0});
     return true;
   }catch(e){
-    console.error('Monitor V3 dados:',e);
-    log('sprint2.monitor_v3_dados_erro',{mensagem:String(e?.message||e).slice(0,80)},'error');
+    console.warn('Monitor V3 store central:',e);
+    log('sprint2.monitor_v3_dados_erro',{mensagem:String(e?.message||e).slice(0,80),leituraFirebase:0},'error');
     return false;
   }
 }
