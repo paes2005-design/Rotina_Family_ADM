@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='tarefas-realdata-v4.3-delete';
+const VERSION='tarefas-realdata-v4.4-edit-days';
 const DAYS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const WEEKDAYS=['Segunda','Terça','Quarta','Quinta','Sexta'];
 const ICONS=['🛏️','📚','🧹','🎻','🍴','🗑️','🧼','🪥','🐶','✅'];
@@ -265,61 +265,94 @@ function selectedPatch(tg,v,now){
 }
 
 async function saveSelected(r,v){
-  const days=sortDays(v.days).filter(d=>r.days.includes(d));
+  const days=sortDays(v.days);
   if(!days.length){toast('Selecione pelo menos um dia da tarefa.');return false}
-  if(!editor.touched?.size){toast('Nenhuma alteração foi feita.');return false}
+
+  const existingDays=days.filter(d=>r.days.includes(d));
+  const newDays=days.filter(d=>!r.days.includes(d));
+  const hasFieldChanges=!!editor.touched?.size;
+  if(!hasFieldChanges&&!newDays.length){toast('Nenhuma alteração foi feita.');return false}
   if(!validate(v,days))return false;
 
-  const docs=selectedDocs(r,days);
-  if(!docs.length){toast('Nenhum dia selecionado foi encontrado.');return false}
-
+  const docs=selectedDocs(r,existingDays);
   const ignore=r.docs.map(d=>d.id);
-  for(const d of docs){
-    const base=cfg(d);
-    const start=touched('start')?v.start:base.start;
-    const end=touched('end')?v.end:base.end;
-    const active=touched('active')?v.active:base.active;
-    if(active){
-      const c=conflict({pid:r.pid,days:[clean(d.diaSemana)],start,end,ignore});
-      if(c){toast(`Conflito real em ${clean(d.diaSemana)} com “${clean(c.nome)}”.`);return false}
+
+  if(hasFieldChanges){
+    for(const d of docs){
+      const base=cfg(d);
+      const start=touched('start')?v.start:base.start;
+      const end=touched('end')?v.end:base.end;
+      const active=touched('active')?v.active:base.active;
+      if(active){
+        const c=conflict({pid:r.pid,days:[clean(d.diaSemana)],start,end,ignore});
+        if(c){toast(`Conflito real em ${clean(d.diaSemana)} com “${clean(c.nome)}”.`);return false}
+      }
+    }
+  }
+
+  for(const day of newDays){
+    if(v.active){
+      const c=conflict({pid:r.pid,days:[day],start:v.start,end:v.end,ignore});
+      if(c){toast(`Conflito real em ${day} com “${clean(c.nome)}”.`);return false}
     }
   }
 
   const g=groupId(),now=new Date().toISOString(),tg=tgFor(r.docs),b=fs.writeBatch(db);
   const alarmNeedsUpdate=['name','start','end','active','alarm'].some(touched);
 
-  for(const d of docs){
-    b.update(fs.doc(db,'tarefas',d.id),selectedPatch(tg,v,now));
+  if(hasFieldChanges){
+    for(const d of docs){
+      b.update(fs.doc(db,'tarefas',d.id),selectedPatch(tg,v,now));
 
-    if(alarmNeedsUpdate){
-      const base=cfg(d);
-      const name=touched('name')?v.name:base.name;
-      const start=touched('start')?v.start:base.start;
-      const end=touched('end')?v.end:base.end;
-      const active=touched('active')?v.active:base.active;
-      const preservedMode=alarmMode(alarmFor(d));
-      const requestedMode=touched('alarm')?v.alarm:preservedMode;
-      const mode=active?requestedMode:'off';
+      if(alarmNeedsUpdate){
+        const base=cfg(d);
+        const name=touched('name')?v.name:base.name;
+        const start=touched('start')?v.start:base.start;
+        const end=touched('end')?v.end:base.end;
+        const active=touched('active')?v.active:base.active;
+        const preservedMode=alarmMode(alarmFor(d));
+        const requestedMode=touched('alarm')?v.alarm:preservedMode;
+        const mode=active?requestedMode:'off';
 
-      b.set(
-        fs.doc(db,'despertadores',alarmId(g,r.pid,d.id)),
-        alarmData({
-          g,pid:r.pid,participant:r.participant,taskId:d.id,tg,
-          name,day:clean(d.diaSemana),start,end,mode,now
-        }),
-        {merge:true}
-      );
+        b.set(
+          fs.doc(db,'despertadores',alarmId(g,r.pid,d.id)),
+          alarmData({
+            g,pid:r.pid,participant:r.participant,taskId:d.id,tg,
+            name,day:clean(d.diaSemana),start,end,mode,now
+          }),
+          {merge:true}
+        );
+      }
     }
+  }
+
+  for(const day of newDays){
+    const ref=fs.doc(fs.collection(db,'tarefas'));
+    b.set(ref,createPayload({g,pid:r.pid,participant:r.participant,tg,day,v}));
+    b.set(
+      fs.doc(db,'despertadores',alarmId(g,r.pid,ref.id)),
+      alarmData({
+        g,pid:r.pid,participant:r.participant,taskId:ref.id,tg,
+        name:v.name,day,start:v.start,end:v.end,mode:v.active?v.alarm:'off',now
+      }),
+      {merge:true}
+    );
   }
 
   await b.commit();
   log('edit_selected_success',{
-    dias:days,
-    docs:docs.length,
+    diasExistentes:existingDays,
+    diasAdicionados:newDays,
+    docsAtualizados:hasFieldChanges?docs.length:0,
+    docsAdicionados:newDays.length,
     campos:[...editor.touched],
     ativa:touched('active')?v.active:null
   });
-  toast(`${days.length} dia${days.length===1?'':'s'} atualizado${days.length===1?'':'s'}.`);
+
+  const partes=[];
+  if(hasFieldChanges&&docs.length)partes.push(`${docs.length} dia${docs.length===1?'':'s'} atualizado${docs.length===1?'':'s'}`);
+  if(newDays.length)partes.push(`${newDays.length} dia${newDays.length===1?'':'s'} adicionado${newDays.length===1?'':'s'}`);
+  toast(partes.length?`${partes.join(' e ')}.`:'Alterações salvas.');
   return true;
 }
 
@@ -432,13 +465,12 @@ async function deleteSeries(key){
 }
 function toggleDraftDay(day){
   if(!editor||!DAYS.includes(day))return;
-  const r=currentSeries();
-  if(editor.mode==='edit'&&r&&!r.days.includes(day))return;
   const set=new Set(editor.draft.days);
   set.has(day)?set.delete(day):set.add(day);
   editor.draft.days=sortDays([...set]);
   render();
 }
+
 function updateDraft(field,value){
   if(!editor)return;
   if(field==='active'&&value==='keep'){
@@ -545,12 +577,10 @@ function normalRow(r){
 function iconField(v){
   return`<label class="tv4-icon"><span data-icon-face>${esc(v)}</span><select data-field="icon">${ICONS.map(i=>`<option value="${i}" ${i===v?'selected':''}>${i}</option>`).join('')}</select></label>`;
 }
-function dayButtons(days,available=null){
-  return DAYS.map(d=>{
-    const disabled=available&&!available.includes(d);
-    return`<button type="button" class="tv4-day ${days.includes(d)?'on':''}" data-action="toggle-day" data-day="${d}" ${disabled?'disabled':''}>${d.slice(0,3)}</button>`;
-  }).join('');
+function dayButtons(days){
+  return DAYS.map(d=>`<button type="button" class="tv4-day ${days.includes(d)?'on':''}" data-action="toggle-day" data-day="${d}">${d.slice(0,3)}</button>`).join('');
 }
+
 function statusField(r,d){
   if(r?.mixedActive&&!touched('active')){
     return`<select data-field="active"><option value="keep" selected>Varia por dia</option><option value="active">Ativa</option><option value="inactive">Inativa</option></select>`;
@@ -559,8 +589,9 @@ function statusField(r,d){
 }
 function applicationBox(r,d){
   if(!r)return`<div class="tv4-box"><label>Aplicação</label><b>${esc(participantFilter==='all'?'Todos os participantes':pname(participantFilter))}</b></div>`;
-  return`<div class="tv4-box"><label>Aplicar alterações nos dias</label><div class="tv4-days">${dayButtons(d.days,r.days)}</div><small class="tv4-muted">Todos os dias desta tarefa vêm selecionados. Desmarque os dias que não deseja alterar.</small></div>`;
+  return`<div class="tv4-box"><label>Aplicar alterações nos dias</label><div class="tv4-days">${dayButtons(d.days)}</div><small class="tv4-muted">Os dias atuais vêm selecionados. Marque outros dias para adicioná-los à tarefa. Desmarcar um dia existente apenas evita aplicar alterações nele.</small></div>`;
 }
+
 function detailRow(r,d){
   return`<tr class="tv4-detail-row"><td colspan="8"><div class="tv4-details">
     ${applicationBox(r,d)}
