@@ -35,7 +35,7 @@ def patch_monitor():
     s = MONITOR.read_text(encoding='utf-8')
     s = re.sub(
         r"const VERSION='monitor-realdata-v3\.[^']+';",
-        "const VERSION='monitor-realdata-v3.6-central-store-only';",
+        "const VERSION='monitor-realdata-v3.7-history-trace';",
         s,
         count=1,
     )
@@ -47,7 +47,16 @@ def patch_monitor():
     log('sprint2.monitor_v3_historico_resolvido',{origem:'store-central',leituraFirebase:0,temHistorico:true});
     return true;
   }
-  log('sprint2.monitor_v3_historico_indisponivel',{motivo:'ausente-no-store-central',leituraFirebase:0},'warning');
+  log('sprint2.monitor_v3_historico_indisponivel',{
+    motivo:'ausente-no-store-central',
+    leituraFirebase:0,
+    tarefaId:clean(x?.__sourceId),
+    execucaoId:clean(x?.__executionId),
+    perfilId:clean(x?.__pid),
+    data:clean(x?.__date).slice(0,10),
+    historicoEsperadoId:expectedHistoryId(x),
+    origemOcorrencia:clean(x?.__resultSource)
+  },'warning');
   return false;
 }
 """
@@ -107,6 +116,9 @@ def patch_monitor():
         raise RuntimeError('Atualizacao manual nao delega ao Store central')
     if "const CACHE_TTL_MS=5*60*1000" not in s:
         raise RuntimeError('Janela de cinco minutos foi alterada')
+    for field in ('tarefaId:', 'execucaoId:', 'perfilId:', 'historicoEsperadoId:', 'origemOcorrencia:'):
+        if field not in resolver:
+            raise RuntimeError(f'Observabilidade incompleta: {field}')
 
     MONITOR.write_text(s, encoding='utf-8')
 
@@ -116,19 +128,19 @@ def bump_release():
     s = p.read_text(encoding='utf-8')
     s = re.sub(
         r'sprint2-monitor-realdata-v2\.js\?v=[^"\']+',
-        'sprint2-monitor-realdata-v2.js?v=20260913-central-store-v36',
+        'sprint2-monitor-realdata-v2.js?v=20260913-history-trace-v37',
         s,
     )
     p.write_text(s, encoding='utf-8')
 
     p = SW
     s = p.read_text(encoding='utf-8')
-    s = re.sub(r"const CACHE_NAME='[^']+';", "const CACHE_NAME='rotina-family-adm-v102-production-20260913.1';", s, count=1)
-    s = re.sub(r"const ROTINA_SW_VERSION='[^']+';", "const ROTINA_SW_VERSION='102';", s, count=1)
-    s = re.sub(r"const ROTINA_BUILD_ID='[^']+';", "const ROTINA_BUILD_ID='20260913.1';", s, count=1)
+    s = re.sub(r"const CACHE_NAME='[^']+';", "const CACHE_NAME='rotina-family-adm-v103-production-20260913.2';", s, count=1)
+    s = re.sub(r"const ROTINA_SW_VERSION='[^']+';", "const ROTINA_SW_VERSION='103';", s, count=1)
+    s = re.sub(r"const ROTINA_BUILD_ID='[^']+';", "const ROTINA_BUILD_ID='20260913.2';", s, count=1)
     s = re.sub(
         r'sprint2-monitor-realdata-v2\.js\?v=[^"\']+',
-        'sprint2-monitor-realdata-v2.js?v=20260913-central-store-v36',
+        'sprint2-monitor-realdata-v2.js?v=20260913-history-trace-v37',
         s,
     )
     p.write_text(s, encoding='utf-8')
@@ -162,3 +174,4 @@ if __name__ == '__main__':
     syntax_check()
     audit_active_ui()
     print('MONITOR_CENTRAL_STORE_ONLY=OK')
+    print('MONITOR_HISTORY_TRACE=OK')
