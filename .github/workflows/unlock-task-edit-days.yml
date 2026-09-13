@@ -1,0 +1,196 @@
+name: Sprint 2.1 unlock task edit days
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/unlock-task-edit-days.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch task editor cleanly
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          task = Path('sprint2-tarefas-realdata-v2.js')
+          text = task.read_text(encoding='utf-8')
+
+          text = text.replace("const VERSION='tarefas-realdata-v4.3-delete';", "const VERSION='tarefas-realdata-v4.4-edit-days';")
+
+          start = text.index('async function saveSelected(r,v){')
+          end = text.index('\nfunction setBusyUI(state){', start)
+          new_save = r'''async function saveSelected(r,v){
+  const days=sortDays(v.days);
+  if(!days.length){toast('Selecione pelo menos um dia da tarefa.');return false}
+
+  const existingDays=days.filter(d=>r.days.includes(d));
+  const newDays=days.filter(d=>!r.days.includes(d));
+  const hasFieldChanges=!!editor.touched?.size;
+  if(!hasFieldChanges&&!newDays.length){toast('Nenhuma alteração foi feita.');return false}
+  if(!validate(v,days))return false;
+
+  const docs=selectedDocs(r,existingDays);
+  const ignore=r.docs.map(d=>d.id);
+
+  if(hasFieldChanges){
+    for(const d of docs){
+      const base=cfg(d);
+      const start=touched('start')?v.start:base.start;
+      const end=touched('end')?v.end:base.end;
+      const active=touched('active')?v.active:base.active;
+      if(active){
+        const c=conflict({pid:r.pid,days:[clean(d.diaSemana)],start,end,ignore});
+        if(c){toast(`Conflito real em ${clean(d.diaSemana)} com “${clean(c.nome)}”.`);return false}
+      }
+    }
+  }
+
+  for(const day of newDays){
+    if(v.active){
+      const c=conflict({pid:r.pid,days:[day],start:v.start,end:v.end,ignore});
+      if(c){toast(`Conflito real em ${day} com “${clean(c.nome)}”.`);return false}
+    }
+  }
+
+  const g=groupId(),now=new Date().toISOString(),tg=tgFor(r.docs),b=fs.writeBatch(db);
+  const alarmNeedsUpdate=['name','start','end','active','alarm'].some(touched);
+
+  if(hasFieldChanges){
+    for(const d of docs){
+      b.update(fs.doc(db,'tarefas',d.id),selectedPatch(tg,v,now));
+
+      if(alarmNeedsUpdate){
+        const base=cfg(d);
+        const name=touched('name')?v.name:base.name;
+        const start=touched('start')?v.start:base.start;
+        const end=touched('end')?v.end:base.end;
+        const active=touched('active')?v.active:base.active;
+        const preservedMode=alarmMode(alarmFor(d));
+        const requestedMode=touched('alarm')?v.alarm:preservedMode;
+        const mode=active?requestedMode:'off';
+
+        b.set(
+          fs.doc(db,'despertadores',alarmId(g,r.pid,d.id)),
+          alarmData({
+            g,pid:r.pid,participant:r.participant,taskId:d.id,tg,
+            name,day:clean(d.diaSemana),start,end,mode,now
+          }),
+          {merge:true}
+        );
+      }
+    }
+  }
+
+  for(const day of newDays){
+    const ref=fs.doc(fs.collection(db,'tarefas'));
+    b.set(ref,createPayload({g,pid:r.pid,participant:r.participant,tg,day,v}));
+    b.set(
+      fs.doc(db,'despertadores',alarmId(g,r.pid,ref.id)),
+      alarmData({
+        g,pid:r.pid,participant:r.participant,taskId:ref.id,tg,
+        name:v.name,day,start:v.start,end:v.end,mode:v.active?v.alarm:'off',now
+      }),
+      {merge:true}
+    );
+  }
+
+  await b.commit();
+  log('edit_selected_success',{
+    diasExistentes:existingDays,
+    diasAdicionados:newDays,
+    docsAtualizados:hasFieldChanges?docs.length:0,
+    docsAdicionados:newDays.length,
+    campos:[...editor.touched],
+    ativa:touched('active')?v.active:null
+  });
+
+  const partes=[];
+  if(hasFieldChanges&&docs.length)partes.push(`${docs.length} dia${docs.length===1?'':'s'} atualizado${docs.length===1?'':'s'}`);
+  if(newDays.length)partes.push(`${newDays.length} dia${newDays.length===1?'':'s'} adicionado${newDays.length===1?'':'s'}`);
+  toast(partes.length?`${partes.join(' e ')}.`:'Alterações salvas.');
+  return true;
+}
+'''
+          text = text[:start] + new_save + text[end:]
+
+          old_toggle = """function toggleDraftDay(day){\n  if(!editor||!DAYS.includes(day))return;\n  const r=currentSeries();\n  if(editor.mode==='edit'&&r&&!r.days.includes(day))return;\n  const set=new Set(editor.draft.days);\n  set.has(day)?set.delete(day):set.add(day);\n  editor.draft.days=sortDays([...set]);\n  render();\n}"""
+          new_toggle = """function toggleDraftDay(day){\n  if(!editor||!DAYS.includes(day))return;\n  const set=new Set(editor.draft.days);\n  set.has(day)?set.delete(day):set.add(day);\n  editor.draft.days=sortDays([...set]);\n  render();\n}"""
+          if old_toggle not in text:
+              raise SystemExit('toggleDraftDay boundary not found')
+          text = text.replace(old_toggle, new_toggle, 1)
+
+          old_days = """function dayButtons(days,available=null){\n  return DAYS.map(d=>{\n    const disabled=available&&!available.includes(d);\n    return`<button type=\"button\" class=\"tv4-day ${days.includes(d)?'on':''}\" data-action=\"toggle-day\" data-day=\"${d}\" ${disabled?'disabled':''}>${d.slice(0,3)}</button>`;\n  }).join('');\n}"""
+          new_days = """function dayButtons(days){\n  return DAYS.map(d=>`<button type=\"button\" class=\"tv4-day ${days.includes(d)?'on':''}\" data-action=\"toggle-day\" data-day=\"${d}\">${d.slice(0,3)}</button>`).join('');\n}"""
+          if old_days not in text:
+              raise SystemExit('dayButtons boundary not found')
+          text = text.replace(old_days, new_days, 1)
+
+          old_app = """  return`<div class=\"tv4-box\"><label>Aplicar alterações nos dias</label><div class=\"tv4-days\">${dayButtons(d.days,r.days)}</div><small class=\"tv4-muted\">Todos os dias desta tarefa vêm selecionados. Desmarque os dias que não deseja alterar.</small></div>`;"""
+          new_app = """  return`<div class=\"tv4-box\"><label>Aplicar alterações nos dias</label><div class=\"tv4-days\">${dayButtons(d.days)}</div><small class=\"tv4-muted\">Os dias atuais vêm selecionados. Marque outros dias para adicioná-los à tarefa. Desmarcar um dia existente apenas evita aplicar alterações nele.</small></div>`;"""
+          if old_app not in text:
+              raise SystemExit('applicationBox boundary not found')
+          text = text.replace(old_app, new_app, 1)
+
+          task.write_text(text, encoding='utf-8')
+
+          index = Path('index-ADMIN-v9.html')
+          html = index.read_text(encoding='utf-8')
+          html = html.replace('sprint2-tarefas-realdata-v2.js?v=20260909-mobile-timepicker-v45', 'sprint2-tarefas-realdata-v2.js?v=20260913-edit-days-v46')
+          html = html.replace("version:'20260905.12'", "version:'20260913.3'")
+          html = html.replace("register('./sw.js?v=20260905.12'", "register('./sw.js?v=20260913.3'")
+          index.write_text(html, encoding='utf-8')
+
+          sw = Path('sw.js')
+          swt = sw.read_text(encoding='utf-8')
+          swt = swt.replace("const CACHE_NAME='rotina-family-adm-v103-production-20260913.2';", "const CACHE_NAME='rotina-family-adm-v104-production-20260913.3';")
+          swt = swt.replace("const ROTINA_SW_VERSION='103';", "const ROTINA_SW_VERSION='104';")
+          swt = swt.replace("const ROTINA_BUILD_ID='20260913.2';", "const ROTINA_BUILD_ID='20260913.3';")
+          swt = swt.replace("./sprint2-tarefas-realdata-v2.js?v=20260905-delete-v43", "./sprint2-tarefas-realdata-v2.js?v=20260913-edit-days-v46")
+          sw.write_text(swt, encoding='utf-8')
+          PY
+
+      - name: Syntax and architecture audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check sprint2-tarefas-realdata-v2.js
+          node --check sw.js
+          grep -q "tarefas-realdata-v4.4-edit-days" sprint2-tarefas-realdata-v2.js
+          grep -q "const newDays=days.filter(d=>!r.days.includes(d))" sprint2-tarefas-realdata-v2.js
+          grep -q "docsAdicionados:newDays.length" sprint2-tarefas-realdata-v2.js
+          grep -q "Marque outros dias para adicioná-los à tarefa" sprint2-tarefas-realdata-v2.js
+          if grep -q "editor.mode==='edit'&&r&&!r.days.includes(day)" sprint2-tarefas-realdata-v2.js; then
+            echo 'Edit day lock still present' >&2
+            exit 1
+          fi
+          if grep -q "available&&!available.includes(d)" sprint2-tarefas-realdata-v2.js; then
+            echo 'Unavailable-day UI lock still present' >&2
+            exit 1
+          fi
+          grep -q "sprint2-tarefas-realdata-v2.js?v=20260913-edit-days-v46" index-ADMIN-v9.html
+          grep -q "rotina-family-adm-v104-production-20260913.3" sw.js
+          grep -q "ROTINA_SW_VERSION='104'" sw.js
+          grep -q "ROTINA_BUILD_ID='20260913.3'" sw.js
+
+      - name: Commit production change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sprint2-tarefas-realdata-v2.js index-ADMIN-v9.html sw.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Sprint 2.1: allow adding days while editing tasks"
+          git push origin HEAD:main
