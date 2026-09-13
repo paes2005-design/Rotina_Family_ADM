@@ -1,67 +1,51 @@
-name: Sprint 2 Monitor V3 central store integration
+name: Sprint 2.1 task edit days migration
 
 on:
   push:
     branches: [main]
     paths:
       - '.github/workflows/sprint2-monitor-v3-central-store-integration.yml'
-      - 'scripts/sprint2_monitor_v3_integrate_store.py'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  integrate-audit:
+  migrate-audit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
-
-      - name: Aplicar arquitetura Store central e auditar leitores ativos
-        run: python scripts/sprint2_monitor_v3_integrate_store.py
-
-      - name: Confirmar escopo da alteracao
+      - name: Apply clean task edit days migration
+        run: python .github/scripts/unlock_task_edit_days.py
+      - name: Validate behavior and release metadata
         shell: bash
         run: |
-          git diff --name-only | sort | tee /tmp/changed.txt
-          printf '%s\n' index-ADMIN-v9.html sprint2-monitor-realdata-v2.js sw.js | sort > /tmp/expected.txt
-          diff -u /tmp/expected.txt /tmp/changed.txt
-
-      - name: Validar ausencia de leitura direta e rastreio seguro
-        shell: bash
-        run: |
-          node --check sprint2-monitor-realdata-v2.js
+          set -euo pipefail
+          node --check sprint2-tarefas-realdata-v2.js
           node --check sw.js
-          python - <<'PY'
-          from pathlib import Path
-          m=Path('sprint2-monitor-realdata-v2.js').read_text(encoding='utf-8')
-          forbidden=['getDocFromServer(','getDocsFromServer(','getDocFromCache(','getDocsFromCache(','onSnapshot(','storeCentral:false']
-          remaining=[x for x in forbidden if x in m]
-          assert not remaining, f'Leituras diretas restantes no Monitor: {remaining}'
-          assert "monitor-realdata-v3.7-history-trace" in m
-          assert "rotinaSprint2SyncNow('monitor-manual')" in m
-          assert "origem:'store-central',leituraFirebase:0" in m
-          assert "tarefaId:clean(x?.__sourceId)" in m
-          assert "execucaoId:clean(x?.__executionId)" in m
-          assert "perfilId:clean(x?.__pid)" in m
-          assert "historicoEsperadoId:expectedHistoryId(x)" in m
-          assert "origemOcorrencia:clean(x?.__resultSource)" in m
-          print('MONITOR_STORE_ONLY_AUDIT=OK')
-          print('MONITOR_HISTORY_TRACE_AUDIT=OK')
-          PY
-
-      - name: Publicar correcao auditada
+          grep -q "tarefas-realdata-v4.4-edit-days" sprint2-tarefas-realdata-v2.js
+          grep -q "const newDays=days.filter(d=>!r.days.includes(d))" sprint2-tarefas-realdata-v2.js
+          grep -q "docsAdicionados:newDays.length" sprint2-tarefas-realdata-v2.js
+          grep -q "Marque outros dias para adicioná-los à tarefa" sprint2-tarefas-realdata-v2.js
+          ! grep -q "editor.mode==='edit'&&r&&!r.days.includes(day)" sprint2-tarefas-realdata-v2.js
+          ! grep -q "available&&!available.includes(d)" sprint2-tarefas-realdata-v2.js
+          grep -q "sprint2-tarefas-realdata-v2.js?v=20260913-edit-days-v46" index-ADMIN-v9.html
+          grep -q "rotina-family-adm-v104-production-20260913.3" sw.js
+          grep -q "ROTINA_SW_VERSION='104'" sw.js
+          grep -q "ROTINA_BUILD_ID='20260913.3'" sw.js
+      - name: Publish audited change
         shell: bash
         run: |
+          set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index-ADMIN-v9.html sprint2-monitor-realdata-v2.js sw.js
+          git add sprint2-tarefas-realdata-v2.js index-ADMIN-v9.html sw.js
           if git diff --cached --quiet; then
-            echo 'Correcao ja aplicada.'
+            echo 'Task edit days migration already applied.'
           else
-            git commit -m 'Sprint 2.1: Monitor rastreia historico ausente pelo Store'
+            git commit -m 'Sprint 2.1: allow adding days while editing tasks'
             git push origin main
           fi
