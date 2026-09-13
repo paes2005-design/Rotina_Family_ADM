@@ -30,7 +30,7 @@ jobs:
           printf '%s\n' index-ADMIN-v9.html sprint2-monitor-realdata-v2.js sw.js | sort > /tmp/expected.txt
           diff -u /tmp/expected.txt /tmp/changed.txt
 
-      - name: Validar ausencia de leitura direta no Monitor
+      - name: Validar ausencia de leitura direta e rastreio seguro
         shell: bash
         run: |
           node --check sprint2-monitor-realdata-v2.js
@@ -41,10 +41,16 @@ jobs:
           forbidden=['getDocFromServer(','getDocsFromServer(','getDocFromCache(','getDocsFromCache(','onSnapshot(','storeCentral:false']
           remaining=[x for x in forbidden if x in m]
           assert not remaining, f'Leituras diretas restantes no Monitor: {remaining}'
-          assert "monitor-realdata-v3.6-central-store-only" in m
+          assert "monitor-realdata-v3.7-history-trace" in m
           assert "rotinaSprint2SyncNow('monitor-manual')" in m
           assert "origem:'store-central',leituraFirebase:0" in m
+          assert "tarefaId:clean(x?.__sourceId)" in m
+          assert "execucaoId:clean(x?.__executionId)" in m
+          assert "perfilId:clean(x?.__pid)" in m
+          assert "historicoEsperadoId:expectedHistoryId(x)" in m
+          assert "origemOcorrencia:clean(x?.__resultSource)" in m
           print('MONITOR_STORE_ONLY_AUDIT=OK')
+          print('MONITOR_HISTORY_TRACE_AUDIT=OK')
           PY
 
       - name: Publicar correcao auditada
@@ -56,6 +62,6 @@ jobs:
           if git diff --cached --quiet; then
             echo 'Correcao ja aplicada.'
           else
-            git commit -m 'Sprint 2.1: Monitor usa somente Store central para leituras'
+            git commit -m 'Sprint 2.1: Monitor rastreia historico ausente pelo Store'
             git push origin main
           fi
