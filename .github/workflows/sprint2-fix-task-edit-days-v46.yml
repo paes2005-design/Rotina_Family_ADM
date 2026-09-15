@@ -1,0 +1,178 @@
+name: Sprint 2.0 - corrigir dias na edicao de tarefas
+
+on:
+  push:
+    paths:
+      - '.github/workflows/sprint2-fix-task-edit-days-v46.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Aplicar correcao estrutural
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f'Trecho esperado nao encontrado: {label}')
+              return text.replace(old, new, 1)
+
+          path = Path('sprint2-tarefas-realdata-v2.js')
+          s = path.read_text(encoding='utf-8')
+
+          s = replace_once(
+              s,
+              "const VERSION='tarefas-realdata-v4.5-search-performance';",
+              "const VERSION='tarefas-realdata-v4.6-edit-days-fix';",
+              'versao do modulo'
+          )
+
+          old = """  const existingDays=days.filter(d=>r.days.includes(d));
+  const newDays=days.filter(d=>!r.days.includes(d));
+  const hasFieldChanges=!!editor.touched?.size;
+  if(!hasFieldChanges&&!newDays.length){toast('Nenhuma alteração foi feita.');return false}
+"""
+          new = """  const existingDays=days.filter(d=>r.days.includes(d));
+  const newDays=days.filter(d=>!r.days.includes(d));
+  const removedDays=r.days.filter(d=>!days.includes(d));
+  const hasFieldChanges=!!editor.touched?.size;
+  const hasDayChanges=!!(newDays.length||removedDays.length);
+  if(!hasFieldChanges&&!hasDayChanges){toast('Nenhuma alteração foi feita.');return false}
+"""
+          s = replace_once(s, old, new, 'deteccao de alteracao dos dias')
+
+          old = """  const docs=selectedDocs(r,existingDays);
+  const ignore=r.docs.map(d=>d.id);
+"""
+          new = """  const docs=selectedDocs(r,existingDays);
+  const removedDocs=selectedDocs(r,removedDays);
+  const ignore=r.docs.map(d=>d.id);
+"""
+          s = replace_once(s, old, new, 'selecao dos documentos removidos')
+
+          old = """  const g=groupId(),now=new Date().toISOString(),tg=tgFor(r.docs),b=fs.writeBatch(db);
+  const alarmNeedsUpdate=['name','start','end','active','alarm'].some(touched);
+
+  if(hasFieldChanges){
+"""
+          new = """  const g=groupId(),now=new Date().toISOString(),tg=tgFor(r.docs),b=fs.writeBatch(db);
+  const alarmNeedsUpdate=['name','start','end','active','alarm'].some(touched);
+
+  // Dias desmarcados significam remocao real daquela ocorrencia semanal.
+  // Historico/execucoes permanecem intactos; somente a tarefa futura e seu alarme sao encerrados.
+  for(const d of removedDocs){
+    b.delete(fs.doc(db,'tarefas',d.id));
+    b.set(
+      fs.doc(db,'despertadores',alarmId(g,r.pid,d.id)),
+      {
+        grupoId:g,perfilId:r.pid,tarefaId:d.id,tarefaGrupoId:clean(d.tarefaGrupoId)||tg,
+        nomeTarefa:clean(d.nome)||r.name,diaSemana:clean(d.diaSemana),
+        ativo:false,bloqueado:false,origem:'ADM',
+        encerradoEm:now,encerradoPor:'ADM',
+        schedulerPendente:true,schedulerVersao:1,schedulerSolicitadoEm:now,atualizadoEm:now
+      },
+      {merge:true}
+    );
+  }
+
+  if(hasFieldChanges){
+"""
+          s = replace_once(s, old, new, 'remocao dos dias e encerramento do alarme')
+
+          old = """  log('edit_selected_success',{
+    diasExistentes:existingDays,
+    diasAdicionados:newDays,
+    docsAtualizados:hasFieldChanges?docs.length:0,
+    docsAdicionados:newDays.length,
+    campos:[...editor.touched],
+    ativa:touched('active')?v.active:null
+  });
+
+  const partes=[];
+  if(hasFieldChanges&&docs.length)partes.push(`${docs.length} dia${docs.length===1?'':'s'} atualizado${docs.length===1?'':'s'}`);
+  if(newDays.length)partes.push(`${newDays.length} dia${newDays.length===1?'':'s'} adicionado${newDays.length===1?'':'s'}`);
+"""
+          new = """  log('edit_selected_success',{
+    diasExistentes:existingDays,
+    diasAdicionados:newDays,
+    diasRemovidos:removedDays,
+    docsAtualizados:hasFieldChanges?docs.length:0,
+    docsAdicionados:newDays.length,
+    docsRemovidos:removedDocs.length,
+    campos:[...editor.touched],
+    ativa:touched('active')?v.active:null
+  });
+
+  const partes=[];
+  if(hasFieldChanges&&docs.length)partes.push(`${docs.length} dia${docs.length===1?'':'s'} atualizado${docs.length===1?'':'s'}`);
+  if(newDays.length)partes.push(`${newDays.length} dia${newDays.length===1?'':'s'} adicionado${newDays.length===1?'':'s'}`);
+  if(removedDocs.length)partes.push(`${removedDocs.length} dia${removedDocs.length===1?'':'s'} removido${removedDocs.length===1?'':'s'}`);
+"""
+          s = replace_once(s, old, new, 'telemetria e mensagem de sucesso')
+
+          old = "Desmarcar um dia existente apenas evita aplicar alterações nele."
+          new = "Desmarque um dia para remover a tarefa daquele dia. Histórico e execuções já realizadas serão preservados."
+          s = replace_once(s, old, new, 'orientacao da interface')
+
+          path.write_text(s, encoding='utf-8')
+
+          htmlp = Path('index-ADMIN-v9.html')
+          html = htmlp.read_text(encoding='utf-8')
+          html = replace_once(html, 'sprint2-tarefas-realdata-v2.js?v=20260913-edit-days-v46', 'sprint2-tarefas-realdata-v2.js?v=20260915-edit-days-fix-v46', 'cachebuster HTML tarefas')
+          html = replace_once(html, "window.ROTINA_OFFICIAL_BUILD={channel:'production',version:'20260915.4',appVersion:'2.0.0'};", "window.ROTINA_OFFICIAL_BUILD={channel:'production',version:'20260915.5',appVersion:'2.0.0'};", 'build oficial HTML')
+          html = replace_once(html, "navigator.serviceWorker.register('./sw.js?v=20260915.4'", "navigator.serviceWorker.register('./sw.js?v=20260915.5'", 'SW HTML')
+          htmlp.write_text(html, encoding='utf-8')
+
+          swp = Path('sw.js')
+          sw = swp.read_text(encoding='utf-8')
+          sw = replace_once(sw, "const CACHE_NAME='rotina-family-adm-v106-sprint3-20260915.4';", "const CACHE_NAME='rotina-family-adm-v107-sprint2-days-20260915.5';", 'cache SW')
+          sw = replace_once(sw, "const ROTINA_SW_VERSION='106';", "const ROTINA_SW_VERSION='107';", 'versao SW')
+          sw = replace_once(sw, "const ROTINA_BUILD_ID='20260915.4';", "const ROTINA_BUILD_ID='20260915.5';", 'build SW')
+          sw = replace_once(sw, './sprint2-tarefas-realdata-v2.js?v=20260914-search-performance-v45', './sprint2-tarefas-realdata-v2.js?v=20260915-edit-days-fix-v46', 'cachebuster SW tarefas')
+          swp.write_text(sw, encoding='utf-8')
+
+          infop = Path('runtime-build-info.js')
+          info = infop.read_text(encoding='utf-8')
+          info = replace_once(info, "build:'20260831.2'", "build:'20260915.5'", 'build runtime info')
+          info = replace_once(info, "htmlVersion:'index-ADMIN-v8'", "htmlVersion:'index-ADMIN-v9'", 'html runtime info')
+          info = replace_once(info, "expectedServiceWorkerVersion:'79'", "expectedServiceWorkerVersion:'107'", 'SW runtime info')
+          infop.write_text(info, encoding='utf-8')
+          PY
+
+      - name: Auditar correcao
+        run: |
+          node --check sprint2-tarefas-realdata-v2.js
+          node --check sw.js
+          node --check runtime-build-info.js
+          grep -F "tarefas-realdata-v4.6-edit-days-fix" sprint2-tarefas-realdata-v2.js
+          grep -F "const removedDays=r.days.filter" sprint2-tarefas-realdata-v2.js
+          grep -F "const removedDocs=selectedDocs(r,removedDays)" sprint2-tarefas-realdata-v2.js
+          grep -F "b.delete(fs.doc(db,'tarefas',d.id))" sprint2-tarefas-realdata-v2.js
+          grep -F "diasRemovidos:removedDays" sprint2-tarefas-realdata-v2.js
+          grep -F "Desmarque um dia para remover a tarefa daquele dia" sprint2-tarefas-realdata-v2.js
+          grep -F "version:'20260915.5'" index-ADMIN-v9.html
+          grep -F "ROTINA_SW_VERSION='107'" sw.js
+          grep -F "expectedServiceWorkerVersion:'107'" runtime-build-info.js
+
+      - name: Commitar correcao
+        run: |
+          git config user.name "paes2005-design"
+          git config user.email "paes2005@gmail.com"
+          git add sprint2-tarefas-realdata-v2.js index-ADMIN-v9.html sw.js runtime-build-info.js
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "Nenhuma mudanca necessaria"
+            exit 0
+          fi
+          git commit -m "Sprint 2.0: corrige edicao dos dias da tarefa"
+          git push origin HEAD:main
