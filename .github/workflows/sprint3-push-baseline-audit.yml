@@ -1,0 +1,49 @@
+name: Sprint 3 - auditoria baseline push
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'index-ADMIN-v9.html'
+      - 'admin-push-onesignal.js'
+      - 'reward-redemption-notifications.js'
+      - 'sw.js'
+      - '.github/workflows/sprint3-push-baseline-audit.yml'
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Auditar baseline Sprint 3
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          idx = Path('index-ADMIN-v9.html').read_text(encoding='utf-8')
+          push = Path('admin-push-onesignal.js').read_text(encoding='utf-8')
+          rewards = Path('reward-redemption-notifications.js').read_text(encoding='utf-8')
+          sw = Path('sw.js').read_text(encoding='utf-8')
+          checks = {
+            'OneSignal SDK V16 no runtime ADM': 'OneSignalSDK.page.js' in idx,
+            'módulo ADM push no runtime': 'admin-push-onesignal.js?v=20260915-sprint3-v1' in idx,
+            'módulo alerta recompensa no runtime': 'reward-redemption-notifications.js?v=20260915-sprint3-v1' in idx,
+            'push usa sessão central': 'rotinaSprint2SessionSnapshot' in push,
+            'push usa Store central': 'rotinaSprint2DataSnapshot' in push,
+            'ADM recebe tags de grupo': "admAtivo: '1'" in push and 'admGrupoId: group' in push,
+            'logout remove tags ADM': 'removeTag' in push and 'admGrupoId' in push,
+            'resgates vêm do Store central': 'rotinaSprint2DataSnapshot' in rewards and '.redemptions' in rewards,
+            'alerta reage ao Store central': 'rotina-sprint2-cache-updated' in rewards,
+            'alerta navega para recompensas V9': 'rewardNavButton' in rewards and 'view-recompensas' in rewards,
+            'SW da Sprint 3 ativo': "ROTINA_SW_VERSION='106'" in sw and "ROTINA_BUILD_ID='20260915.4'" in sw,
+            'SW cacheia módulos de push': "'./admin-push-onesignal.js'" in sw and "'./reward-redemption-notifications.js'" in sw,
+          }
+          failed = [name for name, ok in checks.items() if not ok]
+          for name, ok in checks.items(): print(('PASS' if ok else 'FAIL'), '-', name)
+          if failed: raise SystemExit('Baseline Sprint 3 inválida: ' + ', '.join(failed))
+          PY
+          node --check admin-push-onesignal.js
+          node --check reward-redemption-notifications.js
+          node --check sw.js
