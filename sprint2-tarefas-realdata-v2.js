@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='tarefas-realdata-v4.5-search-performance';
+const VERSION='tarefas-realdata-v4.6-edit-days-fix';
 const SEARCH_DEBOUNCE_MS=70;
 const DAYS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const WEEKDAYS=['Segunda','Terça','Quarta','Quinta','Sexta'];
@@ -307,11 +307,14 @@ async function saveSelected(r,v){
 
   const existingDays=days.filter(d=>r.days.includes(d));
   const newDays=days.filter(d=>!r.days.includes(d));
+  const removedDays=r.days.filter(d=>!days.includes(d));
   const hasFieldChanges=!!editor.touched?.size;
-  if(!hasFieldChanges&&!newDays.length){toast('Nenhuma alteração foi feita.');return false}
+  const hasDayChanges=!!(newDays.length||removedDays.length);
+  if(!hasFieldChanges&&!hasDayChanges){toast('Nenhuma alteração foi feita.');return false}
   if(!validate(v,days))return false;
 
   const docs=selectedDocs(r,existingDays);
+  const removedDocs=selectedDocs(r,removedDays);
   const ignore=r.docs.map(d=>d.id);
 
   if(hasFieldChanges){
@@ -336,6 +339,22 @@ async function saveSelected(r,v){
 
   const g=groupId(),now=new Date().toISOString(),tg=tgFor(r.docs),b=fs.writeBatch(db);
   const alarmNeedsUpdate=['name','start','end','active','alarm'].some(touched);
+
+  // Dia desmarcado remove a ocorrencia futura e encerra seu alarme; historico e execucoes sao preservados.
+  for(const d of removedDocs){
+    b.delete(fs.doc(db,'tarefas',d.id));
+    b.set(
+      fs.doc(db,'despertadores',alarmId(g,r.pid,d.id)),
+      {
+        grupoId:g,perfilId:r.pid,tarefaId:d.id,tarefaGrupoId:clean(d.tarefaGrupoId)||tg,
+        nomeTarefa:clean(d.nome)||r.name,diaSemana:clean(d.diaSemana),
+        ativo:false,bloqueado:false,origem:'ADM',
+        encerradoEm:now,encerradoPor:'ADM',
+        schedulerPendente:true,schedulerVersao:1,schedulerSolicitadoEm:now,atualizadoEm:now
+      },
+      {merge:true}
+    );
+  }
 
   if(hasFieldChanges){
     for(const d of docs){
@@ -380,8 +399,10 @@ async function saveSelected(r,v){
   log('edit_selected_success',{
     diasExistentes:existingDays,
     diasAdicionados:newDays,
+    diasRemovidos:removedDays,
     docsAtualizados:hasFieldChanges?docs.length:0,
     docsAdicionados:newDays.length,
+    docsRemovidos:removedDocs.length,
     campos:[...editor.touched],
     ativa:touched('active')?v.active:null
   });
@@ -389,6 +410,7 @@ async function saveSelected(r,v){
   const partes=[];
   if(hasFieldChanges&&docs.length)partes.push(`${docs.length} dia${docs.length===1?'':'s'} atualizado${docs.length===1?'':'s'}`);
   if(newDays.length)partes.push(`${newDays.length} dia${newDays.length===1?'':'s'} adicionado${newDays.length===1?'':'s'}`);
+  if(removedDocs.length)partes.push(`${removedDocs.length} dia${removedDocs.length===1?'':'s'} removido${removedDocs.length===1?'':'s'}`);
   toast(partes.length?`${partes.join(' e ')}.`:'Alterações salvas.');
   return true;
 }
@@ -630,7 +652,7 @@ function statusField(r,d){
 }
 function applicationBox(r,d){
   if(!r)return`<div class="tv4-box"><label>Aplicação</label><b>${esc(participantFilter==='all'?'Todos os participantes':pname(participantFilter))}</b></div>`;
-  return`<div class="tv4-box"><label>Aplicar alterações nos dias</label><div class="tv4-days">${dayButtons(d.days)}</div><small class="tv4-muted">Os dias atuais vêm selecionados. Marque outros dias para adicioná-los à tarefa. Desmarcar um dia existente apenas evita aplicar alterações nele.</small></div>`;
+  return`<div class="tv4-box"><label>Aplicar alterações nos dias</label><div class="tv4-days">${dayButtons(d.days)}</div><small class="tv4-muted">Os dias atuais vêm selecionados. Marque outros dias para adicioná-los à tarefa. Desmarque um dia para remover a tarefa daquele dia. Histórico e execuções já realizadas serão preservados.</small></div>`;
 }
 
 function detailRow(r,d){

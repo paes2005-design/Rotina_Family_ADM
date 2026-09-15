@@ -1,6 +1,6 @@
-const CACHE_NAME='rotina-family-adm-v106-sprint3-20260915.4';
-const ROTINA_SW_VERSION='106';
-const ROTINA_BUILD_ID='20260915.4';
+const CACHE_NAME='rotina-family-adm-v107-sprint2-days-20260915.5';
+const ROTINA_SW_VERSION='107';
+const ROTINA_BUILD_ID='20260915.5';
 const APP_MAIN_URL=new URL('./index-ADMIN-v9.html',self.location.href).href;
 const ENTRY_URL=new URL('./index.html',self.location.href).href;
 const LEGACY_MAIN_PATH=new URL('./index-ADMIN-v8.html',self.location.href).pathname;
@@ -11,7 +11,7 @@ const APP_SHELL=[
   './sprint2-teste-core.js','./sprint2-observability-v1.js','./sprint2-integracao-login-realdata-bridge-v1.js',
   './sprint2-integracao-login-realdata-v1.js?v=20260905-cache-first-v13',
   './sprint2-data-store-v1.js?v=20260909-cache-budget-v15',
-  './sprint2-tarefas-realdata-v2.js?v=20260914-search-performance-v45',
+  './sprint2-tarefas-realdata-v2.js?v=20260915-edit-days-fix-v46',
   './sprint2-participantes-realdata-v1.js',
   './sprint2-recompensas-realdata-v1.js?v=20260909-production-ui-v137',
   './sprint2-conquistas-realdata-v1.js?v=20260903-deadline-v1',

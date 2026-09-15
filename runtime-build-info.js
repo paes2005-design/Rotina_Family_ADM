@@ -3,10 +3,10 @@
   const INFO=Object.freeze({
     app:'ADM',
     appVersion:'1.0.0',
-    build:'20260831.2',
-    htmlVersion:'index-ADMIN-v8',
+    build:'20260915.5',
+    htmlVersion:'index-ADMIN-v9',
     rulesModuleVersion:'6',
-    expectedServiceWorkerVersion:'79'
+    expectedServiceWorkerVersion:'107'
   });
   window.ROTINA_BUILD_INFO=INFO;
   const emit=(event,details={})=>{try{window.rotinaLog?.(event,{...INFO,...details});}catch{}};
