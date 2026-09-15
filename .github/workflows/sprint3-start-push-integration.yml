@@ -1,0 +1,111 @@
+name: Sprint 3 - iniciar push no ADM
+on:
+  push:
+    paths:
+      - '.github/workflows/sprint3-start-push-integration.yml'
+permissions:
+  contents: write
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Integrar OneSignal e notificações de recompensa ao runtime V9
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f'Padrão não encontrado: {label}')
+              return text.replace(old, new, 1)
+
+          # 1) OneSignal ADM: usar a identidade/grupo do runtime V9 e o Store central.
+          p = Path('admin-push-onesignal.js')
+          s = p.read_text(encoding='utf-8')
+          marker = "  function tagAdmin(OneSignal, groupId) {"
+          if 'function currentGroup()' not in s:
+              current_group = """  function currentGroup() {\n    const session = window.rotinaSprint2SessionSnapshot?.() || {};\n    const store = window.rotinaSprint2DataSnapshot?.() || {};\n    const top = String(document.getElementById('topGroup')?.textContent || '').replace(/^Grupo\\s+/i, '');\n    return normalizeGroup(session.groupId || store.groupId || top || localStorage.getItem(GROUP_STORAGE_KEY));\n  }\n\n"""
+              s = replace_once(s, marker, current_group + marker, 'admin currentGroup')
+          old = """          const group = normalizeGroup(\n            localStorage.getItem(GROUP_STORAGE_KEY) ||\n            document.getElementById('displayCodigoCliente')?.textContent\n          );"""
+          if old in s:
+              s = s.replace(old, "          const group = currentGroup();", 1)
+          old_listener = """  window.addEventListener('rotina-admin-session-ready', event => {\n    window.identificarAdmNoPush(event.detail?.grupoId);\n  });"""
+          new_listener = """  const refreshAdminTag = event => {\n    const group = normalizeGroup(event?.detail?.groupId || event?.detail?.grupoId || currentGroup());\n    if (group) window.identificarAdmNoPush(group);\n  };\n  window.addEventListener('rotina-admin-session-ready', refreshAdminTag);\n  window.addEventListener('rotina-sprint2-cache-updated', refreshAdminTag);"""
+          if old_listener in s:
+              s = s.replace(old_listener, new_listener, 1)
+          s = s.replace("    await tagAdmin(OneSignal, localStorage.getItem(GROUP_STORAGE_KEY));", "    await tagAdmin(OneSignal, currentGroup());\n    window.rotinaLog?.('push.adm_runtime_pronto', { oneSignal: true, grupoIdentificado: Boolean(currentGroup()) });", 1)
+          p.write_text(s, encoding='utf-8')
+
+          # 2) Alertas de resgate: consumir Store central e navegação real do ADM V9.
+          p = Path('reward-redemption-notifications.js')
+          s = p.read_text(encoding='utf-8')
+          old_group = """function grupoAtual() {\n  const grupo = (document.getElementById('displayCodigoCliente')?.textContent || '').trim();\n  return grupo && grupo !== '--' && grupo !== 'CLI-Gen' ? grupo : '';\n}"""
+          new_group = """function grupoAtual() {\n  const session = window.rotinaSprint2SessionSnapshot?.() || {};\n  const store = window.rotinaSprint2DataSnapshot?.() || {};\n  const top = String(document.getElementById('topGroup')?.textContent || '').replace(/^Grupo\\s+/i, '').trim();\n  const grupo = String(session.groupId || store.groupId || top || '').trim().toUpperCase();\n  return grupo && grupo !== '--' && grupo !== 'CLI-GEN' && grupo !== 'SISTEMA' ? grupo : '';\n}"""
+          if old_group in s:
+              s = s.replace(old_group, new_group, 1)
+          s = s.replace("  const botao = [...document.querySelectorAll('.tab-btn')].find(el => /recompensas/i.test(el.textContent || ''));", "  const botao = document.getElementById('rewardNavButton') || [...document.querySelectorAll('.tab-btn')].find(el => /recompensas/i.test(el.textContent || ''));", 1)
+          s = s.replace("  const botao = [...document.querySelectorAll('.tab-btn')].find(el => /recompensas/i.test(el.textContent || ''));\n  if (botao) botao.click();\n  else document.getElementById('recompensas')?.scrollIntoView({ behavior: 'smooth', block: 'start' });", "  const botao = document.getElementById('rewardNavButton') || [...document.querySelectorAll('.tab-btn')].find(el => /recompensas/i.test(el.textContent || ''));\n  if (botao) botao.click();\n  else document.getElementById('view-recompensas')?.scrollIntoView({ behavior: 'smooth', block: 'start' });", 1)
+          s = s.replace("  const lista = window.rotinaAdmCacheSnapshot?.().resgates || [];", "  const lista = window.rotinaSprint2DataSnapshot?.().redemptions || window.rotinaAdmCacheSnapshot?.().resgates || [];", 1)
+          s = s.replace("  window.addEventListener('rotina-adm-cache-updated',iniciarEscuta);", "  window.addEventListener('rotina-sprint2-cache-updated',iniciarEscuta);\n  window.addEventListener('rotina-adm-cache-updated',iniciarEscuta);", 1)
+          p.write_text(s, encoding='utf-8')
+
+          # 3) Runtime oficial V9: carregar SDK + módulos de push/recompensa.
+          p = Path('index-ADMIN-v9.html')
+          s = p.read_text(encoding='utf-8')
+          sdk = '<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>'
+          if sdk not in s:
+              s = replace_once(s, '</head>', sdk + '</head>', 'OneSignal SDK no ADM')
+          scripts = '<script src="admin-push-onesignal.js?v=20260915-sprint3-v1"></script><script src="reward-redemption-notifications.js?v=20260915-sprint3-v1"></script>'
+          if 'admin-push-onesignal.js?v=20260915-sprint3-v1' not in s:
+              anchor = '<script src="sprint2-monitor-realdata-v2.js?v=20260913-history-trace-v37"></script>'
+              s = replace_once(s, anchor, anchor + scripts, 'módulos push ADM')
+          s = s.replace("version:'20260913.3'", "version:'20260915.4'", 1)
+          s = s.replace("register('./sw.js?v=20260913.3'", "register('./sw.js?v=20260915.4'", 1)
+          p.write_text(s, encoding='utf-8')
+
+          # 4) Service Worker ADM: nova build e cache dos módulos locais integrados.
+          p = Path('sw.js')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace("const CACHE_NAME='rotina-family-adm-v105-production-20260914.1';", "const CACHE_NAME='rotina-family-adm-v106-sprint3-20260915.4';", 1)
+          s = s.replace("const ROTINA_SW_VERSION='105';", "const ROTINA_SW_VERSION='106';", 1)
+          s = s.replace("const ROTINA_BUILD_ID='20260914.1';", "const ROTINA_BUILD_ID='20260915.4';", 1)
+          shell_anchor = "  './sprint2-master-realdata-v1.js?v=20260905-master-realdata-v13-role-visibility'"
+          if "'./admin-push-onesignal.js'" not in s:
+              s = replace_once(s, shell_anchor, shell_anchor + ",\n  './admin-push-onesignal.js','./reward-redemption-notifications.js'", 'cache push ADM')
+          p.write_text(s, encoding='utf-8')
+
+          # Auditoria local do incremento antes do commit.
+          idx = Path('index-ADMIN-v9.html').read_text(encoding='utf-8')
+          push = Path('admin-push-onesignal.js').read_text(encoding='utf-8')
+          rewards = Path('reward-redemption-notifications.js').read_text(encoding='utf-8')
+          sw = Path('sw.js').read_text(encoding='utf-8')
+          checks = {
+              'SDK OneSignal carregado': 'OneSignalSDK.page.js' in idx,
+              'módulo push carregado': 'admin-push-onesignal.js?v=20260915-sprint3-v1' in idx,
+              'alerta recompensa carregado': 'reward-redemption-notifications.js?v=20260915-sprint3-v1' in idx,
+              'grupo vem da sessão/Store': 'rotinaSprint2SessionSnapshot' in push and 'rotinaSprint2DataSnapshot' in push,
+              'tag ADM': "admAtivo: '1'" in push and 'admGrupoId: group' in push,
+              'Store central de resgates': 'rotinaSprint2DataSnapshot' in rewards and '.redemptions' in rewards,
+              'evento cache central': 'rotina-sprint2-cache-updated' in rewards,
+              'navegação V9 recompensa': 'rewardNavButton' in rewards,
+              'SW 106': "ROTINA_SW_VERSION='106'" in sw,
+              'SW cacheia módulos': "'./admin-push-onesignal.js'" in sw and "'./reward-redemption-notifications.js'" in sw,
+          }
+          failed = [k for k,v in checks.items() if not v]
+          for k,v in checks.items(): print(('PASS' if v else 'FAIL'), '-', k)
+          if failed: raise SystemExit('Falhas: ' + ', '.join(failed))
+          PY
+          node --check admin-push-onesignal.js
+          node --check reward-redemption-notifications.js
+          node --check sw.js
+      - name: Commit do incremento Sprint 3
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index-ADMIN-v9.html admin-push-onesignal.js reward-redemption-notifications.js sw.js
+          git commit -m 'Sprint 3: integra push OneSignal ao ADM V9'
+          git push
