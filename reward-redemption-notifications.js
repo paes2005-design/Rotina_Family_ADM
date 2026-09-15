@@ -10,8 +10,11 @@ const esc = (valor = '') => String(valor).replace(/[&<>"']/g, caractere => ({
 }[caractere]));
 
 function grupoAtual() {
-  const grupo = (document.getElementById('displayCodigoCliente')?.textContent || '').trim();
-  return grupo && grupo !== '--' && grupo !== 'CLI-Gen' ? grupo : '';
+  const session = window.rotinaSprint2SessionSnapshot?.() || {};
+  const store = window.rotinaSprint2DataSnapshot?.() || {};
+  const top = String(document.getElementById('topGroup')?.textContent || '').replace(/^Grupo\s+/i, '').trim();
+  const grupo = String(session.groupId || store.groupId || top || '').trim().toUpperCase();
+  return grupo && grupo !== '--' && grupo !== 'CLI-GEN' && grupo !== 'SISTEMA' ? grupo : '';
 }
 
 function chaveStorage(grupoId) {
@@ -56,7 +59,7 @@ function garantirEstilo() {
 }
 
 function atualizarBadge(total) {
-  const botao = [...document.querySelectorAll('.tab-btn')].find(el => /recompensas/i.test(el.textContent || ''));
+  const botao = document.getElementById('rewardNavButton') || [...document.querySelectorAll('.tab-btn')].find(el => /recompensas/i.test(el.textContent || ''));
   if (!botao) return;
   let badge = botao.querySelector('.resgate-tab-badge');
   if (!total) {
@@ -73,9 +76,9 @@ function atualizarBadge(total) {
 }
 
 function abrirRecompensas() {
-  const botao = [...document.querySelectorAll('.tab-btn')].find(el => /recompensas/i.test(el.textContent || ''));
+  const botao = document.getElementById('rewardNavButton') || [...document.querySelectorAll('.tab-btn')].find(el => /recompensas/i.test(el.textContent || ''));
   if (botao) botao.click();
-  else document.getElementById('recompensas')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  else document.getElementById('view-recompensas')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function mostrarNotificacaoSistema(resgate) {
@@ -174,7 +177,7 @@ function iniciarEscuta() {
   const grupoId = grupoAtual();
   if (!grupoId) return;
   grupoEmEscuta = grupoId;
-  const lista = window.rotinaAdmCacheSnapshot?.().resgates || [];
+  const lista = window.rotinaSprint2DataSnapshot?.().redemptions || window.rotinaAdmCacheSnapshot?.().resgates || [];
   processarLista(lista, grupoId);
 }
 
@@ -182,6 +185,7 @@ function instalar() {
   garantirEstilo();
   iniciarEscuta();
   window.addEventListener('rotina-admin-session-ready',()=>setTimeout(iniciarEscuta,100));
+  window.addEventListener('rotina-sprint2-cache-updated',iniciarEscuta);
   window.addEventListener('rotina-adm-cache-updated',iniciarEscuta);
   if (new URLSearchParams(location.search).get('abrir') === 'resgates') setTimeout(abrirRecompensas, 700);
 }

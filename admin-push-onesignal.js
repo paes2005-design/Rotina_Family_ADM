@@ -11,6 +11,13 @@
     return value && value !== '--' && value !== 'CLI-Gen' ? value : '';
   }
 
+  function currentGroup() {
+    const session = window.rotinaSprint2SessionSnapshot?.() || {};
+    const store = window.rotinaSprint2DataSnapshot?.() || {};
+    const top = String(document.getElementById('topGroup')?.textContent || '').replace(/^Grupo\s+/i, '');
+    return normalizeGroup(session.groupId || store.groupId || top || localStorage.getItem(GROUP_STORAGE_KEY));
+  }
+
   function tagAdmin(OneSignal, groupId) {
     const group = normalizeGroup(groupId);
     if (!group) return Promise.resolve();
@@ -35,10 +42,7 @@
       window.OneSignalDeferred.push(async OneSignal => {
         try {
           await OneSignal.User.PushSubscription.optIn();
-          const group = normalizeGroup(
-            localStorage.getItem(GROUP_STORAGE_KEY) ||
-            document.getElementById('displayCodigoCliente')?.textContent
-          );
+          const group = currentGroup();
           await tagAdmin(OneSignal, group);
           complete({
             optedIn: OneSignal.User.PushSubscription.optedIn,
@@ -68,9 +72,12 @@
     });
   };
 
-  window.addEventListener('rotina-admin-session-ready', event => {
-    window.identificarAdmNoPush(event.detail?.grupoId);
-  });
+  const refreshAdminTag = event => {
+    const group = normalizeGroup(event?.detail?.groupId || event?.detail?.grupoId || currentGroup());
+    if (group) window.identificarAdmNoPush(group);
+  };
+  window.addEventListener('rotina-admin-session-ready', refreshAdminTag);
+  window.addEventListener('rotina-sprint2-cache-updated', refreshAdminTag);
 
   window.OneSignalDeferred.push(async function (OneSignal) {
     await OneSignal.init({
@@ -118,6 +125,7 @@
     OneSignal.Notifications.addEventListener('dismiss', event => {
       window.rotinaLog?.('push.onesignal_dispensado', pushDetails(event));
     });
-    await tagAdmin(OneSignal, localStorage.getItem(GROUP_STORAGE_KEY));
+    await tagAdmin(OneSignal, currentGroup());
+    window.rotinaLog?.('push.adm_runtime_pronto', { oneSignal: true, grupoIdentificado: Boolean(currentGroup()) });
   });
 })();
