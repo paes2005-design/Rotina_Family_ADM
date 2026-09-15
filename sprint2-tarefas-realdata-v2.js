@@ -1,7 +1,8 @@
 (function(){
 'use strict';
 
-const VERSION='tarefas-realdata-v4.4-edit-days';
+const VERSION='tarefas-realdata-v4.5-search-performance';
+const SEARCH_DEBOUNCE_MS=70;
 const DAYS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const WEEKDAYS=['Segunda','Terça','Quarta','Quinta','Sexta'];
 const ICONS=['🛏️','📚','🧹','🎻','🍴','🗑️','🧼','🪥','🐶','✅'];
@@ -14,6 +15,9 @@ let busy=false,installed=false,pendingDataRefresh=false;
 let profiles=[],series=[];
 let participantFilter='all',dayFilter=todayFull(),statusFilter='all',searchFilter='';
 let editor=null; // {mode,key,draft,touched:Set}
+let dataDirty=true,modelGroup='',taskDocsIndex=[];
+let alarmByTask=new Map(),alarmByGroupDay=new Map(),profileById=new Map(),profileByName=new Map();
+let participantOptionsSignature='',searchTimer=null;
 
 function todayFull(){return DAYS[new Date().getDay()]}
 function groupId(){return clean($('topGroup')?.textContent).replace(/^Grupo\s+/i,'').toUpperCase()}
@@ -28,12 +32,16 @@ function dayOrder(d){const i=DAYS.indexOf(d);return i<0?99:i}
 function sortDays(a){return[...new Set((a||[]).filter(Boolean))].sort((x,y)=>dayOrder(x)-dayOrder(y))}
 function validTime(a,b){return /^\d{2}:\d{2}$/.test(a)&&/^\d{2}:\d{2}$/.test(b)&&a<b}
 function most(a){const m=new Map();for(const v of a)m.set(v,(m.get(v)||0)+1);return[...m].sort((x,y)=>y[1]-x[1])[0]?.[0]??''}
+function perfNow(){return globalThis.performance?.now?.()??Date.now()}
+function ms(v){return Math.round(v*10)/10}
+function alarmGroupDayKey(tg,day){return`${clean(tg)}::${clean(day)}`}
 
 function pidFor(d){
-  if(d?.perfilId&&profiles.some(p=>p.id===d.perfilId))return d.perfilId;
-  return profiles.find(p=>clean(p.nome).toLowerCase()===clean(d?.perfilNome).toLowerCase())?.id||'';
+  const direct=clean(d?.perfilId);
+  if(direct&&profileById.has(direct))return direct;
+  return profileByName.get(clean(d?.perfilNome).toLowerCase())?.id||'';
 }
-function pname(pid,d){return clean(profiles.find(p=>p.id===pid)?.nome)||clean(d?.perfilNome)||'Integrante'}
+function pname(pid,d){return clean(profileById.get(pid)?.nome)||clean(d?.perfilNome)||'Integrante'}
 function noteOf(d){
   for(const k of['observacao','observações','observacoes','nota','descricao']){
     const v=clean(d?.[k]);if(v)return v;
@@ -62,11 +70,10 @@ function tgFor(docs){
     ||`tg-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
 }
 function alarmFor(d){
-  const s=snap(),g=groupId();
-  const exact=(s.alarms||[]).find(a=>sameGroup(a,g)&&clean(a.tarefaId)===clean(d?.id));
+  const exact=alarmByTask.get(clean(d?.id));
   if(exact)return exact;
   const tg=clean(d?.tarefaGrupoId);
-  return tg?(s.alarms||[]).find(a=>sameGroup(a,g)&&clean(a.tarefaGrupoId)===tg&&clean(a.diaSemana)===clean(d?.diaSemana))||null:null;
+  return tg?alarmByGroupDay.get(alarmGroupDayKey(tg,d?.diaSemana))||null:null;
 }
 function alarmMode(a){
   if(!a||a.ativo===false)return'off';
@@ -74,12 +81,35 @@ function alarmMode(a){
   return m.includes('inicio')&&m.includes('fim')?'both':m.includes('fim')?'end':'start';
 }
 
-function build(){
-  const s=snap(),g=groupId();
-  profiles=(s.profiles||[]).filter(p=>!p.grupoId||sameGroup(p,g)).map(x=>({...x}));
-  const raw=new Map();
+function build(force=false){
+  const g=groupId();
+  if(!force&&!dataDirty&&modelGroup===g)return true;
 
-  for(const source of(s.taskDocs||[]).filter(x=>sameGroup(x,g))){
+  const started=perfNow(),s=snap();
+  if(!g||clean(s.readyGroup).toUpperCase()!==g)return false;
+
+  profiles=(s.profiles||[]).filter(p=>!p.grupoId||sameGroup(p,g)).map(x=>({...x}));
+  profileById=new Map(profiles.map(p=>[clean(p.id),p]));
+  profileByName=new Map(profiles.map(p=>[clean(p.nome).toLowerCase(),p]));
+  taskDocsIndex=(s.taskDocs||[]).filter(x=>sameGroup(x,g)).map(x=>({...x}));
+
+  alarmByTask=new Map();
+  alarmByGroupDay=new Map();
+  let indexedAlarms=0;
+  for(const a of(s.alarms||[])){
+    if(!sameGroup(a,g))continue;
+    indexedAlarms++;
+    const taskId=clean(a.tarefaId);
+    if(taskId&&!alarmByTask.has(taskId))alarmByTask.set(taskId,a);
+    const tg=clean(a.tarefaGrupoId),day=clean(a.diaSemana);
+    if(tg&&day){
+      const key=alarmGroupDayKey(tg,day);
+      if(!alarmByGroupDay.has(key))alarmByGroupDay.set(key,a);
+    }
+  }
+
+  const raw=new Map();
+  for(const source of taskDocsIndex){
     const d={...source},pid=pidFor(d);
     if(!pid)continue;
     const tg=clean(d.tarefaGrupoId);
@@ -106,9 +136,11 @@ function build(){
     const alarmUniform=new Set(alarms).size<=1;
     const activeCount=docs.filter(isActive).length;
     const inactiveCount=docs.length-activeCount;
+    const participant=pname(r.pid,baseDoc);
     return{
       key:r.key,pid:r.pid,docs,
-      participant:pname(r.pid,baseDoc),
+      participant,
+      searchText:`${base.name}\n${participant}`.toLocaleLowerCase('pt-BR'),
       days:sortDays(docs.map(d=>clean(d.diaSemana))),
       ...base,
       active:activeCount>0,
@@ -121,10 +153,15 @@ function build(){
     };
   }).sort((a,b)=>a.participant.localeCompare(b.participant,'pt-BR')||a.sortStart.localeCompare(b.sortStart)||a.name.localeCompare(b.name,'pt-BR'));
 
+  modelGroup=g;
+  dataDirty=false;
+  log('model_rebuilt',{tarefas:taskDocsIndex.length,series:series.length,alarmes:indexedAlarms,tempoMs:ms(perfNow()-started)});
+
   if(editor?.mode==='edit'&&!series.some(r=>r.key===editor.key)){
     log('editor_closed_stale',{key:editor.key},'warning');
     editor=null;
   }
+  return true;
 }
 
 function draftFrom(r){
@@ -148,9 +185,9 @@ function draftFrom(r){
 function currentSeries(){return editor?.mode==='edit'?series.find(r=>r.key===editor.key)||null:null}
 
 function conflict({pid,days,start,end,ignore=[]}){
-  const ids=new Set(ignore.map(clean)),g=groupId();
-  for(const d of snap().taskDocs||[]){
-    if(ids.has(clean(d.id))||!sameGroup(d,g)||!isActive(d)||pidFor(d)!==pid||!days.includes(clean(d.diaSemana)))continue;
+  const ids=new Set(ignore.map(clean));
+  for(const d of taskDocsIndex){
+    if(ids.has(clean(d.id))||!isActive(d)||pidFor(d)!==pid||!days.includes(clean(d.diaSemana)))continue;
     const a=clean(d.horaSugeridaInicio),b=clean(d.horaSugeridaFim);
     if(validTime(a,b)&&start<b&&end>a)return d;
   }
@@ -533,7 +570,7 @@ function view(){
       <div class="tv4-field"><label>Participante</label><select id="tv4Participant"></select></div>
       <div class="tv4-field"><label>Dia</label><select id="tv4Day"><option value="all">Todos os dias</option>${DAYS.map(d=>`<option>${d}</option>`).join('')}</select></div>
       <div class="tv4-field"><label>Status</label><select id="tv4Status"><option value="all">Todas</option><option value="active">Ativas</option><option value="inactive">Inativas</option></select></div>
-      <div class="tv4-field"><label>Buscar</label><input id="tv4Search"></div>
+      <div class="tv4-field"><label>Buscar</label><input id="tv4Search" autocomplete="off"></div>
       <button id="tv4Refresh" class="tv4-refresh" data-action="refresh">↻ Atualizar</button>
     </div>
     <div id="tv4Count" class="tv4-count"></div>
@@ -544,17 +581,21 @@ function view(){
 
 function fillParticipant(){
   const e=$('tv4Participant'),keep=participantFilter;
-  e.innerHTML='<option value="all">Todos os participantes</option>'+profiles.map(p=>`<option value="${esc(p.id)}">${esc(p.nome||'Integrante')}</option>`).join('');
+  const signature=profiles.map(p=>`${clean(p.id)}:${clean(p.nome)}`).join('|');
+  if(participantOptionsSignature!==signature||!e.options.length){
+    e.innerHTML='<option value="all">Todos os participantes</option>'+profiles.map(p=>`<option value="${esc(p.id)}">${esc(p.nome||'Integrante')}</option>`).join('');
+    participantOptionsSignature=signature;
+  }
   e.value=[...e.options].some(o=>o.value===keep)?keep:'all';
   participantFilter=e.value;
 }
 function filteredRows(){
-  const q=searchFilter.toLowerCase();
+  const q=searchFilter.toLocaleLowerCase('pt-BR');
   return series.filter(r=>
     (participantFilter==='all'||r.pid===participantFilter)&&
     (dayFilter==='all'||r.days.includes(dayFilter))&&
     (statusFilter==='all'||(statusFilter==='active'?r.active:!r.active))&&
-    (!q||r.name.toLowerCase().includes(q)||r.participant.toLowerCase().includes(q))
+    (!q||r.searchText.includes(q))
   );
 }
 function daySummary(days){return sortDays(days).map(d=>d.slice(0,3)).join(', ')}
@@ -649,39 +690,58 @@ function mobileEdit(r){
   </article>`;
 }
 
-function render(){
-  if(!ensureView())return;
-  const s=snap(),g=groupId();
-  if(!g||clean(s.readyGroup).toUpperCase()!==g)return;
-
-  build();
-  fillParticipant();
-  $('tv4Day').value=dayFilter;
-  $('tv4Status').value=statusFilter;
-  $('tv4Search').value=searchFilter;
-
+function renderList({searchOnly=false,measureSearch=false}={}){
+  const started=measureSearch?perfNow():0;
   const list=filteredRows();
   $('tv4Count').textContent=`${list.length} série${list.length===1?'':'s'} de tarefa`;
 
   const r=currentSeries();
-  let web='';
-  if(editor?.mode==='create')web+=editRows(null);
-  for(const item of list)web+=editor?.mode==='edit'&&item.key===editor.key?editRows(item):normalRow(item);
-  $('tv4Body').innerHTML=web||'<tr><td colspan="8" class="tv4-empty">Nenhuma tarefa encontrada.</td></tr>';
+  const mobileMode=globalThis.matchMedia?.('(max-width:900px)')?.matches===true;
 
-  let mobile='';
-  if(editor?.mode==='create')mobile+=mobileEdit(null);
-  for(const item of list)mobile+=editor?.mode==='edit'&&item.key===editor.key?mobileEdit(item):mobileNormal(item);
-  $('tv4Mobile').innerHTML=mobile||'<div class="tv4-empty">Nenhuma tarefa encontrada.</div>';
+  if(!searchOnly||!mobileMode){
+    let web='';
+    if(editor?.mode==='create')web+=editRows(null);
+    for(const item of list)web+=editor?.mode==='edit'&&item.key===editor.key?editRows(item):normalRow(item);
+    $('tv4Body').innerHTML=web||'<tr><td colspan="8" class="tv4-empty">Nenhuma tarefa encontrada.</td></tr>';
+  }
+
+  if(!searchOnly||mobileMode){
+    let mobile='';
+    if(editor?.mode==='create')mobile+=mobileEdit(null);
+    for(const item of list)mobile+=editor?.mode==='edit'&&item.key===editor.key?mobileEdit(item):mobileNormal(item);
+    $('tv4Mobile').innerHTML=mobile||'<div class="tv4-empty">Nenhuma tarefa encontrada.</div>';
+  }
 
   $('tv4Add').disabled=busy||!canWrite()||!!editor;
   $('tv4Refresh').disabled=busy||!!editor;
+
+  if(measureSearch){
+    log('search_render',{caracteres:searchFilter.length,resultados:list.length,totalSeries:series.length,tempoMs:ms(perfNow()-started),modo:mobileMode?'mobile':'desktop'});
+  }
+}
+function scheduleSearchRender(){
+  clearTimeout(searchTimer);
+  searchTimer=setTimeout(()=>{
+    searchTimer=null;
+    if(!ensureView()||!build())return;
+    renderList({searchOnly:true,measureSearch:true});
+  },SEARCH_DEBOUNCE_MS);
+}
+function render(){
+  if(!ensureView())return;
+  if(!build())return;
+
+  fillParticipant();
+  $('tv4Day').value=dayFilter;
+  $('tv4Status').value=statusFilter;
+  $('tv4Search').value=searchFilter;
+  renderList();
 }
 function ensureView(){
   const v=$('view-tarefas');
   if(!v)return false;
   if(v.dataset.tv4!=='1'){
-    style();v.innerHTML=view();v.dataset.tv4='1';bindOnce(v);
+    style();v.innerHTML=view();v.dataset.tv4='1';participantOptionsSignature='';bindOnce(v);
   }
   return true;
 }
@@ -707,15 +767,19 @@ function bindOnce(v){
 
   v.addEventListener('change',e=>{
     const target=e.target;
-    if(target.id==='tv4Participant'){participantFilter=target.value;editor=null;render();return}
-    if(target.id==='tv4Day'){dayFilter=target.value;editor=null;render();return}
-    if(target.id==='tv4Status'){statusFilter=target.value;editor=null;render();return}
+    if(target.id==='tv4Participant'){participantFilter=target.value;editor=null;renderList();return}
+    if(target.id==='tv4Day'){dayFilter=target.value;editor=null;renderList();return}
+    if(target.id==='tv4Status'){statusFilter=target.value;editor=null;renderList();return}
     if(target.dataset.field){updateDraft(target.dataset.field,target.value)}
   });
 
   v.addEventListener('input',e=>{
     const target=e.target;
-    if(target.id==='tv4Search'){searchFilter=target.value;render();return}
+    if(target.id==='tv4Search'){
+      searchFilter=target.value;
+      scheduleSearchRender();
+      return;
+    }
     if(target.dataset.field)updateDraft(target.dataset.field,target.value);
   });
 }
@@ -733,10 +797,11 @@ function install(){
     .observe(document.body,{attributes:true,attributeFilter:['class']});
 
   window.addEventListener('rotina-sprint2-cache-updated',event=>{
-    if(!$('view-tarefas')?.classList.contains('active'))return;
     const origin=clean(event?.detail?.origin);
-
     if(origin==='live-execucoes')return;
+
+    dataDirty=true;
+    if(!$('view-tarefas')?.classList.contains('active'))return;
 
     if(editor){
       pendingDataRefresh=true;
