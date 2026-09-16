@@ -6,21 +6,29 @@
     build:'20260915.6',
     htmlVersion:'index-ADMIN-v9',
     rulesModuleVersion:'6',
-    expectedServiceWorkerVersion:'108'
+    expectedServiceWorkerVersion:'109'
   });
   window.ROTINA_BUILD_INFO=INFO;
   const emit=(event,details={})=>{try{window.rotinaLog?.(event,{...INFO,...details});}catch{}};
-  function badge(){
-    const existing=document.getElementById('rotinaBuildBadge');
-    if(existing){existing.textContent=`ADM v${INFO.appVersion} • ${INFO.build}`;return;}
-    const el=document.createElement('button');
-    el.id='rotinaBuildBadge';
-    el.type='button';
-    el.textContent=`ADM v${INFO.appVersion} • ${INFO.build}`;
-    el.title='Toque para ver a versão em execução';
-    el.style.cssText='position:fixed;right:8px;bottom:82px;z-index:9998;border:1px solid rgba(100,116,139,.35);background:rgba(255,255,255,.94);color:#64748b;border-radius:999px;padding:4px 8px;font:600 10px/1.2 system-ui;box-shadow:0 2px 8px rgba(0,0,0,.08);opacity:.86';
-    el.onclick=()=>alert(`Rotina Family ADM\nVersão: ${INFO.appVersion}\nBuild: ${INFO.build}\nHTML: ${INFO.htmlVersion}\nRegras: v${INFO.rulesModuleVersion}\nService Worker esperado: v${INFO.expectedServiceWorkerVersion}\nService Worker ativo: ${window.ROTINA_SW_VERSION||'sem resposta'}`);
-    document.body.appendChild(el);
+  function footer(){
+    document.getElementById('rotinaBuildBadge')?.remove();
+    const candidates=[...document.querySelectorAll('#rotinaBuildFooter,.version,[data-version-footer]')];
+    const legacy=candidates.find(el=>/Rotina\s+Family/i.test(el.textContent||'')&&/Build/i.test(el.textContent||''))||candidates.find(el=>el.classList?.contains('version'))||null;
+    const legacyVersion=String(legacy?.textContent||'').match(/Vers(?:ão|ao)\s*([0-9.]+)/i)?.[1]||INFO.appVersion;
+    let el=document.getElementById('rotinaBuildFooter')||legacy;
+    if(!el){el=document.createElement('div');el.id='rotinaBuildFooter';}
+    if(!el.id)el.id='rotinaBuildFooter';
+    el.classList.remove('version');
+    el.classList.add('rotina-build-footer');
+    el.removeAttribute('type');
+    el.textContent=`Rotina Family ADM · Versão ${legacyVersion} · Build ${INFO.build}`;
+    el.title=`HTML ${INFO.htmlVersion} · Regras v${INFO.rulesModuleVersion} · Service Worker esperado v${INFO.expectedServiceWorkerVersion}`;
+    el.style.cssText='position:static;inset:auto;display:block;width:100%;margin:28px 0 8px;padding:0;text-align:center;background:transparent;border:0;border-radius:0;box-shadow:none;color:#9aa0ad;font:500 11px/1.4 system-ui;opacity:1;pointer-events:none;';
+    const host=document.getElementById('mainScroll')||document.querySelector('.main')||document.body;
+    if(el.parentElement!==host)host.appendChild(el);
+    for(const node of candidates){
+      if(node!==el&&(node.id==='rotinaBuildBadge'||node.classList?.contains('version')||(/Rotina\s+Family/i.test(node.textContent||'')&&/Build/i.test(node.textContent||''))))node.remove();
+    }
   }
   async function checkSw(){
     try{
@@ -46,7 +54,9 @@
     }catch(e){emit('build.sw_erro',{mensagem:String(e?.message||e)});}
   }
   const boot=()=>{
-    badge();
+    footer();
+    setTimeout(footer,700);
+    setTimeout(footer,1800);
     emit('build.html_carregado',{href:location.href,userAgent:navigator.userAgent});
     setTimeout(checkSw,150);
     setTimeout(()=>emit('build.regra_modulo_esperado',{rulesModuleVersion:INFO.rulesModuleVersion}),400);
