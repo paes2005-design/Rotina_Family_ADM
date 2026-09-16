@@ -14,14 +14,14 @@
   <div class="loading">Carregando Rotina Family ADM...</div>
   <script>
     (async()=>{
-      try{if('serviceWorker' in navigator){const reg=await navigator.serviceWorker.register('./sw.js?v=20260915.6',{updateViaCache:'none'});await reg.update().catch(()=>{});}}catch(_){}
+      try{if('serviceWorker' in navigator){const reg=await navigator.serviceWorker.register('./sw.js?v=109',{updateViaCache:'none'});await reg.update().catch(()=>{});}}catch(_){}
       const target=new URL('./index-ADMIN-v9.html',location.href);
       const params=new URLSearchParams(location.search);
       params.delete('entry');
-      params.set('release','20260915.6');
+      params.set('release','20260915.6-footer');
       target.search=params.toString();target.hash=location.hash;location.replace(target.href);
     })();
   </script>
-  <noscript><a href="./index-ADMIN-v9.html?release=20260915.6">Abrir Rotina Family ADM</a></noscript>
+  <noscript><a href="./index-ADMIN-v9.html?release=20260915.6-footer">Abrir Rotina Family ADM</a></noscript>
 </body>
 </html>
