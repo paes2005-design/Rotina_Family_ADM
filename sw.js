@@ -1,5 +1,5 @@
-const CACHE_NAME='rotina-family-adm-v108-build-id-20260915.6';
-const ROTINA_SW_VERSION='108';
+const CACHE_NAME='rotina-family-adm-v109-build-id-20260915.6';
+const ROTINA_SW_VERSION='109';
 const ROTINA_BUILD_ID='20260915.6';
 const APP_MAIN_URL=new URL('./index-ADMIN-v9.html',self.location.href).href;
 const ENTRY_URL=new URL('./index.html',self.location.href).href;
