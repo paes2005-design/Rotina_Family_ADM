@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-const VERSION='sprint2-data-store-v1.5-inmemory-patch-budget';
+const VERSION='sprint2-data-store-v1.6-review-authoritative';
 const SYNC_MS=5*60*1000;
 const HOT_NAMES=['perfis','tarefas','execucoes','despertadores','recompensas','resgates','conquistas','conquistaHistorico'];
 const FULL_NAMES=['perfis','tarefas','historico','execucoes','despertadores','recompensas','resgates','conquistas','conquistaHistorico'];
@@ -115,8 +115,10 @@ function scheduleNext(){
 function markServerActivity(origin='acao-servidor'){
   const g=groupId();if(!g||g==='SISTEMA')return false;
   if(data.groupId!==g)reset(g);
-  rememberServerSync(g);
+  // Uma escrita confirmada não equivale a uma leitura completa do servidor.
+  // Não avance lastServerSync aqui: isso poderia adiar a reconciliação por 5 min.
   data.origin=origin;
+  data.lastLocalSync=Date.now();
   window.dispatchEvent(new CustomEvent('rotina-sprint2-server-activity',{detail:{groupId:g,origin,lastServerSync:data.lastServerSync,version:VERSION}}));
   return true;
 }
