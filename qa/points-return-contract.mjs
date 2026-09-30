@@ -1,0 +1,15 @@
+import fs from 'node:fs';
+const monitor=fs.readFileSync('sprint2-monitor-realdata-v2.js','utf8');
+const store=fs.readFileSync('sprint2-data-store-v1.js','utf8');
+const checks=[];const ok=(l,c)=>{checks.push([l,!!c]);console.log(c?'OK  ':'FAIL',l)};
+ok('historico authoritative',/batch\.update\(histRef,patch\)/.test(monitor));
+ok('waits Firestore',/await batch\.commit\(\)/.test(monitor));
+ok('immediate server reconcile',/rotinaSprint2SyncNow\?\.\('monitor-revisao-confirmada'\)/.test(monitor));
+ok('does not patch task schedule',!monitor.includes("batch.update(fs.doc(db,'tarefas',x.__sourceId),patch)"));
+ok('stores returned points',/pontosDevolvidos:Math\.max\(0,points-o\.points\)/.test(monitor));
+ok('undo removes review fields',/remove=\['percentualRevisado','pontosDevolvidos','revisaoDecisao','revisadoEm'\]/.test(monitor));
+ok('undo restores original points',/pontosGanhos:o\.points/.test(monitor));
+ok('undo button remains',monitor.includes('data-review="reverter"'));
+ok('success keeps undo instruction',monitor.includes('Use “Reverter decisão” para refazer.'));
+ok('write is not full refresh',!/function markServerActivity[\s\S]{0,500}rememberServerSync\(g\)/.test(store));
+const passed=checks.filter(([,v])=>v).length;console.log(`POINTS_RETURN_ADM_CONTRACT=${passed}/${checks.length}`);if(passed!==checks.length)process.exit(1);
