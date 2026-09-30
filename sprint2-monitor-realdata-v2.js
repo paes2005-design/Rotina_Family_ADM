@@ -453,7 +453,15 @@ async function openAlarm(x){
   m.querySelector('#mv2AlarmOn').onclick=()=>command(true);m.querySelector('#mv2AlarmOff').onclick=()=>command(false);
 }
 function originalOutcome(x){
-  const max=maxPoints(x),points=Number.isFinite(Number(x.pontosOriginais))?Number(x.pontosOriginais):wonPoints(x),pct=operationalPercentage(x)??0;return{max,points,pct};
+  const max=maxPoints(x);
+  // Nunca derive o resultado original de uma revisão já aplicada. O percentual
+  // operacional pode continuar refletindo o status da execução, mas os pontos
+  // originais precisam vir do registro imutável quando ele existir.
+  const storedOriginal=Number(x.pontosOriginais);
+  const points=Number.isFinite(storedOriginal)?storedOriginal:wonPoints(x);
+  const storedPct=numericPercentage(x.percentualOriginal);
+  const pct=storedPct!==null?storedPct:(operationalPercentage(x)??0);
+  return{max,points,pct};
 }
 function applyPlainPatch(doc,set,remove){if(!doc)return;Object.assign(doc,set||{});for(const key of remove||[])delete doc[key]}
 function patchReviewMemory(x,set,remove){
@@ -481,12 +489,11 @@ async function applyReview(x,type,targetPct=null,msg){
       set={pontosGanhos:points,pontosOriginais:o.points,percentualOriginal:o.pct,percentualRevisado:pct,pontosDevolvidos:Math.max(0,points-o.points),revisaoStatus:'revisado',revisaoDecisao:type==='manter'?'manter':`devolver-${pct}`,revisadoEm:new Date().toISOString()};patch={...set};
     }
     batch.update(histRef,patch);if(execRef)batch.update(execRef,patch);
-    // Para a ocorrência de hoje, histórico e tarefa precisam mudar na mesma transação.
-    // Isso evita que o Participante receba o histórico revisado e a tarefa ainda com
-    // a pontuação anterior (ou o inverso).
-    if(x.__date===todayIso()&&x.__sourceId)batch.update(fs.doc(db,'tarefas',x.__sourceId),patch);
     await batch.commit();
+    // A pontuação consumida pelo Participante nasce do histórico. A tarefa é a
+    // programação e não deve receber campos de resultado/revisão.
     patchReviewMemory(x,set,remove);
+    await window.rotinaSprint2SyncNow?.('monitor-revisao-confirmada');
     const devolvidos=Number(set.pontosDevolvidos)||0;
     log(type==='reverter'?'sprint2.monitor_v3_justificativa_reverter':'sprint2.monitor_v3_justificativa_decisao',{alvoPct:targetPct===null?-1:Number(targetPct),reversao:type==='reverter',pontosGanhos:Number(set.pontosGanhos)||0,pontosDevolvidos:devolvidos,confirmadoServidor:true});
     if(type==='reverter'){
