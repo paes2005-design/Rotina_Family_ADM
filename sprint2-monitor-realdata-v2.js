@@ -480,11 +480,25 @@ async function applyReview(x,type,targetPct=null,msg){
       const pct=type==='manter'?o.pct:Math.max(o.pct,Number(targetPct)||o.pct),points=type==='manter'?o.points:Math.max(o.points,Math.round(o.max*pct/100));
       set={pontosGanhos:points,pontosOriginais:o.points,percentualOriginal:o.pct,percentualRevisado:pct,pontosDevolvidos:Math.max(0,points-o.points),revisaoStatus:'revisado',revisaoDecisao:type==='manter'?'manter':`devolver-${pct}`,revisadoEm:new Date().toISOString()};patch={...set};
     }
-    batch.update(histRef,patch);if(execRef)batch.update(execRef,patch);await batch.commit();
+    batch.update(histRef,patch);if(execRef)batch.update(execRef,patch);
+    // Para a ocorrência de hoje, histórico e tarefa precisam mudar na mesma transação.
+    // Isso evita que o Participante receba o histórico revisado e a tarefa ainda com
+    // a pontuação anterior (ou o inverso).
+    if(x.__date===todayIso()&&x.__sourceId)batch.update(fs.doc(db,'tarefas',x.__sourceId),patch);
+    await batch.commit();
     patchReviewMemory(x,set,remove);
-    log(type==='reverter'?'sprint2.monitor_v3_justificativa_reverter':'sprint2.monitor_v3_justificativa_decisao',{alvoPct:targetPct===null?-1:Number(targetPct),reversao:type==='reverter'});
-    msg.textContent='Decisão registrada na ocorrência.';
-    closeModal();requestAnimationFrame(()=>render(false,true));
+    const devolvidos=Number(set.pontosDevolvidos)||0;
+    log(type==='reverter'?'sprint2.monitor_v3_justificativa_reverter':'sprint2.monitor_v3_justificativa_decisao',{alvoPct:targetPct===null?-1:Number(targetPct),reversao:type==='reverter',pontosGanhos:Number(set.pontosGanhos)||0,pontosDevolvidos:devolvidos,confirmadoServidor:true});
+    if(type==='reverter'){
+      msg.textContent='↩️ Devolução revertida. O resultado automático foi restaurado; você pode refazer a decisão.';
+    }else if(type==='manter'){
+      msg.textContent='Decisão confirmada no servidor. Resultado automático mantido. Use “Reverter decisão” para refazer.';
+    }else{
+      msg.textContent=`↩️ ${devolvidos} ponto(s) devolvido(s) e confirmado(s) no servidor. Use “Reverter decisão” para refazer.`;
+    }
+    requestAnimationFrame(()=>render(false,true));
+    // Mantém o aviso visível. Ao reabrir a ocorrência, o estado revisado continua
+    // oferecendo “Reverter decisão”, preservando o fluxo já aprovado.
   }catch(e){msg.textContent=e.message||'Não foi possível registrar a decisão.';log('sprint2.monitor_v3_justificativa_erro',{mensagem:String(e?.message||e).slice(0,70)},'error')}
   finally{if(lockKey)reviewLocks.delete(lockKey)}
 }

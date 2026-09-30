@@ -107,17 +107,37 @@ async function abrir(ctx={}){
   }catch(e){console.error('Revisão de justificativa:',e);msg.textContent=e.message||'Não foi possível carregar a justificativa.';}
 }
 
-function commitSemBloquearOffline(batch,operacaoId,msg){
-  // O SDK completo do Firestore persiste writeBatch offline. O Promise só resolve
-  // quando o servidor confirmar, por isso não bloqueamos a interface esperando-o.
-  batch.commit().then(()=>{
-    if(operacaoId!==ultimaOperacao)return;
-    if(msg&&navigator.onLine!==false)msg.textContent=(msg.dataset.okOnline||msg.textContent);
-  }).catch(e=>{
+async function confirmarRevisao(batch,operacaoId,msg){
+  // Pontuação é dado crítico: online, a interface só confirma a devolução/reversão
+  // depois que o Firestore confirmar o batch. Offline, o SDK mantém a escrita
+  // pendente e a interface informa explicitamente que ainda não houve confirmação.
+  const offline=navigator.onLine===false;
+  const commit=batch.commit();
+  if(offline){
+    commit.then(()=>{
+      if(operacaoId!==ultimaOperacao)return;
+      if(msg)msg.textContent=msg.dataset.okOnline||'Alteração sincronizada.';
+      window.rotinaLog?.('justificativa.revisao_confirmada_servidor',{operacaoId});
+    }).catch(e=>{
+      console.error('Sincronizar revisão:',e);
+      if(operacaoId!==ultimaOperacao)return;
+      if(msg)msg.textContent='⚠️ O servidor recusou a alteração. Reconecte e tente novamente.';
+      window.rotinaLog?.('justificativa.revisao_recusada_servidor',{operacaoId,mensagem:String(e?.message||e)},'error');
+    });
+    return false;
+  }
+  try{
+    await commit;
+    if(operacaoId===ultimaOperacao&&msg)msg.textContent=msg.dataset.okOnline||msg.textContent;
+    window.rotinaLog?.('justificativa.revisao_confirmada_servidor',{operacaoId});
+    window.dispatchEvent(new CustomEvent('rotina-adm-critical-data-changed',{detail:{tipo:'pontuacao',operacaoId}}));
+    return true;
+  }catch(e){
     console.error('Sincronizar revisão:',e);
-    if(operacaoId!==ultimaOperacao)return;
-    if(msg)msg.textContent='⚠️ A alteração ficou local, mas o servidor recusou a sincronização. Reconecte e tente novamente.';
-  });
+    if(operacaoId===ultimaOperacao&&msg)msg.textContent='⚠️ Não foi possível confirmar a alteração no servidor. Tente novamente.';
+    window.rotinaLog?.('justificativa.revisao_recusada_servidor',{operacaoId,mensagem:String(e?.message||e)},'error');
+    throw e;
+  }
 }
 
 let ultimaOperacao=0;
@@ -163,7 +183,7 @@ async function salvarRevisao(tipo,pct){
       msg.textContent=navigator.onLine===false?'📴 Decisão revertida neste aparelho. Será sincronizada quando a internet voltar.':'Decisão revertida. O resultado automático foi restaurado; escolha uma nova opção se desejar.';
       m.querySelector('#admReviewOriginal').innerHTML=resumoResultado(atualizado,o);
       m.querySelector('#admReviewAcoes').innerHTML=montarAcoes(atualizado).html;
-      commitSemBloquearOffline(batch,operacaoId,msg);
+      await confirmarRevisao(batch,operacaoId,msg);
       return;
     }
 
@@ -185,7 +205,7 @@ async function salvarRevisao(tipo,pct){
     msg.textContent=navigator.onLine===false?`📴 Parecer salvo neste aparelho${tipo==='manter'?'':` (${devolvidos} ponto(s) devolvido(s))`}. Será sincronizado quando a internet voltar.`:textoOnline;
     m.querySelector('#admReviewOriginal').innerHTML=resumoResultado(atualizado,o);
     m.querySelector('#admReviewAcoes').innerHTML=montarAcoes(atualizado).html;
-    commitSemBloquearOffline(batch,operacaoId,msg);
+    await confirmarRevisao(batch,operacaoId,msg);
   }catch(e){
     console.error('Salvar revisão:',e);
     msg.textContent=e.message||'Não foi possível registrar a revisão. Tente novamente.';
