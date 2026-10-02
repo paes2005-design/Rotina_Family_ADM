@@ -482,11 +482,26 @@ async function applyReview(x,type,targetPct=null,msg){
     let patch,set,remove=[];
     if(type==='reverter'){
       set={pontosGanhos:o.points,pontosOriginais:o.points,percentualOriginal:o.pct,revisaoStatus:'aguardando'};
-      remove=['percentualRevisado','pontosDevolvidos','revisaoDecisao','revisadoEm'];
-      patch={...set,percentualRevisado:fs.deleteField(),pontosDevolvidos:fs.deleteField(),revisaoDecisao:fs.deleteField(),revisadoEm:fs.deleteField()};
+      remove=['percentualRevisado','pontosDevolvidos','revisaoDecisao','revisaoPercentualAlvo','revisadoEm'];
+      patch={...set,percentualRevisado:fs.deleteField(),pontosDevolvidos:fs.deleteField(),revisaoDecisao:fs.deleteField(),revisaoPercentualAlvo:fs.deleteField(),revisadoEm:fs.deleteField()};
     }else{
-      const pct=type==='manter'?o.pct:Math.max(o.pct,Number(targetPct)||o.pct),points=type==='manter'?o.points:Math.max(o.points,Math.round(o.max*pct/100));
-      set={pontosGanhos:points,pontosOriginais:o.points,percentualOriginal:o.pct,percentualRevisado:pct,pontosDevolvidos:Math.max(0,points-o.points),revisaoStatus:'revisado',revisaoDecisao:type==='manter'?'manter':`devolver-${pct}`,revisadoEm:new Date().toISOString()};patch={...set};
+      const manter=type==='manter';
+      const pct=manter?o.pct:Math.max(o.pct,Number(targetPct)||o.pct);
+      const points=manter?o.points:Math.max(o.points,Math.round(o.max*pct/100));
+      const devolvidos=Math.max(0,points-o.points);
+      const decisao=manter?'manter':(devolvidos>0?'devolver':'manter');
+      set={
+        pontosGanhos:points,
+        pontosOriginais:o.points,
+        percentualOriginal:o.pct,
+        percentualRevisado:pct,
+        pontosDevolvidos:devolvidos,
+        revisaoStatus:'revisado',
+        revisaoDecisao:decisao,
+        revisaoPercentualAlvo:manter?null:pct,
+        revisadoEm:new Date().toISOString()
+      };
+      patch={...set};
     }
     batch.update(histRef,patch);if(execRef)batch.update(execRef,patch);
     await batch.commit();
