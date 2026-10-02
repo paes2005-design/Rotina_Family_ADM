@@ -482,8 +482,8 @@ async function applyReview(x,type,targetPct=null,msg){
     let patch,set,remove=[];
     if(type==='reverter'){
       set={pontosGanhos:o.points,pontosOriginais:o.points,percentualOriginal:o.pct,revisaoStatus:'aguardando'};
-      remove=['percentualRevisado','pontosDevolvidos','revisaoDecisao','revisaoPercentualAlvo','revisadoEm'];
-      patch={...set,percentualRevisado:fs.deleteField(),pontosDevolvidos:fs.deleteField(),revisaoDecisao:fs.deleteField(),revisaoPercentualAlvo:fs.deleteField(),revisadoEm:fs.deleteField()};
+      remove=['percentualRevisado','pontosDevolvidos','revisaoDecisao','revisaoPercentualAlvo','revisaoData','revisadoEm'];
+      patch={...set,percentualRevisado:fs.deleteField(),pontosDevolvidos:fs.deleteField(),revisaoDecisao:fs.deleteField(),revisaoPercentualAlvo:fs.deleteField(),revisaoData:fs.deleteField(),revisadoEm:fs.deleteField()};
     }else{
       const manter=type==='manter';
       const pct=manter?o.pct:Math.max(o.pct,Number(targetPct)||o.pct);
@@ -499,6 +499,7 @@ async function applyReview(x,type,targetPct=null,msg){
         revisaoStatus:'revisado',
         revisaoDecisao:decisao,
         revisaoPercentualAlvo:manter?null:pct,
+        revisaoData:x.__date,
         revisadoEm:new Date().toISOString()
       };
       patch={...set};
